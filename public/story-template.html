@@ -12,7 +12,7 @@
         body { font-family: 'Poppins', sans-serif; margin: 0; }
         #story-preview {
             font-family: 'Poppins', sans-serif;
-            color: white;
+            /* Warna default diatur di tema, bukan di sini */
             width: 1080px;
             height: 1920px;
             position: relative;
@@ -27,14 +27,33 @@
             object-position: center 10%;
         }
 
-        /* Tema Background */
-        .theme-gradient-blue { background: linear-gradient(160deg, #192670, #4c9b32); }
-        .theme-gradient-purple { background: linear-gradient(160deg, #5a189a, #c1121f, #f77f00); }
-        .theme-gradient-orange { background: linear-gradient(160deg, #f7b267, #f79d65, #f4845f); }
-        .theme-solid-white { background: white; color: #374151; }
+        /* --- PERUBAHAN CSS DI SINI --- */
+        /* Menggabungkan ID dan Class untuk meningkatkan "kekuatan" (specificity) */
+        
+        /* Tema Default & Gelap */
+        #story-preview.theme-gradient-blue { 
+            background: linear-gradient(160deg, #192670, #4c9b32);
+            color: white; /* Teks putih untuk background gelap */
+        }
+        #story-preview.theme-gradient-purple { 
+            background: linear-gradient(160deg, #5a189a, #c1121f, #f77f00);
+            color: white;
+        }
+        #story-preview.theme-gradient-orange { 
+            background: linear-gradient(160deg, #f7b267, #f79d65, #f4845f);
+            color: white;
+        }
+        
+        /* Tema Terang (Putih) */
+        #story-preview.theme-solid-white { 
+            background: white; 
+            color: #1e293b; /* Teks biru navy gelap untuk background terang */
+        }
+        /* --- AKHIR PERUBAHAN --- */
+
 
         /* Pola Dot untuk tema putih */
-        .theme-solid-white #dot-pattern-overlay {
+        #story-preview.theme-solid-white #dot-pattern-overlay {
             background-image: radial-gradient(circle, #000080 1px, transparent 1px);
             background-size: 15px 15px;
             opacity: 0.05;
