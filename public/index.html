@@ -17,8 +17,8 @@
             width: 1080px;
             height: 1920px;
             transform-origin: top left;
-            position: relative; /* Penting untuk posisi absolute overlay */
-            overflow: hidden;   /* Pastikan pola tidak keluar dari batas preview */
+            position: relative;
+            overflow: hidden;
         }
         .montserrat { font-family: 'Montserrat', sans-serif; }
         #doctor-checkbox-list::-webkit-scrollbar { width: 8px; }
@@ -26,21 +26,14 @@
         #doctor-checkbox-list::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
         #doctor-checkbox-list::-webkit-scrollbar-thumb:hover { background: #555; }
         #story-preview img { object-fit: cover; }
-
-        /* Mengatur posisi fokus gambar dokter di dalam bingkai bundar */
-        #story-preview .flex .items-center img.rounded-full {
-            object-position: center 10%; 
-        }
-
-        /* ▼▼▼ CSS BARU UNTUK DOT PATTERN ▼▼▼ */
+        #story-preview .flex .items-center img.rounded-full { object-position: center 10%; }
         #dot-pattern-overlay {
-            background-image: radial-gradient(circle, #000080 1px, transparent 1px); /* Biru Navy */
-            background-size: 15px 15px; /* Ukuran pola dot. Anda bisa mengubah 15px ini. */
-            opacity: 0.05; /* Transparansi agar tidak terlalu dominan. Anda bisa mengubah 0.05 ini. */
-            z-index: 0; /* Pastikan di bawah konten teks dan gambar utama */
-            pointer-events: none; /* Agar tidak menghalangi interaksi jika ada */
+            background-image: radial-gradient(circle, #000080 1px, transparent 1px);
+            background-size: 15px 15px;
+            opacity: 0.05;
+            z-index: 0;
+            pointer-events: none;
         }
-        /* ▲▲▲ CSS BARU ▲▲▲ */
     </style>
 </head>
 <body class="bg-gray-100 flex flex-col md:flex-row h-screen overflow-hidden">
@@ -62,8 +55,8 @@
                 <div id="doctor-checkbox-list" class="w-full p-3 border border-gray-300 rounded-lg max-h-60 overflow-y-auto space-y-2"></div>
             </div>
             <div>
-                <label for="logo-url" class="block text-sm font-medium text-gray-700 mb-1">URL Logo</label>
-                <input type="text" id="logo-url" value="asset/logo/logo.png" class="w-full p-3 border border-gray-300 rounded-lg">
+                <label for="logo-url" class="block text-sm font-medium text-gray-700 mb-1">URL Logo (Opsional)</label>
+                <input type="text" id="logo-url" placeholder="Biarkan kosong untuk logo default" class="w-full p-3 border border-gray-300 rounded-lg">
             </div>
             <div>
                 <label for="background-select" class="block text-sm font-medium text-gray-700 mb-1">Pilih Tema Background</label>
@@ -75,13 +68,14 @@
                 </select>
             </div>
             <div class="pt-4">
-                <button id="download-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                <button id="download-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
                     <span id="button-text">Pilih Dokter Dahulu</span>
                 </button>
             </div>
         </div>
         <div id="error-state" class="hidden text-center py-8 bg-red-50 border-l-4 border-red-400 p-4">
             <p class="font-bold text-red-800">Gagal Memuat Data</p>
+            <p class="text-sm text-red-600">Coba muat ulang halaman atau periksa koneksi internet.</p>
         </div>
     </div>
 
@@ -89,275 +83,198 @@
         <div id="preview-container" class="w-full h-full">
             <div id="story-preview" class="flex flex-col p-16">
                 <div id="dot-pattern-overlay" class="absolute inset-0 hidden"></div>
-                <div class="flex-shrink-0 flex justify-center items-center relative z-10"> <img id="story-logo" src="asset/logo/logo.png" class="h-28" alt="Logo">
+                <div class="flex-shrink-0 flex justify-center items-center relative z-10">
+                    <img id="story-logo" src="asset/logo/logo.png" class="h-28" alt="Logo">
                 </div>
-                <div class="flex-grow flex flex-col justify-start items-center text-center pt-20 relative z-10"> <div class="mb-12">
+                <div class="flex-grow flex flex-col justify-start items-center text-center pt-20 relative z-10">
+                    <div class="mb-12">
                         <p class="text-5xl tracking-widest montserrat">PEMBERITAHUAN</p>
                         <h2 class="text-9xl font-extrabold mt-2 montserrat">JADWAL CUTI</h2>
                     </div>
-                    <div id="story-doctors-list" class="w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12 relative z-10"> <div class="text-center text-4xl opacity-75 flex flex-col justify-center items-center h-full">
-                            <p>Pilih dokter dari panel kiri untuk melihat preview.</p>
+                    <div id="story-doctors-list" class="w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12 relative z-10">
+                        <div class="text-center text-4xl opacity-75 flex flex-col justify-center items-center h-full">
+                            <p>Preview simple. Hasil akhir akan digenerate oleh server.</p>
                         </div>
                     </div>
                 </div>
-                <div class="flex-shrink-0 text-center relative z-10"> <p class="text-3xl font-semibold">Siloam Hospitals Ambo</p>
+                <div class="flex-shrink-0 text-center relative z-10">
+                    <p class="text-3xl font-semibold">Siloam Hospitals Ambon</p>
                 </div>
             </div>
         </div>
     </div>
 
 <script>
-    // BAGIAN 1: FUNGSI GLOBAL
-    let combinedData = [];
+document.addEventListener('DOMContentLoaded', () => {
+    // --- URL & KONFIGURASI ---
+    const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
+    const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
+    
+    // --- ELEMEN DOM ---
+    const controls = document.getElementById('controls');
+    const loadingState = document.getElementById('loading-state');
+    const errorState = document.getElementById('error-state');
+    const doctorCheckboxList = document.getElementById('doctor-checkbox-list');
+    const downloadButton = document.getElementById('download-button');
+    const buttonText = document.getElementById('button-text');
+    const logoUrlInput = document.getElementById('logo-url');
+    const backgroundSelect = document.getElementById('background-select');
+    const storyLogo = document.getElementById('story-logo');
 
+    // --- FUNGSI ---
     function getSelectedDoctorIds() {
-        return Array.from(document.getElementById('doctor-checkbox-list').querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value);
+        return Array.from(document.querySelectorAll('#doctor-checkbox-list input:checked')).map(cb => cb.value);
     }
 
-    function updateBackground(theme) {
-        const storyPreview = document.getElementById('story-preview');
-        const dotPatternOverlay = document.getElementById('dot-pattern-overlay'); // Ambil elemen overlay
+    function updateUiState() {
+        const selectedIds = getSelectedDoctorIds();
+        if (selectedIds.length > 0) {
+            downloadButton.disabled = false;
+            buttonText.textContent = `Generate & Download Story (${selectedIds.length})`;
+        } else {
+            downloadButton.disabled = true;
+            buttonText.textContent = 'Pilih Dokter Dahulu';
+        }
+    }
 
+    function updateBackgroundPreview(theme) {
+        const storyPreview = document.getElementById('story-preview');
+        const dotPatternOverlay = document.getElementById('dot-pattern-overlay');
         storyPreview.style.background = '';
         storyPreview.style.color = 'white';
-        dotPatternOverlay.classList.add('hidden'); // Sembunyikan secara default
-
+        dotPatternOverlay.classList.add('hidden');
         switch(theme) {
             case 'gradient-purple': storyPreview.style.background = 'linear-gradient(160deg, #5a189a, #c1121f, #f77f00)'; break;
             case 'gradient-orange': storyPreview.style.background = 'linear-gradient(160deg, #f7b267, #f79d65, #f4845f)'; break;
             case 'solid-white': 
                 storyPreview.style.background = 'white'; 
                 storyPreview.style.color = '#374151'; 
-                dotPatternOverlay.classList.remove('hidden'); // Tampilkan dot pattern untuk tema putih
+                dotPatternOverlay.classList.remove('hidden');
                 break;
             default: storyPreview.style.background = 'linear-gradient(160deg, #192670, #4c9b32)'; break;
         }
     }
 
-    function updateStoryPreview(doctorIds) {
-        const doctorsListContainer = document.getElementById('story-doctors-list');
-        const downloadButton = document.getElementById('download-button');
-        const buttonText = document.getElementById('button-text');
+    function generateAndDownload() {
+        const selectedIds = getSelectedDoctorIds();
+        if (selectedIds.length === 0) return;
         
-        if (!doctorIds || doctorIds.length === 0) {
-            doctorsListContainer.innerHTML = `<div class="text-center text-4xl opacity-75 flex flex-col justify-center items-center h-full"><p>Pilih dokter dari panel kiri.</p></div>`;
-            if (downloadButton) {
-                downloadButton.disabled = true;
-                buttonText.textContent = 'Pilih Dokter Dahulu';
-            }
-            return;
+        const params = new URLSearchParams();
+        params.append('doctors', selectedIds.join(','));
+        params.append('theme', backgroundSelect.value);
+        if (logoUrlInput.value) {
+            params.append('logo', logoUrlInput.value);
         }
-
-        const selectedDoctorsData = doctorIds.map(id => combinedData.find(d => d.id === id)).filter(Boolean);
-        let doctorHTML = '';
-        const numDoctors = selectedDoctorsData.length;
         
-        let containerClass = "w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12";
-        let itemClass = "flex items-center w-full bg-white/20 rounded-3xl p-8 shadow-lg";
-        let photoClass = "w-48 h-48 rounded-full object-cover border-8 border-white flex-shrink-0";
-        let textContainerClass = "ml-8 text-left";
-        let nameClass = "text-5xl font-bold";
-        let specialtyClass = "text-3xl opacity-90 mt-1";
-        let dateClass = "text-3xl mt-4";
-
-        if (numDoctors > 2) {
-            containerClass = "w-full flex flex-col items-center justify-center flex-grow space-y-6 px-10";
-            itemClass = "flex items-center w-full bg-white/20 rounded-3xl p-6 shadow-lg";
-            photoClass = "w-40 h-40 rounded-full object-cover border-8 border-white flex-shrink-0";
-            textContainerClass = "ml-6 text-left";
-            nameClass = "text-4xl font-bold";
-            specialtyClass = "text-2xl opacity-90 mt-1";
-            dateClass = "text-2xl mt-3";
-        }
-        if (numDoctors > 4) {
-            containerClass = "w-full flex flex-col items-center justify-center flex-grow space-y-4 px-8";
-            itemClass = "flex items-center w-full bg-white/20 rounded-2xl p-4 shadow-lg";
-            photoClass = "w-32 h-32 rounded-full object-cover border-4 border-white flex-shrink-0";
-            textContainerClass = "ml-4 text-left";
-            nameClass = "text-3xl font-bold";
-            specialtyClass = "text-xl opacity-90";
-            dateClass = "text-xl mt-2";
-        }
-
-        doctorsListContainer.className = containerClass;
-        
-        function formatFullDate(dateStr) {
-            if (!dateStr) return '';
-            const parts = dateStr.split('-');
-            if (parts.length !== 3) return dateStr;
-            const day = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10) - 1;
-            const year = parseInt(parts[2], 10);
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
-            return `${day} ${months[month]} ${year}`;
-        }
-
-        selectedDoctorsData.forEach(doctor => {
-            const startDate = formatFullDate(doctor.cutiMulai);
-            const endDate = formatFullDate(doctor.cutiSelesai);
-            const leaveDatesText = (startDate === endDate) ? startDate : `${startDate} - ${endDate}`;
-            doctorHTML += `
-                <div class="${itemClass}">
-                    <img src="${doctor.fotourl}" class="${photoClass}" alt="Foto ${doctor.nama}" onerror="this.src='https://placehold.co/200x200/ffffff/cccccc?text=Error'">
-                    <div class="${textContainerClass}">
-                        <h3 class="${nameClass}">${doctor.nama}</h3>
-                        <p class="${specialtyClass}">${doctor.spesialis}</p>
-                        <p class="${dateClass}">Tidak praktek: <strong class="font-semibold">${leaveDatesText}</strong></p>
-                    </div>
-                </div>`;
-        });
-        
-        doctorsListContainer.innerHTML = doctorHTML;
-        if (downloadButton) {
-            downloadButton.disabled = false;
-            buttonText.textContent = `Generate & Download Story`;
-        }
+        const apiUrl = `/.netlify/functions/generate-story?${params.toString()}`;
+        window.open(apiUrl, '_blank');
     }
     
-
-    // BAGIAN 2: LOGIKA INISIALISASI
-    document.addEventListener('DOMContentLoaded', () => {
-        const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
-        const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
-        const LOCAL_WEBP_IMAGE_PATH = 'asset/webp/';
-        
-        const controls = document.getElementById('controls');
-        const loadingState = document.getElementById('loading-state');
-        const errorState = document.getElementById('error-state');
-        const doctorCheckboxList = document.getElementById('doctor-checkbox-list');
-        const downloadButton = document.getElementById('download-button');
-        const logoUrlInput = document.getElementById('logo-url');
-        const backgroundSelect = document.getElementById('background-select');
-        const storyLogo = document.getElementById('story-logo');
-
-        function generateAndDownloadViaApi() {
-            const selectedIds = getSelectedDoctorIds();
-            if (selectedIds.length === 0) {
-                alert('Silakan pilih minimal satu dokter.');
-                return;
-            }
-            
-            const selectedTheme = backgroundSelect.value;
-            const logoUrl = logoUrlInput.value;
-            
-            const params = new URLSearchParams();
-            params.append('doctors', selectedIds.join(','));
-            params.append('theme', selectedTheme);
-            params.append('logo', logoUrl);
-
-            const apiUrl = `/.netlify/functions/generate-story?${params.toString()}`;
-            window.open(apiUrl, '_blank');
+    async function fetchData(url) {
+        try {
+            const response = await fetch(`${url}?t=${new Date().getTime()}`);
+            if (!response.ok) throw new Error(`Network response error`);
+            return await response.json();
+        } catch (error) {
+            console.error('Fetch error:', error);
+            showError();
+            return null;
         }
-        
-        async function fetchData(url) {
-            try {
-                const response = await fetch(`${url}?t=${new Date().getTime()}`);
-                if (!response.ok) throw new Error(`Network response error`);
-                return await response.json();
-            } catch (error) {
-                console.error('Fetch error:', error);
-                showError();
-                return null;
-            }
-        }
+    }
+
+    function showError() {
+        loadingState.style.display = 'none';
+        controls.style.display = 'none';
+        errorState.style.display = 'block';
+    }
     
-        function showError() {
-            loadingState.style.display = 'none';
-            controls.style.display = 'none';
-            errorState.style.display = 'block';
+    function formatFullDate(dateStr) {
+        if (!dateStr) return '';
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return dateStr;
+        const [day, month, year] = parts;
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+        return `${parseInt(day, 10)} ${months[parseInt(month, 10) - 1]} ${year}`;
+    }
+    
+    function resizePreview() {
+        const previewContainer = document.getElementById('preview-container');
+        if (!previewContainer) return;
+        const scale = Math.min(previewContainer.clientWidth / 1080, previewContainer.clientHeight / 1920);
+        document.getElementById('story-preview').style.transform = `scale(${scale})`;
+    }
+
+    async function initialize() {
+        const [jadwalData, cutiData] = await Promise.all([
+            fetchData(GOOGLE_SCRIPT_JADWAL_URL),
+            fetchData(GOOGLE_SCRIPT_CUTI_URL)
+        ]);
+
+        if (!jadwalData || !cutiData) return;
+
+        // Logika untuk menggabungkan data tetap sama, hanya untuk menampilkan di checklist
+        const allDoctors = new Map();
+        for (const key in jadwalData) {
+            jadwalData[key].doctors.forEach(doc => {
+                allDoctors.set(doc.name.toLowerCase(), {
+                    spesialis: jadwalData[key].title
+                });
+            });
         }
         
-        function formatFullDate(dateStr) {
-            if (!dateStr) return '';
-            const parts = dateStr.split('-');
-            if (parts.length !== 3) return dateStr;
-            const day = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10) - 1;
-            const year = parseInt(parts[2], 10);
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
-            return `${day} ${months[month]} ${year}`;
-        }
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-        async function initialize() {
-            const [jadwalData, cutiData] = await Promise.all([
-                fetchData(GOOGLE_SCRIPT_JADWAL_URL),
-                fetchData(GOOGLE_SCRIPT_CUTI_URL)
-            ]);
-            if (!jadwalData || !cutiData) return;
-
-            const allDoctors = [];
-            for (const key in jadwalData) {
-                jadwalData[key].doctors.forEach(doc => {
-                    const imageName = doc.image_webp ? doc.image_webp.split(/[\\/]/).pop() : '';
-                    allDoctors.push({
-                        nama: doc.name,
-                        spesialis: jadwalData[key].title,
-                        fotourl: imageName ? LOCAL_WEBP_IMAGE_PATH + encodeURIComponent(imageName) : 'https://placehold.co/200x200/ffffff/cccccc?text=Foto'
-                    });
-                });
-            }
+        const combinedData = cutiData.map((cuti, index) => {
+            const endDateParts = cuti.TanggalSelesaiCuti.split('-');
+            if (endDateParts.length !== 3) return null;
             
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            combinedData = cutiData.map((cuti, index) => {
-                const endDateParts = cuti.TanggalSelesaiCuti.split('-');
-                if(endDateParts.length !== 3) return null;
-                const endDate = new Date(endDateParts[2], endDateParts[1]-1, endDateParts[0]);
-                if (endDate < today) return null;
-                const doctorDetails = allDoctors.find(d => d.nama.toLowerCase() === cuti.NamaDokter.toLowerCase());
-                return {
-                    id: `doc-${index}`,
-                    nama: cuti.NamaDokter,
-                    cutiMulai: cuti.TanggalMulaiCuti,
-                    cutiSelesai: cuti.TanggalSelesaiCuti,
-                    spesialis: doctorDetails ? doctorDetails.spesialis : 'Spesialis tidak ditemukan',
-                    fotourl: doctorDetails ? doctorDetails.fotourl : 'https://placehold.co/200x200/ffffff/cccccc?text=Foto'
-                };
-            }).filter(Boolean);
-
-            if (combinedData.length > 0) {
-                doctorCheckboxList.innerHTML = '';
-                combinedData.forEach(doc => {
-                    const div = document.createElement('div');
-                    div.innerHTML = `
-                        <input id="${doc.id}" type="checkbox" value="${doc.id}" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
-                        <label for="${doc.id}" class="ml-3 block text-sm font-medium text-gray-700 cursor-pointer">${doc.nama} (Cuti s/d ${formatFullDate(doc.cutiSelesai)})</label>
-                    `;
-                    doctorCheckboxList.appendChild(div);
-                });
-            } else {
-                doctorCheckboxList.innerHTML = '<p class="text-sm text-gray-500">Tidak ada jadwal cuti dokter.</p>';
-            }
+            const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
+            if (endDate < today) return null;
             
-            loadingState.style.display = 'none';
-            controls.style.display = 'block';
+            return {
+                id: `doc-${index}`,
+                nama: cuti.NamaDokter,
+                cutiSelesai: cuti.TanggalSelesaiCuti,
+            };
+        }).filter(Boolean);
 
-            const previewContainer = document.getElementById('preview-container');
-            const scale = Math.min(previewContainer.clientWidth / 1080, previewContainer.clientHeight / 1920);
-            document.getElementById('story-preview').style.transform = `scale(${scale})`;
+        if (combinedData.length > 0) {
+            doctorCheckboxList.innerHTML = '';
+            combinedData.forEach(doc => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center';
+                div.innerHTML = `
+                    <input id="${doc.id}" type="checkbox" value="${doc.id}" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
+                    <label for="${doc.id}" class="ml-3 block text-sm font-medium text-gray-700 cursor-pointer">${doc.nama} (Cuti s/d ${formatFullDate(doc.cutiSelesai)})</label>
+                `;
+                doctorCheckboxList.appendChild(div);
+            });
+        } else {
+            doctorCheckboxList.innerHTML = '<p class="text-sm text-gray-500">Tidak ada jadwal cuti dokter saat ini.</p>';
         }
+        
+        loadingState.style.display = 'none';
+        controls.style.display = 'block';
 
-        // Mendaftarkan semua event listener
-        doctorCheckboxList.addEventListener('change', () => {
-            updateStoryPreview(getSelectedDoctorIds());
-        });
-        logoUrlInput.addEventListener('change', (e) => {
+        resizePreview();
+    }
+
+    // --- EVENT LISTENERS ---
+    doctorCheckboxList.addEventListener('change', updateUiState);
+    backgroundSelect.addEventListener('change', (e) => updateBackgroundPreview(e.target.value));
+    logoUrlInput.addEventListener('input', (e) => {
+        if (e.target.value) {
             storyLogo.src = e.target.value;
-        });
-        backgroundSelect.addEventListener('change', (e) => {
-            updateBackground(e.target.value);
-        });
-        downloadButton.addEventListener('click', generateAndDownloadViaApi);
-
-        initialize();
-        
-        window.addEventListener('resize', () => {
-            const previewContainer = document.getElementById('preview-container');
-            const scale = Math.min(previewContainer.clientWidth / 1080, previewContainer.clientHeight / 1920);
-            document.getElementById('story-preview').style.transform = `scale(${scale})`;
-        });
+        } else {
+            storyLogo.src = 'asset/logo/logo.png'; // Kembali ke default jika kosong
+        }
     });
+    downloadButton.addEventListener('click', generateAndDownload);
+    window.addEventListener('resize', resizePreview);
+    
+    initialize();
+});
 </script>
 </body>
 </html>
