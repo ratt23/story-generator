@@ -9,8 +9,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
     <style>
-        body { 
-            font-family: 'Poppins', sans-serif; 
+        body {
+            font-family: 'Poppins', sans-serif;
         }
         #story-preview {
             font-family: 'Poppins', sans-serif;
@@ -23,13 +23,29 @@
             overflow: hidden;
             transition: transform 0.2s ease-in-out, background 0.3s, color 0.3s;
         }
-        .montserrat { font-family: 'Montserrat', sans-serif; }
-        #doctor-checkbox-list::-webkit-scrollbar { width: 8px; }
-        #doctor-checkbox-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
-        #doctor-checkbox-list::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
-        #doctor-checkbox-list::-webkit-scrollbar-thumb:hover { background: #555; }
-        #story-preview img { object-fit: cover; }
-        #story-preview .flex .items-center img.rounded-full { object-position: center 10%; }
+        .montserrat {
+            font-family: 'Montserrat', sans-serif;
+        }
+        #doctor-checkbox-list::-webkit-scrollbar {
+            width: 8px;
+        }
+        #doctor-checkbox-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        #doctor-checkbox-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        #doctor-checkbox-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        #story-preview img {
+            object-fit: cover;
+        }
+        #story-preview .flex .items-center img.rounded-full {
+            object-position: center 10%;
+        }
     </style>
 </head>
 <body class="bg-slate-100 flex flex-col md:flex-row md:h-screen md:overflow-hidden">
@@ -39,7 +55,7 @@
             <h1 class="text-2xl font-bold text-slate-800">Desain Story Cuti</h1>
             <p class="text-slate-500">Gunakan panel ini untuk membuat gambar jadwal cuti.</p>
         </div>
-        
+
         <div id="loading-state" class="text-center py-8">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
             <p class="mt-4 text-slate-600">Memuat data dari Google Sheets...</p>
@@ -98,7 +114,8 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
+    // URL, Elemen DOM, dan Variabel Global
+    const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRYoD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
     const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
     const LOCAL_WEBP_IMAGE_PATH = 'asset/webp/';
     const controls = document.getElementById('controls');
@@ -110,22 +127,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const storyLogo = document.getElementById('story-logo');
     let allCutiData = [];
 
+    // --- FUNGSI-FUNGSI ---
+
     function resizePreview() {
         const previewContainer = document.getElementById('preview-container');
         const storyPreview = document.getElementById('story-preview');
         if (!previewContainer || !storyPreview) return;
-        
         const scale = (window.innerWidth >= 768)
             ? Math.min(previewContainer.clientWidth / 1080, previewContainer.clientHeight / 1920)
             : previewContainer.clientWidth / 1080;
-        
         storyPreview.style.transform = `scale(${scale * 0.92})`;
     }
 
     function getSelectedDoctorIds() {
         return Array.from(document.querySelectorAll('#doctor-checkbox-list input:checked')).map(cb => cb.value);
     }
-    
+
     function updateDoctorPreview() {
         const doctorsListContainer = document.getElementById('story-doctors-list');
         const selectedIds = getSelectedDoctorIds();
@@ -140,18 +157,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 ? formatFullDate(doctor.cutiMulai)
                 : `${formatFullDate(doctor.cutiMulai)} - ${formatFullDate(doctor.cutiSelesai)}`;
             const isLightTheme = backgroundSelect.value === 'solid-white';
-            const cardClass = isLightTheme 
+            const cardClass = isLightTheme
                 ? 'bg-slate-100 text-slate-800 border border-slate-200'
                 : 'bg-white/20 text-white';
+            
+            // --- PERUBAHAN DI SINI: Foto dibungkus div dengan background putih ---
             doctorHTML += `
                 <div class="flex items-center w-full rounded-2xl p-4 shadow-md ${cardClass}">
-                    <img src="${doctor.fotourl}" class="w-24 h-24 rounded-full object-cover border-4 border-white flex-shrink-0" alt="Foto ${doctor.nama}" onerror="this.src='https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'">
+                    <div class="w-24 h-24 rounded-full bg-white overflow-hidden flex-shrink-0 border-4 border-white">
+                        <img src="${doctor.fotourl}" class="w-full h-full object-cover" alt="Foto ${doctor.nama}" onerror="this.src='https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'">
+                    </div>
                     <div class="ml-4 text-left">
                         <h3 class="text-2xl font-bold">${doctor.nama}</h3>
                         <p class="text-lg opacity-90">${doctor.spesialis}</p>
                         <p class="text-lg mt-1"><strong class="font-semibold">${leaveDatesText}</strong></p>
                     </div>
                 </div>`;
+            // --- AKHIR PERUBAHAN ---
         });
         doctorsListContainer.innerHTML = doctorHTML;
     }
@@ -176,13 +198,13 @@ document.addEventListener('DOMContentLoaded', () => {
         storyPreview.style.color = 'white';
 
         switch(theme) {
-            case 'gradient-purple': 
-                storyPreview.style.background = 'linear-gradient(160deg, #5a189a, #c1121f, #f77f00)'; 
+            case 'gradient-purple':
+                storyPreview.style.background = 'linear-gradient(160deg, #5a189a, #c1121f, #f77f00)';
                 break;
-            case 'gradient-orange': 
-                storyPreview.style.background = 'linear-gradient(160deg, #f7b267, #f79d65, #f4845f)'; 
+            case 'gradient-orange':
+                storyPreview.style.background = 'linear-gradient(160deg, #f7b267, #f79d65, #f4845f)';
                 break;
-            case 'solid-white': 
+            case 'solid-white':
                 storyPreview.style.background = '#ffffff';
                 storyPreview.style.backgroundImage = `
                     radial-gradient(circle, #E5E7EB 1px, transparent 1.5px),
@@ -192,11 +214,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 storyPreview.style.backgroundSize = '20px 20px, 120% 120%, 120% 120%';
                 storyPreview.style.color = '#1e293b';
                 break;
-            default: 
-                storyPreview.style.background = 'linear-gradient(160deg, #192670, #4c9b32)'; 
+            default:
+                storyPreview.style.background = 'linear-gradient(160deg, #192670, #4c9b32)';
                 break;
         }
-        updateDoctorPreview(); 
+        updateDoctorPreview();
     }
 
     function generateAndDownload() {
@@ -208,7 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         window.open(`/.netlify/functions/generate-story?${params.toString()}`, '_blank');
     }
-    
+
     async function fetchData(url) {
         try {
             const response = await fetch(`${url}?t=${new Date().getTime()}`);
@@ -220,7 +242,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return null;
         }
     }
-    
+
     function formatFullDate(dateStr) {
         if (!dateStr) return '';
         const [day, month, year] = dateStr.split('-');
@@ -234,7 +256,6 @@ document.addEventListener('DOMContentLoaded', () => {
             fetchData(GOOGLE_SCRIPT_CUTI_URL)
         ]);
         if (!jadwalData || !cutiData) return;
-
         const allDoctors = new Map();
         for (const key in jadwalData) {
             jadwalData[key].doctors.forEach(doc => {
@@ -245,15 +266,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         }
-        
-        const today = new Date(); today.setHours(0, 0, 0, 0);
-        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         allCutiData = cutiData.map((cuti, index) => {
             const endDateParts = cuti.TanggalSelesaiCuti.split('-');
             if (endDateParts.length !== 3) return null;
             const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
             if (endDate < today) return null;
-            
             const details = allDoctors.get(cuti.NamaDokter.toLowerCase());
             return {
                 id: `doc-${index}`,
@@ -264,7 +283,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 fotourl: details ? details.fotourl : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'
             };
         }).filter(Boolean);
-
         if (allCutiData.length > 0) {
             doctorCheckboxList.innerHTML = '';
             allCutiData.forEach(doc => {
@@ -279,13 +297,13 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             doctorCheckboxList.innerHTML = '<p class="text-sm text-slate-500">Tidak ada jadwal cuti dokter.</p>';
         }
-        
         loadingState.style.display = 'none';
         controls.style.display = 'block';
         updateDoctorPreview();
         resizePreview();
     }
 
+    // EVENT LISTENERS
     doctorCheckboxList.addEventListener('change', updateUiState);
     backgroundSelect.addEventListener('change', (e) => updateBackgroundPreview(e.target.value));
     document.getElementById('logo-url').addEventListener('input', (e) => {

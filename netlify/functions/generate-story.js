@@ -6,14 +6,17 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
+// --- URL & KONFIGURASI ---
+const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRYoD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
 const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
 const LOCAL_WEBP_IMAGE_PATH = 'public/asset/webp/';
 const CACHE_DURATION_MS = 5 * 60 * 1000;
 
+// --- MEKANISME CACHING ---
 let cachedData = null;
 let lastCacheTime = 0;
 
+// --- FUNGSI HELPER ---
 function fetchData(url, redirectCount = 0) {
     if (redirectCount > 5) return Promise.reject(new Error('Terlalu banyak redirect.'));
     return new Promise((resolve, reject) => {
@@ -93,6 +96,7 @@ async function getCombinedDoctorData() {
     return combinedData;
 }
 
+// --- FUNGSI UTAMA (HANDLER) ---
 exports.handler = async (event) => {
     const { doctors, theme } = event.queryStringParameters;
     if (!doctors) return { statusCode: 400, body: 'Error: Anda perlu memasukkan ID dokter.' };
@@ -110,11 +114,11 @@ exports.handler = async (event) => {
         const isLightTheme = lightThemes.includes(selectedTheme);
         const numDoctors = selectedDoctors.length;
         
-        let containerClass, itemClass, photoClass, textContainerClass, nameClass, specialtyClass, dateClass;
+        let containerClass, itemClass, photoContainerClass, textContainerClass, nameClass, specialtyClass, dateClass;
 
         if (numDoctors > 4) {
             containerClass = "w-full flex flex-col items-center justify-center flex-grow space-y-4 px-8";
-            photoClass = "w-32 h-32 rounded-full object-cover border-4 flex-shrink-0";
+            photoContainerClass = "w-32 h-32 rounded-full border-4 flex-shrink-0";
             textContainerClass = "ml-4 text-left";
             nameClass = "text-3xl font-bold";
             specialtyClass = "text-xl";
@@ -124,7 +128,7 @@ exports.handler = async (event) => {
                 : "flex items-center w-full bg-white/20 rounded-2xl p-4 shadow-lg";
         } else if (numDoctors > 2) {
             containerClass = "w-full flex flex-col items-center justify-center flex-grow space-y-6 px-10";
-            photoClass = "w-40 h-40 rounded-full object-cover border-8 flex-shrink-0";
+            photoContainerClass = "w-40 h-40 rounded-full border-8 flex-shrink-0";
             textContainerClass = "ml-6 text-left";
             nameClass = "text-4xl font-bold";
             specialtyClass = "text-2xl";
@@ -134,7 +138,7 @@ exports.handler = async (event) => {
                 : "flex items-center w-full bg-white/20 rounded-3xl p-6 shadow-lg";
         } else {
             containerClass = "w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12";
-            photoClass = "w-48 h-48 rounded-full object-cover border-8 flex-shrink-0";
+            photoContainerClass = "w-48 h-48 rounded-full border-8 flex-shrink-0";
             textContainerClass = "ml-8 text-left";
             nameClass = "text-5xl font-bold";
             specialtyClass = "text-3xl";
@@ -145,12 +149,12 @@ exports.handler = async (event) => {
         }
         
         if (isLightTheme) {
-            photoClass += " border-white shadow-md";
+            photoContainerClass += " border-white shadow-md";
             nameClass += " text-slate-800";
             specialtyClass += " text-slate-600";
             dateClass += " text-slate-600";
         } else {
-            photoClass += " border-white";
+            photoContainerClass += " border-white";
             specialtyClass += " opacity-90";
         }
 
@@ -166,15 +170,20 @@ exports.handler = async (event) => {
                 ? formatFullDate(doctor.cutiMulai) 
                 : `${formatFullDate(doctor.cutiMulai)} - ${formatFullDate(doctor.cutiSelesai)}`;
             const photoSrc = doctor.fotourl ? imageToBase64(doctor.fotourl) : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+            
+            // --- PERUBAHAN DI SINI: Foto dibungkus div dengan background putih ---
             return `
                 <div class="${itemClass}">
-                    <img src="${photoSrc}" class="${photoClass}" alt="Foto ${doctor.nama}">
+                    <div class="${photoContainerClass} bg-white overflow-hidden">
+                        <img src="${photoSrc}" class="w-full h-full object-cover" alt="Foto ${doctor.nama}">
+                    </div>
                     <div class="${textContainerClass}">
                         <h3 class="${nameClass}">${doctor.nama}</h3>
                         <p class="${specialtyClass}">${doctor.spesialis}</p>
                         <p class="${dateClass}">Tidak praktek: <strong class="font-semibold">${leaveDatesText}</strong></p>
                     </div>
                 </div>`;
+            // --- AKHIR PERUBAHAN ---
         }).join('');
         
         const doctorListContainerHTML = `<div class="${containerClass}">${doctorsHTML}</div>`;
