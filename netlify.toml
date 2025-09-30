@@ -1,0 +1,12 @@
+# netlify.toml
+
+[build]
+  publish = "public"
+  functions = "netlify/functions"
+
+[functions]
+  external_node_modules = ["@sparticuz/chromium"]
+  node_bundler = "esbuild"
+
+[functions."generate-story"]
+  timeout = 25
