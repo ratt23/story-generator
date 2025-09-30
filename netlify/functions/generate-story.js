@@ -6,17 +6,14 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 
-// --- URL & KONFIGURASI ---
 const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
 const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
 const LOCAL_WEBP_IMAGE_PATH = 'public/asset/webp/';
 const CACHE_DURATION_MS = 5 * 60 * 1000;
 
-// --- MEKANISME CACHING ---
 let cachedData = null;
 let lastCacheTime = 0;
 
-// --- FUNGSI HELPER ---
 function fetchData(url, redirectCount = 0) {
     if (redirectCount > 5) return Promise.reject(new Error('Terlalu banyak redirect.'));
     return new Promise((resolve, reject) => {
@@ -96,7 +93,6 @@ async function getCombinedDoctorData() {
     return combinedData;
 }
 
-// --- FUNGSI UTAMA (HANDLER) ---
 exports.handler = async (event) => {
     const { doctors, theme } = event.queryStringParameters;
     if (!doctors) return { statusCode: 400, body: 'Error: Anda perlu memasukkan ID dokter.' };
@@ -110,16 +106,13 @@ exports.handler = async (event) => {
         const selectedDoctors = doctorIds.map(id => allDoctorData.find(d => d.id === id)).filter(Boolean);
         if (selectedDoctors.length === 0) return { statusCode: 404, body: 'Error: Dokter tidak ditemukan.' };
 
-        // --- LOGIKA BARU UNTUK TEMA TERANG/GELAP ---
-        const lightThemes = ['solid-white']; // Daftar tema yang dianggap "terang"
+        const lightThemes = ['solid-white'];
         const isLightTheme = lightThemes.includes(selectedTheme);
-        
         const numDoctors = selectedDoctors.length;
         
         let containerClass, itemClass, photoClass, textContainerClass, nameClass, specialtyClass, dateClass;
 
-        // Atur style berdasarkan jumlah dokter
-        if (numDoctors > 4) { // Untuk 5+ dokter
+        if (numDoctors > 4) {
             containerClass = "w-full flex flex-col items-center justify-center flex-grow space-y-4 px-8";
             photoClass = "w-32 h-32 rounded-full object-cover border-4 flex-shrink-0";
             textContainerClass = "ml-4 text-left";
@@ -129,7 +122,7 @@ exports.handler = async (event) => {
             itemClass = isLightTheme 
                 ? "flex items-center w-full bg-slate-100 rounded-2xl p-4 shadow-lg border border-slate-200" 
                 : "flex items-center w-full bg-white/20 rounded-2xl p-4 shadow-lg";
-        } else if (numDoctors > 2) { // Untuk 3-4 dokter
+        } else if (numDoctors > 2) {
             containerClass = "w-full flex flex-col items-center justify-center flex-grow space-y-6 px-10";
             photoClass = "w-40 h-40 rounded-full object-cover border-8 flex-shrink-0";
             textContainerClass = "ml-6 text-left";
@@ -139,7 +132,7 @@ exports.handler = async (event) => {
             itemClass = isLightTheme 
                 ? "flex items-center w-full bg-slate-100 rounded-3xl p-6 shadow-lg border border-slate-200" 
                 : "flex items-center w-full bg-white/20 rounded-3xl p-6 shadow-lg";
-        } else { // Untuk 1-2 dokter
+        } else {
             containerClass = "w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12";
             photoClass = "w-48 h-48 rounded-full object-cover border-8 flex-shrink-0";
             textContainerClass = "ml-8 text-left";
@@ -151,18 +144,15 @@ exports.handler = async (event) => {
                 : "flex items-center w-full bg-white/20 rounded-3xl p-8 shadow-lg";
         }
         
-        // Atur warna border foto dan warna teks berdasarkan tema
         if (isLightTheme) {
             photoClass += " border-white shadow-md";
-            nameClass += " text-slate-800"; // Teks nama dokter menjadi abu tua/biru navy
-            specialtyClass += " text-slate-600"; // Teks spesialis sedikit lebih terang
-            dateClass += " text-slate-600"; // Teks tanggal juga
+            nameClass += " text-slate-800";
+            specialtyClass += " text-slate-600";
+            dateClass += " text-slate-600";
         } else {
             photoClass += " border-white";
-            specialtyClass += " opacity-90"; // Efek opacity untuk tema gelap
-            // Untuk tema gelap, warna teks tidak perlu ditambahkan karena akan mewarisi warna putih dari container
+            specialtyClass += " opacity-90";
         }
-        // --- AKHIR LOGIKA BARU ---
 
         const formatFullDate = (dateStr) => {
             if (!dateStr) return '';

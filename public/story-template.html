@@ -12,61 +12,44 @@
         body { font-family: 'Poppins', sans-serif; margin: 0; }
         #story-preview {
             font-family: 'Poppins', sans-serif;
-            /* Warna default diatur di tema, bukan di sini */
-            width: 1080px;
-            height: 1920px;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
+            width: 1080px; height: 1920px;
+            position: relative; overflow: hidden;
+            display: flex; flex-direction: column;
             padding: 64px;
+            transform-origin: center;
+            transition: transform 0.2s ease-in-out, background 0.3s, color 0.3s;
         }
         .montserrat { font-family: 'Montserrat', sans-serif; }
         #story-preview img { object-fit: cover; }
-        #story-preview .flex .items-center img.rounded-full {
-            object-position: center 10%;
-        }
+        #story-preview .flex .items-center img.rounded-full { object-position: center 10%; }
 
-        /* --- PERUBAHAN CSS DI SINI --- */
-        /* Menggabungkan ID dan Class untuk meningkatkan "kekuatan" (specificity) */
-        
-        /* Tema Default & Gelap */
         #story-preview.theme-gradient-blue { 
-            background: linear-gradient(160deg, #192670, #4c9b32);
-            color: white; /* Teks putih untuk background gelap */
+            background: linear-gradient(160deg, #192670, #4c9b32); color: white;
         }
         #story-preview.theme-gradient-purple { 
-            background: linear-gradient(160deg, #5a189a, #c1121f, #f77f00);
-            color: white;
+            background: linear-gradient(160deg, #5a189a, #c1121f, #f77f00); color: white;
         }
         #story-preview.theme-gradient-orange { 
-            background: linear-gradient(160deg, #f7b267, #f79d65, #f4845f);
-            color: white;
+            background: linear-gradient(160deg, #f7b267, #f79d65, #f4845f); color: white;
         }
         
-        /* Tema Terang (Putih) */
         #story-preview.theme-solid-white { 
-            background: white; 
-            color: #1e293b; /* Teks biru navy gelap untuk background terang */
-        }
-        /* --- AKHIR PERUBAHAN --- */
-
-
-        /* Pola Dot untuk tema putih */
-        #story-preview.theme-solid-white #dot-pattern-overlay {
-            background-image: radial-gradient(circle, #000080 1px, transparent 1px);
-            background-size: 15px 15px;
-            opacity: 0.05;
-            z-index: 0;
-            pointer-events: none;
-            position: absolute;
-            inset: 0;
+            background-color: #ffffff;
+            background-image:
+                radial-gradient(circle, #E5E7EB 1px, transparent 1.5px),
+                radial-gradient(circle at 0% 0%, rgba(229, 231, 235, 0.5) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(229, 231, 235, 0.5) 0%, transparent 40%);
+            background-size:
+                20px 20px,
+                120% 120%,
+                120% 120%;
+            color: #1e293b;
         }
     </style>
 </head>
 <body>
     <div id="story-preview" class="{{THEME_CLASS}}">
-        <div id="dot-pattern-overlay"></div> <div class="flex-shrink-0 flex justify-center items-center relative z-10">
+        <div class="flex-shrink-0 flex justify-center items-center relative z-10">
             <img id="story-logo" src="{{LOGO_SRC}}" class="h-28" alt="Logo">
         </div>
 
