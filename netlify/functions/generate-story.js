@@ -69,7 +69,7 @@ exports.handler = async (event) => {
         console.error(error);
         return { statusCode: 500, body: JSON.stringify({ error: 'Oops, gagal membuat gambar.' })};
     } finally {
-        // Apapun yang terjadi, tutup browsernya agar tidak boros resource
+        
         if (browser) {
             await browser.close();
         }

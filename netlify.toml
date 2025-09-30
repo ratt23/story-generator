@@ -13,3 +13,9 @@
 
 [functions."generate-story"]
   timeout = 25
+
+  [functions."generate-story"]
+  # Baris ini memberitahu Netlify untuk menyertakan folder 'public'
+  # beserta semua isinya untuk fungsi ini.
+  included_files = ["public/**"]
+  timeout = 25
