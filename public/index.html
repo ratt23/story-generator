@@ -17,9 +17,8 @@
             width: 1080px;
             height: 1920px;
             transform-origin: top left;
-            /* ▼▼▼ BARIS TAMBAHAN ▼▼▼ */
-            border: 15px solid #ffffff; /* Menambahkan border putih setebal 15px */
-            box-sizing: border-box;   /* Memastikan border tidak menambah ukuran elemen */
+            position: relative; /* Penting untuk posisi absolute overlay */
+            overflow: hidden;   /* Pastikan pola tidak keluar dari batas preview */
         }
         .montserrat { font-family: 'Montserrat', sans-serif; }
         #doctor-checkbox-list::-webkit-scrollbar { width: 8px; }
@@ -30,8 +29,18 @@
 
         /* Mengatur posisi fokus gambar dokter di dalam bingkai bundar */
         #story-preview .flex .items-center img.rounded-full {
-            object-position: center 25%; 
+            object-position: center 10%; 
         }
+
+        /* ▼▼▼ CSS BARU UNTUK DOT PATTERN ▼▼▼ */
+        #dot-pattern-overlay {
+            background-image: radial-gradient(circle, #000080 1px, transparent 1px); /* Biru Navy */
+            background-size: 15px 15px; /* Ukuran pola dot. Anda bisa mengubah 15px ini. */
+            opacity: 0.05; /* Transparansi agar tidak terlalu dominan. Anda bisa mengubah 0.05 ini. */
+            z-index: 0; /* Pastikan di bawah konten teks dan gambar utama */
+            pointer-events: none; /* Agar tidak menghalangi interaksi jika ada */
+        }
+        /* ▲▲▲ CSS BARU ▲▲▲ */
     </style>
 </head>
 <body class="bg-gray-100 flex flex-col md:flex-row h-screen overflow-hidden">
@@ -79,22 +88,19 @@
     <div class="flex-grow bg-gray-100 flex items-center justify-center p-4 overflow-hidden">
         <div id="preview-container" class="w-full h-full">
             <div id="story-preview" class="flex flex-col p-16">
-                <div class="flex-shrink-0 flex justify-center items-center">
-                    <img id="story-logo" src="asset/logo/logo.png" class="h-28" alt="Logo">
+                <div id="dot-pattern-overlay" class="absolute inset-0 hidden"></div>
+                <div class="flex-shrink-0 flex justify-center items-center relative z-10"> <img id="story-logo" src="asset/logo/logo.png" class="h-28" alt="Logo">
                 </div>
-                <div class="flex-grow flex flex-col justify-start items-center text-center pt-20">
-                    <div class="mb-12">
+                <div class="flex-grow flex flex-col justify-start items-center text-center pt-20 relative z-10"> <div class="mb-12">
                         <p class="text-5xl tracking-widest montserrat">PEMBERITAHUAN</p>
                         <h2 class="text-9xl font-extrabold mt-2 montserrat">JADWAL CUTI</h2>
                     </div>
-                    <div id="story-doctors-list" class="w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12">
-                        <div class="text-center text-4xl opacity-75 flex flex-col justify-center items-center h-full">
+                    <div id="story-doctors-list" class="w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12 relative z-10"> <div class="text-center text-4xl opacity-75 flex flex-col justify-center items-center h-full">
                             <p>Pilih dokter dari panel kiri untuk melihat preview.</p>
                         </div>
                     </div>
                 </div>
-                <div class="flex-shrink-0 text-center">
-                    <p class="text-3xl font-semibold">Informasi lebih lanjut, hubungi kami.</p>
+                <div class="flex-shrink-0 text-center relative z-10"> <p class="text-3xl font-semibold">Informasi lebih lanjut, hubungi kami.</p>
                 </div>
             </div>
         </div>
@@ -110,12 +116,20 @@
 
     function updateBackground(theme) {
         const storyPreview = document.getElementById('story-preview');
+        const dotPatternOverlay = document.getElementById('dot-pattern-overlay'); // Ambil elemen overlay
+
         storyPreview.style.background = '';
         storyPreview.style.color = 'white';
+        dotPatternOverlay.classList.add('hidden'); // Sembunyikan secara default
+
         switch(theme) {
             case 'gradient-purple': storyPreview.style.background = 'linear-gradient(160deg, #5a189a, #c1121f, #f77f00)'; break;
             case 'gradient-orange': storyPreview.style.background = 'linear-gradient(160deg, #f7b267, #f79d65, #f4845f)'; break;
-            case 'solid-white': storyPreview.style.background = 'white'; storyPreview.style.color = '#374151'; break;
+            case 'solid-white': 
+                storyPreview.style.background = 'white'; 
+                storyPreview.style.color = '#374151'; 
+                dotPatternOverlay.classList.remove('hidden'); // Tampilkan dot pattern untuk tema putih
+                break;
             default: storyPreview.style.background = 'linear-gradient(160deg, #192670, #4c9b32)'; break;
         }
     }
