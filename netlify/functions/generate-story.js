@@ -6,10 +6,11 @@ const fs = require('fs').promises;
 const path = require('path');
 const https = require('https');
 
-// --- HANYA PERLU API CUTI SAJA ---
+// --- URL & KONFIGURASI ---
+const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
 const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
 const LOCAL_WEBP_IMAGE_PATH = 'public/asset/webp/';
-const CACHE_DURATION_MS = 5 * 60 * 1000;
+const CACHE_DURATION_MS = 5 * 60 * 1000; // Cache 5 menit
 
 // --- MEKANISME CACHING ---
 let cachedData = null;
@@ -29,7 +30,7 @@ function fetchData(url, redirectCount = 0) {
             }
             
             if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error(`HTTP ${res.statusCode}`));
+                return reject(new Error(`HTTP ${res.statusCode} untuk ${url}`));
             }
             
             let body = '';
@@ -46,13 +47,14 @@ function fetchData(url, redirectCount = 0) {
         req.on('error', (err) => reject(err));
         req.setTimeout(15000, () => {
             req.destroy();
-            reject(new Error('Request timed out'));
+            reject(new Error('Request timed out setelah 15 detik'));
         });
     });
 }
 
 async function imageToBase64(filePath) {
     try {
+        // Handle external URLs
         if (filePath.startsWith('http')) {
             return filePath;
         }
@@ -63,13 +65,21 @@ async function imageToBase64(filePath) {
             await fs.access(absolutePath);
         } catch {
             console.warn(`File gambar tidak ditemukan: ${absolutePath}`);
-            return 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+            return 'https://placehold.co/200x200/e2e8f0/475569?text=NotFound';
         }
 
         const imageBuffer = await fs.readFile(absolutePath);
         const extension = path.extname(filePath).toLowerCase().slice(1);
-        const mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
+        const mimeTypes = {
+            'png': 'image/png',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'webp': 'image/webp',
+            'gif': 'image/gif',
+            'svg': 'image/svg+xml'
+        };
         
+        const mimeType = mimeTypes[extension] || `image/${extension}`;
         return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
     } catch (error) {
         console.error(`Gagal membaca file gambar: ${filePath}`, error);
@@ -78,12 +88,13 @@ async function imageToBase64(filePath) {
 }
 
 function normalizeName(name) {
-    return name.toLowerCase().trim().replace(/\s+/g, ' ').replace(/[^\w\s]/g, '');
+    return name.toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
 function parseDate(dateStr) {
     if (!dateStr) return null;
     
+    // Format: DD-MM-YYYY
     const parts = dateStr.split('-');
     if (parts.length !== 3) return null;
     
@@ -96,55 +107,77 @@ function parseDate(dateStr) {
     return new Date(year, month, day);
 }
 
-// --- FUNGSI YANG DISEDERHANAKAN TANPA API JADWAL ---
-async function getCutiData() {
+async function getCombinedDoctorData() {
     const now = Date.now();
     if (cachedData && (now - lastCacheTime < CACHE_DURATION_MS)) {
         console.log('Menggunakan data cache');
         return cachedData;
     }
 
-    console.log('Mengambil data cuti dari Google Sheets...');
+    console.log('Mengambil data terbaru dari Google Sheets...');
     
     try {
-        const cutiData = await fetchData(GOOGLE_SCRIPT_CUTI_URL);
+        const [jadwalData, cutiData] = await Promise.all([
+            fetchData(GOOGLE_SCRIPT_JADWAL_URL),
+            fetchData(GOOGLE_SCRIPT_CUTI_URL)
+        ]);
 
-        if (!cutiData || !Array.isArray(cutiData)) {
-            throw new Error("Data cuti tidak valid atau kosong");
+        if (!jadwalData || !cutiData) {
+            throw new Error("Gagal mengambil data dari Google Sheets.");
+        }
+
+        // Build doctor map for faster lookup
+        const doctorMap = new Map();
+        for (const key in jadwalData) {
+            if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
+                jadwalData[key].doctors.forEach(doc => {
+                    if (doc && doc.name) {
+                        const imageName = doc.image_webp ? 
+                            path.basename(doc.image_webp) : '';
+                        const imagePath = imageName ? 
+                            path.join(LOCAL_WEBP_IMAGE_PATH, imageName) : '';
+                        
+                        doctorMap.set(normalizeName(doc.name), {
+                            nama: doc.name,
+                            spesialis: jadwalData[key].title || 'Spesialis tidak diketahui',
+                            fotourl: imagePath
+                        });
+                    }
+                });
+            }
         }
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const processedData = cutiData
+        const combinedData = cutiData
             .filter(cuti => cuti && cuti.NamaDokter && cuti.TanggalSelesaiCuti)
             .map((cuti, index) => {
                 const endDate = parseDate(cuti.TanggalSelesaiCuti);
                 if (!endDate || endDate < today) return null;
 
-                // Generate photo path from doctor name (lebih sederhana)
-                const photoName = `${normalizeName(cuti.NamaDokter)}.webp`;
-                const photoPath = path.join(LOCAL_WEBP_IMAGE_PATH, photoName);
+                const doctorDetails = doctorMap.get(normalizeName(cuti.NamaDokter));
                 
                 return {
                     id: `doc-${index}`,
                     nama: cuti.NamaDokter,
                     cutiMulai: cuti.TanggalMulaiCuti,
                     cutiSelesai: cuti.TanggalSelesaiCuti,
-                    spesialis: 'Dokter', // Default value, bisa disesuaikan
-                    fotourl: photoPath
+                    spesialis: doctorDetails ? doctorDetails.spesialis : 'Spesialis tidak ditemukan',
+                    fotourl: doctorDetails?.fotourl || ''
                 };
             })
             .filter(Boolean);
 
-        cachedData = processedData;
+        cachedData = combinedData;
         lastCacheTime = now;
         
-        console.log(`Berhasil memuat data ${processedData.length} dokter cuti`);
-        return processedData;
+        console.log(`Berhasil memuat data ${combinedData.length} dokter`);
+        return combinedData;
 
     } catch (error) {
-        console.error('Error mengambil data cuti:', error);
+        console.error('Error dalam getCombinedDoctorData:', error);
+        // Return cached data even if stale as fallback
         if (cachedData) {
             console.log('Menggunakan data cache lama karena error');
             return cachedData;
@@ -171,8 +204,9 @@ function generateDoctorHTML(doctors, theme) {
     const isLightTheme = theme === 'solid-white';
     const numDoctors = doctors.length;
 
+    // Determine styling based on number of doctors
     let styles;
-    if (numDoctors > 4) {
+    if (numDoctors > 4) { // 5+ dokter
         styles = {
             container: "w-full flex flex-col items-center justify-center flex-grow space-y-4 px-8",
             item: isLightTheme 
@@ -184,7 +218,7 @@ function generateDoctorHTML(doctors, theme) {
             specialty: "text-xl",
             date: "text-xl mt-2"
         };
-    } else if (numDoctors > 2) {
+    } else if (numDoctors > 2) { // 3-4 dokter
         styles = {
             container: "w-full flex flex-col items-center justify-center flex-grow space-y-6 px-10",
             item: isLightTheme 
@@ -196,7 +230,7 @@ function generateDoctorHTML(doctors, theme) {
             specialty: "text-2xl",
             date: "text-2xl mt-3"
         };
-    } else {
+    } else { // 1-2 dokter
         styles = {
             container: "w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12",
             item: isLightTheme
@@ -210,6 +244,7 @@ function generateDoctorHTML(doctors, theme) {
         };
     }
 
+    // Apply theme-specific styles
     if (isLightTheme) {
         styles.photo += " border-white shadow-md";
         styles.name += " text-slate-800";
@@ -227,7 +262,7 @@ function generateDoctorHTML(doctors, theme) {
 
         return `
             <div class="${styles.item}">
-                <img src="${doctor.fotourl}" class="${styles.photo}" alt="Foto ${doctor.nama}">
+                <img src="${doctor.fotourl}" class="${styles.photo}" alt="Foto ${doctor.nama}" onerror="this.src='https://placehold.co/200x200/e2e8f0/475569?text=Photo+Error'">
                 <div class="${styles.textContainer}">
                     <h3 class="${styles.name}">${doctor.nama}</h3>
                     <p class="${styles.specialty}">${doctor.spesialis}</p>
@@ -239,7 +274,7 @@ function generateDoctorHTML(doctors, theme) {
     return `<div class="${styles.container}">${doctorsHTML}</div>`;
 }
 
-// --- FUNGSI UTAMA ---
+// --- FUNGSI UTAMA (HANDLER) ---
 exports.handler = async (event) => {
     console.log('Function generate-story dipanggil');
     
@@ -259,7 +294,16 @@ exports.handler = async (event) => {
     let browser = null;
 
     try {
-        const allDoctorData = await getCutiData();
+        // Validasi parameter
+        const validThemes = ['gradient-blue', 'gradient-purple', 'gradient-orange', 'solid-white'];
+        if (!validThemes.includes(selectedTheme)) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Tema tidak valid' })
+            };
+        }
+
+        const allDoctorData = await getCombinedDoctorData();
         const selectedDoctors = doctorIds
             .map(id => allDoctorData.find(d => d.id === id))
             .filter(Boolean);
@@ -267,11 +311,13 @@ exports.handler = async (event) => {
         if (selectedDoctors.length === 0) {
             return {
                 statusCode: 404,
-                body: JSON.stringify({ error: 'Tidak ada dokter yang ditemukan' })
+                body: JSON.stringify({ error: 'Tidak ada dokter yang ditemukan dengan ID tersebut' })
             };
         }
 
-        // Process images
+        console.log(`Memproses ${selectedDoctors.length} dokter:`, selectedDoctors.map(d => d.nama));
+
+        // Process images to base64
         const doctorsWithProcessedImages = await Promise.all(
             selectedDoctors.map(async (doctor) => {
                 const processedPhoto = await imageToBase64(doctor.fotourl);
@@ -282,7 +328,7 @@ exports.handler = async (event) => {
         const doctorListContainerHTML = generateDoctorHTML(doctorsWithProcessedImages, selectedTheme);
         const processedLogo = await imageToBase64(customLogo);
 
-        // Load template
+        // Load and process template
         const templatePath = path.resolve(process.cwd(), 'public/story-template.html');
         let htmlContent = await fs.readFile(templatePath, 'utf8');
         
@@ -291,7 +337,7 @@ exports.handler = async (event) => {
             .replace('{{LOGO_SRC}}', processedLogo)
             .replace('{{DOCTOR_LIST_HTML}}', doctorListContainerHTML);
 
-        // Generate screenshot
+        // Launch browser and generate screenshot
         const browserOptions = {
             args: chromium.args,
             defaultViewport: { width: 1080, height: 1920 },
@@ -299,58 +345,72 @@ exports.handler = async (event) => {
             headless: true,
         };
 
+        console.log('Launching browser...');
         browser = await puppeteer.launch(browserOptions);
+        
         const page = await browser.newPage();
         await page.setViewport({ width: 1080, height: 1920 });
         
+        console.log('Setting content...');
         await page.setContent(htmlContent, { 
-            waitUntil: 'networkidle0',
+            waitUntil: ['networkidle0', 'load', 'domcontentloaded'],
             timeout: 30000
         });
 
-        // Wait for images
+        // Wait for images to load
+        console.log('Menunggu gambar加载...');
         await page.evaluate(async () => {
             const images = Array.from(document.images);
             await Promise.all(images.map(img => {
                 if (img.complete) return;
-                return new Promise((resolve) => {
+                return new Promise((resolve, reject) => {
                     img.onload = resolve;
-                    img.onerror = resolve;
+                    img.onerror = resolve; // Continue even if some images fail
                 });
             }));
         });
 
+        // Additional wait for stability
         await new Promise(resolve => setTimeout(resolve, 1000));
 
+        console.log('Taking screenshot...');
         const imageBuffer = await page.screenshot({ 
             type: 'png',
             fullPage: false
         });
 
+        console.log('Screenshot berhasil dibuat');
+
         return {
             statusCode: 200,
             headers: { 
                 'Content-Type': 'image/png',
-                'Cache-Control': 'public, max-age=300'
+                'Cache-Control': 'public, max-age=300' // Cache 5 menit
             },
             body: imageBuffer.toString('base64'),
             isBase64Encoded: true,
         };
 
     } catch (error) {
-        console.error("Error:", error);
+        console.error("Error dalam handler:", error);
         
         return {
             statusCode: 500,
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 error: 'Gagal membuat gambar story',
-                message: error.message
+                message: error.message,
+                details: process.env.NODE_ENV === 'development' ? error.stack : undefined
             })
         };
     } finally {
         if (browser) {
-            await browser.close().catch(console.error);
+            try {
+                await browser.close();
+                console.log('Browser closed');
+            } catch (closeError) {
+                console.error('Error closing browser:', closeError);
+            }
         }
     }
 };
