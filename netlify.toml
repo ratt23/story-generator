@@ -1,15 +1,21 @@
+# netlify.toml
+
 [build]
   publish = "public"
   functions = "netlify/functions"
 
+  [build.environment]
+  NEON_DATABASE_URL = "psql 'postgresql://neondb_owner:npg_xEhdgM95Bmon@ep-cool-thunder-adxeoa1r-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'"
+
 [functions]
+  external_node_modules = ["@sparticuz/chromium"]
   node_bundler = "esbuild"
 
-[[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
-  status = 200
+[functions."generate-story"]
+  timeout = 25
 
-# Increase timeout for functions
-[functions.generate-story]
-  timeout = 60
+  [functions."generate-story"]
+  # Baris ini memberitahu Netlify untuk menyertakan folder 'public'
+  # beserta semua isinya untuk fungsi ini.
+  included_files = ["public/**"]
+  timeout = 25

@@ -9,75 +9,59 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Poppins', sans-serif; margin: 0; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+        }
         #story-preview {
             font-family: 'Poppins', sans-serif;
-            width: 1080px; height: 1920px;
-            position: relative; overflow: hidden;
-            display: flex; flex-direction: column;
+            width: 1080px;
+            height: 1920px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
             padding: 64px;
             transform-origin: center;
             transition: transform 0.2s ease-in-out, background 0.3s, color 0.3s;
         }
-        .montserrat { font-family: 'Montserrat', sans-serif; }
-        #story-preview img { object-fit: cover; }
-        #story-preview .flex .items-center img.rounded-full { object-position: center 10%; }
-
-        /* Style untuk memastikan container foto selalu putih di semua tema */
-        #story-preview .bg-white { background-color: white !important; }
-        #story-preview .overflow-hidden img { background-color: white; }
-
-        /* Pattern dot untuk background putih */
-        .pattern-dots {
-            background-image: radial-gradient(circle, #94a3b8 1.5px, transparent 2px);
-            background-size: 25px 25px;
-            background-position: 0 0;
+        .montserrat {
+            font-family: 'Montserrat', sans-serif;
         }
-
-        /* Style untuk tanggal cuti - merah dan besar */
-        .cuti-date {
-            color: #dc2626 !important;
-            font-weight: bold;
+        #story-preview img {
+            object-fit: cover;
         }
-
-        #story-preview.theme-gradient-blue { 
-            background: linear-gradient(160deg, #192670, #4c9b32); color: white;
+        #story-preview .flex .items-center img.rounded-full {
+            object-position: center 10%;
         }
-        #story-preview.theme-gradient-purple { 
-            background: linear-gradient(160deg, #5a189a, #c1121f, #f77f00); color: white;
+        #story-preview.theme-gradient-blue {
+            background: linear-gradient(160deg, #192670, #4c9b32);
+            color: white;
         }
-        #story-preview.theme-gradient-orange { 
-            background: linear-gradient(160deg, #f7b267, #f79d65, #f4845f); color: white;
+        #story-preview.theme-gradient-purple {
+            background: linear-gradient(160deg, #5a189a, #c1121f, #f77f00);
+            color: white;
         }
-        
-        #story-preview.theme-solid-white { 
+        #story-preview.theme-gradient-orange {
+            background: linear-gradient(160deg, #f7b267, #f79d65, #f4845f);
+            color: white;
+        }
+        #story-preview.theme-solid-white {
             background-color: #ffffff;
-            background-image: 
-                radial-gradient(circle, #cbd5e1 1.5px, transparent 2px),
-                radial-gradient(circle at 0% 0%, rgba(203, 213, 225, 0.3) 0%, transparent 40%),
-                radial-gradient(circle at 100% 100%, rgba(203, 213, 225, 0.3) 0%, transparent 40%);
-            background-size: 
-                25px 25px,
+            background-image:
+                radial-gradient(circle, #E5E7EB 1px, transparent 1.5px),
+                radial-gradient(circle at 0% 0%, rgba(229, 231, 235, 0.5) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(229, 231, 235, 0.5) 0%, transparent 40%);
+            background-size:
+                20px 20px,
                 120% 120%,
                 120% 120%;
             color: #1e293b;
         }
-
-        /* Pattern dot khusus untuk tema putih */
-        #story-preview.theme-solid-white.pattern-dots {
-            background-image: 
-                radial-gradient(circle, #94a3b8 1.5px, transparent 2px),
-                radial-gradient(circle at 0% 0%, rgba(148, 163, 184, 0.2) 0%, transparent 40%),
-                radial-gradient(circle at 100% 100%, rgba(148, 163, 184, 0.2) 0%, transparent 40%);
-            background-size: 
-                30px 30px,
-                120% 120%,
-                120% 120%;
-        }
     </style>
 </head>
 <body>
-    <div id="story-preview" class="{{THEME_CLASS}} pattern-dots">
+    <div id="story-preview" class="{{THEME_CLASS}}">
         <div class="flex-shrink-0 flex justify-center items-center relative z-10">
             <img id="story-logo" src="{{LOGO_SRC}}" class="h-28" alt="Logo">
         </div>
