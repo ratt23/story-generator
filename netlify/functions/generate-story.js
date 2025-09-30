@@ -4,30 +4,15 @@ const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
 const path = require('path');
 
-// ▼▼▼ TAMBAHKAN URL DAN FUNGSI HELPER DI SINI ▼▼▼
 const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
 const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
-const LOCAL_WEBP_IMAGE_PATH = 'asset/webp/';
+const LOCAL_WEBP_IMAGE_PATH = 'asset/webp/'; // Path relatif di dalam folder 'public'
 
 async function fetchData(url) {
-    // Menggunakan fetch dari Node.js
     const response = await fetch(`${url}?t=${new Date().getTime()}`);
     if (!response.ok) throw new Error(`Network response error from ${url}`);
     return await response.json();
 }
-
-function formatFullDate(dateStr) {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return dateStr;
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1;
-    const year = parseInt(parts[2], 10);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
-    return `${day} ${months[month]} ${year}`;
-}
-// ▲▲▲ AKHIR DARI FUNGSI HELPER ▲▲▲
-
 
 exports.handler = async (event, context) => {
     const { doctors, theme, logo } = event.queryStringParameters;
@@ -38,18 +23,19 @@ exports.handler = async (event, context) => {
     
     const doctorIds = doctors.split(',');
     const selectedTheme = theme || 'gradient-blue';
-    const logoUrl = logo || `https://marcomtools.netlify.app/asset/logo/logo.png`; // Gunakan URL absolut
+    
+    // ▼▼▼ PERBAIKAN 1: Menggunakan path file lokal untuk logo ▼▼▼
+    // Jika parameter logo tidak ada, gunakan path file lokal, bukan URL.
+    const logoPath = logo || `file://${path.resolve(process.cwd(), 'public/asset/logo/logo.png')}`;
 
     let browser = null;
 
     try {
-        // ▼▼▼ LOGIKA PENGAMBILAN DATA SEKARANG DI SINI ▼▼▼
-        console.log('Fetching data from Google Sheets...');
+        // Ambil data dari Google Sheets
         const [jadwalData, cutiData] = await Promise.all([
             fetchData(GOOGLE_SCRIPT_JADWAL_URL),
             fetchData(GOOGLE_SCRIPT_CUTI_URL)
         ]);
-        console.log('Data fetched successfully.');
 
         const allDoctors = [];
         for (const key in jadwalData) {
@@ -58,6 +44,7 @@ exports.handler = async (event, context) => {
                 allDoctors.push({
                     nama: doc.name,
                     spesialis: jadwalData[key].title,
+                    // Path fotonya relatif terhadap folder 'public'
                     fotourl: imageName ? LOCAL_WEBP_IMAGE_PATH + encodeURIComponent(imageName) : 'https://placehold.co/200x200/ffffff/cccccc?text=Foto'
                 });
             });
@@ -72,16 +59,21 @@ exports.handler = async (event, context) => {
             const endDate = new Date(endDateParts[2], endDateParts[1]-1, endDateParts[0]);
             if (endDate < today) return null;
             const doctorDetails = allDoctors.find(d => d.nama.toLowerCase() === cuti.NamaDokter.toLowerCase());
+            
+            // ▼▼▼ PERBAIKAN 1: Menggunakan path file lokal untuk foto dokter ▼▼▼
+            const fotoPath = doctorDetails 
+                ? `file://${path.resolve(process.cwd(), 'public', doctorDetails.fotourl)}`
+                : 'https://placehold.co/200x200/ffffff/cccccc?text=Foto';
+
             return {
                 id: `doc-${index}`,
                 nama: cuti.NamaDokter,
                 cutiMulai: cuti.TanggalMulaiCuti,
                 cutiSelesai: cuti.TanggalSelesaiCuti,
                 spesialis: doctorDetails ? doctorDetails.spesialis : 'Spesialis tidak ditemukan',
-                fotourl: doctorDetails ? `https://marcomtools.netlify.app/${doctorDetails.fotourl}` : 'https://placehold.co/200x200/ffffff/cccccc?text=Foto'
+                fotourl: fotoPath
             };
         }).filter(Boolean);
-        // ▲▲▲ AKHIR DARI LOGIKA DATA ▲▲▲
 
         // Luncurkan Puppeteer
         browser = await puppeteer.launch({
@@ -93,27 +85,24 @@ exports.handler = async (event, context) => {
 
         const page = await browser.newPage();
         const htmlPath = path.resolve(process.cwd(), 'public/index.html');
-        await page.goto(`file://${htmlPath}`);
+        // Kita gunakan networkidle2 agar halaman dasar siap
+        await page.goto(`file://${htmlPath}`, { waitUntil: 'networkidle2' });
 
-        // ▼▼▼ SUNTIKKAN DATA YANG SUDAH JADI KE HALAMAN ▼▼▼
-        console.log('Injecting data into the page...');
+        // Suntikkan data ke halaman
         await page.evaluate((ids, theme, urlLogo, allData) => {
-            // Definisikan ulang combinedData di dalam browser dengan data dari server
             window.combinedData = allData;
-            
-            // Panggil fungsi global yang sudah ada di index.html
             updateBackground(theme);
             updateStoryPreview(ids);
-            
-            // Atur logo secara manual
             document.getElementById('story-logo').src = urlLogo;
+        }, doctorIds, selectedTheme, logoPath, combinedData);
 
-        }, doctorIds, selectedTheme, logoUrl, combinedData); // Kirim 'combinedData' ke browser
-        console.log('Data injected.');
+        // ▼▼▼ PERBAIKAN 2: Tunggu sampai semua aktivitas jaringan selesai ▼▼▼
+        // Ganti waitForTimeout dengan waitForNetworkIdle
+        console.log('Waiting for images to load...');
+        await page.waitForNetworkIdle({ idleTime: 500, timeout: 10000 });
+        console.log('Images loaded, taking screenshot.');
 
         const previewElement = await page.$('#story-preview');
-        await page.waitForTimeout(1000); // Beri waktu 1 detik untuk gambar me-render
-
         const imageBuffer = await previewElement.screenshot({ type: 'png' });
 
         return {
