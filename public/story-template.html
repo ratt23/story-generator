@@ -9,44 +9,31 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            margin: 0;
-        }
+        body { font-family: 'Poppins', sans-serif; margin: 0; }
         #story-preview {
             font-family: 'Poppins', sans-serif;
-            width: 1080px;
-            height: 1920px;
-            position: relative;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
+            width: 1080px; height: 1920px;
+            position: relative; overflow: hidden;
+            display: flex; flex-direction: column;
             padding: 64px;
             transform-origin: center;
             transition: transform 0.2s ease-in-out, background 0.3s, color 0.3s;
         }
-        .montserrat {
-            font-family: 'Montserrat', sans-serif;
+        .montserrat { font-family: 'Montserrat', sans-serif; }
+        #story-preview img { object-fit: cover; }
+        #story-preview .flex .items-center img.rounded-full { object-position: center 10%; }
+
+        #story-preview.theme-gradient-blue { 
+            background: linear-gradient(160deg, #192670, #4c9b32); color: white;
         }
-        #story-preview img {
-            object-fit: cover;
+        #story-preview.theme-gradient-purple { 
+            background: linear-gradient(160deg, #5a189a, #c1121f, #f77f00); color: white;
         }
-        #story-preview .flex .items-center img.rounded-full {
-            object-position: center 10%;
+        #story-preview.theme-gradient-orange { 
+            background: linear-gradient(160deg, #f7b267, #f79d65, #f4845f); color: white;
         }
-        #story-preview.theme-gradient-blue {
-            background: linear-gradient(160deg, #192670, #4c9b32);
-            color: white;
-        }
-        #story-preview.theme-gradient-purple {
-            background: linear-gradient(160deg, #5a189a, #c1121f, #f77f00);
-            color: white;
-        }
-        #story-preview.theme-gradient-orange {
-            background: linear-gradient(160deg, #f7b267, #f79d65, #f4845f);
-            color: white;
-        }
-        #story-preview.theme-solid-white {
+        
+        #story-preview.theme-solid-white { 
             background-color: #ffffff;
             background-image:
                 radial-gradient(circle, #E5E7EB 1px, transparent 1.5px),

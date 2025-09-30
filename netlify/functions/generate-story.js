@@ -2,7 +2,7 @@
 
 const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 const https = require('https');
 
@@ -18,196 +18,399 @@ let lastCacheTime = 0;
 
 // --- FUNGSI HELPER ---
 function fetchData(url, redirectCount = 0) {
-    if (redirectCount > 5) return Promise.reject(new Error('Terlalu banyak redirect.'));
+    if (redirectCount > 5) {
+        return Promise.reject(new Error('Terlalu banyak redirect.'));
+    }
+    
     return new Promise((resolve, reject) => {
         const req = https.get(url, (res) => {
             if (res.statusCode === 301 || res.statusCode === 302) {
-                return resolve(fetchData(res.headers.location, redirectCount + 1));
+                const redirectUrl = new URL(res.headers.location, url).href;
+                return resolve(fetchData(redirectUrl, redirectCount + 1));
             }
+            
             if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error(`StatusCode=${res.statusCode}`));
+                return reject(new Error(`HTTP ${res.statusCode} untuk ${url}`));
             }
+            
             let body = '';
             res.on('data', (chunk) => { body += chunk; });
-            res.on('end', () => resolve(JSON.parse(body)));
+            res.on('end', () => {
+                try {
+                    resolve(JSON.parse(body));
+                } catch (parseError) {
+                    reject(new Error(`Gagal parsing JSON: ${parseError.message}`));
+                }
+            });
         });
+        
         req.on('error', (err) => reject(err));
-        req.setTimeout(10000, () => {
+        req.setTimeout(15000, () => {
             req.destroy();
-            reject(new Error('Request timed out'));
+            reject(new Error('Request timed out setelah 15 detik'));
         });
     });
 }
 
-function imageToBase64(filePath) {
+async function imageToBase64(filePath) {
     try {
+        // Handle external URLs
+        if (filePath.startsWith('http')) {
+            return filePath;
+        }
+
         const absolutePath = path.resolve(process.cwd(), filePath);
-        if (!fs.existsSync(absolutePath)) {
-            console.warn(`File gambar tidak ditemukan di: ${absolutePath}`);
+        
+        try {
+            await fs.access(absolutePath);
+        } catch {
+            console.warn(`File gambar tidak ditemukan: ${absolutePath}`);
             return 'https://placehold.co/200x200/e2e8f0/475569?text=NotFound';
         }
-        const imageBuffer = fs.readFileSync(absolutePath);
-        const extension = path.extname(filePath).slice(1);
-        return `data:image/${extension};base64,${imageBuffer.toString('base64')}`;
+
+        const imageBuffer = await fs.readFile(absolutePath);
+        const extension = path.extname(filePath).toLowerCase().slice(1);
+        const mimeTypes = {
+            'png': 'image/png',
+            'jpg': 'image/jpeg',
+            'jpeg': 'image/jpeg',
+            'webp': 'image/webp',
+            'gif': 'image/gif',
+            'svg': 'image/svg+xml'
+        };
+        
+        const mimeType = mimeTypes[extension] || `image/${extension}`;
+        return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
     } catch (error) {
         console.error(`Gagal membaca file gambar: ${filePath}`, error);
         return 'https://placehold.co/200x200/e2e8f0/475569?text=Error';
     }
 }
 
+function normalizeName(name) {
+    return name.toLowerCase().trim().replace(/\s+/g, ' ');
+}
+
+function parseDate(dateStr) {
+    if (!dateStr) return null;
+    
+    // Format: DD-MM-YYYY
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return null;
+    
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const year = parseInt(parts[2], 10);
+    
+    if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+    
+    return new Date(year, month, day);
+}
+
 async function getCombinedDoctorData() {
     const now = Date.now();
-    if (cachedData && (now - lastCacheTime < CACHE_DURATION_MS)) return cachedData;
-    const [jadwalData, cutiData] = await Promise.all([
-        fetchData(GOOGLE_SCRIPT_JADWAL_URL),
-        fetchData(GOOGLE_SCRIPT_CUTI_URL)
-    ]);
-    if (!jadwalData || !cutiData) throw new Error("Gagal mengambil data Google Sheets.");
-    const allDoctors = [];
-    for (const key in jadwalData) {
-        jadwalData[key].doctors.forEach(doc => {
-            const imageName = doc.image_webp ? doc.image_webp.split(/[\\/]/).pop() : '';
-            allDoctors.push({
-                nama: doc.name,
-                spesialis: jadwalData[key].title,
-                fotourl: imageName ? path.join(LOCAL_WEBP_IMAGE_PATH, imageName) : ''
-            });
-        });
+    if (cachedData && (now - lastCacheTime < CACHE_DURATION_MS)) {
+        console.log('Menggunakan data cache');
+        return cachedData;
     }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const combinedData = cutiData.map((cuti, index) => {
-        const endDateParts = cuti.TanggalSelesaiCuti.split('-');
-        if (endDateParts.length !== 3) return null;
-        const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
-        if (endDate < today) return null;
-        const doctorDetails = allDoctors.find(d => d.nama.toLowerCase() === cuti.NamaDokter.toLowerCase());
-        return {
-            id: `doc-${index}`,
-            nama: cuti.NamaDokter,
-            cutiMulai: cuti.TanggalMulaiCuti,
-            cutiSelesai: cuti.TanggalSelesaiCuti,
-            spesialis: doctorDetails ? doctorDetails.spesialis : 'Spesialis tidak ditemukan',
-            fotourl: doctorDetails?.fotourl || ''
+
+    console.log('Mengambil data terbaru dari Google Sheets...');
+    
+    try {
+        const [jadwalData, cutiData] = await Promise.all([
+            fetchData(GOOGLE_SCRIPT_JADWAL_URL),
+            fetchData(GOOGLE_SCRIPT_CUTI_URL)
+        ]);
+
+        if (!jadwalData || !cutiData) {
+            throw new Error("Gagal mengambil data dari Google Sheets.");
+        }
+
+        // Build doctor map for faster lookup
+        const doctorMap = new Map();
+        for (const key in jadwalData) {
+            if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
+                jadwalData[key].doctors.forEach(doc => {
+                    if (doc && doc.name) {
+                        const imageName = doc.image_webp ? 
+                            path.basename(doc.image_webp) : '';
+                        const imagePath = imageName ? 
+                            path.join(LOCAL_WEBP_IMAGE_PATH, imageName) : '';
+                        
+                        doctorMap.set(normalizeName(doc.name), {
+                            nama: doc.name,
+                            spesialis: jadwalData[key].title || 'Spesialis tidak diketahui',
+                            fotourl: imagePath
+                        });
+                    }
+                });
+            }
+        }
+
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const combinedData = cutiData
+            .filter(cuti => cuti && cuti.NamaDokter && cuti.TanggalSelesaiCuti)
+            .map((cuti, index) => {
+                const endDate = parseDate(cuti.TanggalSelesaiCuti);
+                if (!endDate || endDate < today) return null;
+
+                const doctorDetails = doctorMap.get(normalizeName(cuti.NamaDokter));
+                
+                return {
+                    id: `doc-${index}`,
+                    nama: cuti.NamaDokter,
+                    cutiMulai: cuti.TanggalMulaiCuti,
+                    cutiSelesai: cuti.TanggalSelesaiCuti,
+                    spesialis: doctorDetails ? doctorDetails.spesialis : 'Spesialis tidak ditemukan',
+                    fotourl: doctorDetails?.fotourl || ''
+                };
+            })
+            .filter(Boolean);
+
+        cachedData = combinedData;
+        lastCacheTime = now;
+        
+        console.log(`Berhasil memuat data ${combinedData.length} dokter`);
+        return combinedData;
+
+    } catch (error) {
+        console.error('Error dalam getCombinedDoctorData:', error);
+        // Return cached data even if stale as fallback
+        if (cachedData) {
+            console.log('Menggunakan data cache lama karena error');
+            return cachedData;
+        }
+        throw error;
+    }
+}
+
+function formatFullDate(dateStr) {
+    if (!dateStr) return 'Tanggal tidak tersedia';
+    
+    const date = parseDate(dateStr);
+    if (!date) return 'Format tanggal invalid';
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const year = date.getFullYear();
+
+    return `${day} ${month} ${year}`;
+}
+
+function generateDoctorHTML(doctors, theme) {
+    const isLightTheme = theme === 'solid-white';
+    const numDoctors = doctors.length;
+
+    // Determine styling based on number of doctors
+    let styles;
+    if (numDoctors > 4) { // 5+ dokter
+        styles = {
+            container: "w-full flex flex-col items-center justify-center flex-grow space-y-4 px-8",
+            item: isLightTheme 
+                ? "flex items-center w-full bg-slate-100 rounded-2xl p-4 shadow-lg border border-slate-200" 
+                : "flex items-center w-full bg-white/20 rounded-2xl p-4 shadow-lg",
+            photo: "w-32 h-32 rounded-full object-cover border-4 flex-shrink-0",
+            textContainer: "ml-4 text-left",
+            name: "text-3xl font-bold",
+            specialty: "text-xl",
+            date: "text-xl mt-2"
         };
-    }).filter(Boolean);
-    cachedData = combinedData;
-    lastCacheTime = now;
-    return combinedData;
+    } else if (numDoctors > 2) { // 3-4 dokter
+        styles = {
+            container: "w-full flex flex-col items-center justify-center flex-grow space-y-6 px-10",
+            item: isLightTheme 
+                ? "flex items-center w-full bg-slate-100 rounded-3xl p-6 shadow-lg border border-slate-200" 
+                : "flex items-center w-full bg-white/20 rounded-3xl p-6 shadow-lg",
+            photo: "w-40 h-40 rounded-full object-cover border-8 flex-shrink-0",
+            textContainer: "ml-6 text-left",
+            name: "text-4xl font-bold",
+            specialty: "text-2xl",
+            date: "text-2xl mt-3"
+        };
+    } else { // 1-2 dokter
+        styles = {
+            container: "w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12",
+            item: isLightTheme
+                ? "flex items-center w-full bg-slate-100 rounded-3xl p-8 shadow-lg border border-slate-200"
+                : "flex items-center w-full bg-white/20 rounded-3xl p-8 shadow-lg",
+            photo: "w-48 h-48 rounded-full object-cover border-8 flex-shrink-0",
+            textContainer: "ml-8 text-left",
+            name: "text-5xl font-bold",
+            specialty: "text-3xl",
+            date: "text-3xl mt-4"
+        };
+    }
+
+    // Apply theme-specific styles
+    if (isLightTheme) {
+        styles.photo += " border-white shadow-md";
+        styles.name += " text-slate-800";
+        styles.specialty += " text-slate-600";
+        styles.date += " text-slate-600";
+    } else {
+        styles.photo += " border-white";
+        styles.specialty += " opacity-90";
+    }
+
+    const doctorsHTML = doctors.map(doctor => {
+        const leaveDatesText = (doctor.cutiMulai === doctor.cutiSelesai) 
+            ? formatFullDate(doctor.cutiMulai) 
+            : `${formatFullDate(doctor.cutiMulai)} - ${formatFullDate(doctor.cutiSelesai)}`;
+
+        return `
+            <div class="${styles.item}">
+                <img src="${doctor.fotourl}" class="${styles.photo}" alt="Foto ${doctor.nama}" onerror="this.src='https://placehold.co/200x200/e2e8f0/475569?text=Photo+Error'">
+                <div class="${styles.textContainer}">
+                    <h3 class="${styles.name}">${doctor.nama}</h3>
+                    <p class="${styles.specialty}">${doctor.spesialis}</p>
+                    <p class="${styles.date}">Tidak praktek: <strong class="font-semibold">${leaveDatesText}</strong></p>
+                </div>
+            </div>`;
+    }).join('');
+
+    return `<div class="${styles.container}">${doctorsHTML}</div>`;
 }
 
 // --- FUNGSI UTAMA (HANDLER) ---
 exports.handler = async (event) => {
-    const { doctors, theme } = event.queryStringParameters;
-    if (!doctors) return { statusCode: 400, body: 'Error: Anda perlu memasukkan ID dokter.' };
+    console.log('Function generate-story dipanggil');
     
+    const { doctors, theme, logo } = event.queryStringParameters;
+    
+    if (!doctors) {
+        return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'Parameter doctors diperlukan' })
+        };
+    }
+
     const doctorIds = doctors.split(',');
     const selectedTheme = theme || 'gradient-blue';
+    const customLogo = logo || 'public/asset/logo/logo.png';
+    
     let browser = null;
 
     try {
+        // Validasi parameter
+        const validThemes = ['gradient-blue', 'gradient-purple', 'gradient-orange', 'solid-white'];
+        if (!validThemes.includes(selectedTheme)) {
+            return {
+                statusCode: 400,
+                body: JSON.stringify({ error: 'Tema tidak valid' })
+            };
+        }
+
         const allDoctorData = await getCombinedDoctorData();
-        const selectedDoctors = doctorIds.map(id => allDoctorData.find(d => d.id === id)).filter(Boolean);
-        if (selectedDoctors.length === 0) return { statusCode: 404, body: 'Error: Dokter tidak ditemukan.' };
+        const selectedDoctors = doctorIds
+            .map(id => allDoctorData.find(d => d.id === id))
+            .filter(Boolean);
 
-        const lightThemes = ['solid-white'];
-        const isLightTheme = lightThemes.includes(selectedTheme);
-        const numDoctors = selectedDoctors.length;
-        
-        let containerClass, itemClass, photoClass, textContainerClass, nameClass, specialtyClass, dateClass;
-
-        if (numDoctors > 4) { // 5+ dokter
-            containerClass = "w-full flex flex-col items-center justify-center flex-grow space-y-4 px-8";
-            photoClass = "w-32 h-32 rounded-full object-cover border-4 flex-shrink-0";
-            textContainerClass = "ml-4 text-left";
-            nameClass = "text-3xl font-bold";
-            specialtyClass = "text-xl";
-            dateClass = "text-xl mt-2";
-            itemClass = isLightTheme 
-                ? "flex items-center w-full bg-slate-100 rounded-2xl p-4 shadow-lg border border-slate-200" 
-                : "flex items-center w-full bg-white/20 rounded-2xl p-4 shadow-lg";
-        } else if (numDoctors > 2) { // 3-4 dokter
-            containerClass = "w-full flex flex-col items-center justify-center flex-grow space-y-6 px-10";
-            photoClass = "w-40 h-40 rounded-full object-cover border-8 flex-shrink-0";
-            textContainerClass = "ml-6 text-left";
-            nameClass = "text-4xl font-bold";
-            specialtyClass = "text-2xl";
-            dateClass = "text-2xl mt-3";
-            itemClass = isLightTheme 
-                ? "flex items-center w-full bg-slate-100 rounded-3xl p-6 shadow-lg border border-slate-200" 
-                : "flex items-center w-full bg-white/20 rounded-3xl p-6 shadow-lg";
-        } else { // 1-2 dokter
-            containerClass = "w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12";
-            photoClass = "w-48 h-48 rounded-full object-cover border-8 flex-shrink-0";
-            textContainerClass = "ml-8 text-left";
-            nameClass = "text-5xl font-bold";
-            specialtyClass = "text-3xl";
-            dateClass = "text-3xl mt-4";
-            itemClass = isLightTheme
-                ? "flex items-center w-full bg-slate-100 rounded-3xl p-8 shadow-lg border border-slate-200"
-                : "flex items-center w-full bg-white/20 rounded-3xl p-8 shadow-lg";
-        }
-        
-        if (isLightTheme) {
-            photoClass += " border-white shadow-md";
-            nameClass += " text-slate-800";
-            specialtyClass += " text-slate-600";
-            dateClass += " text-slate-600";
-        } else {
-            photoClass += " border-white";
-            specialtyClass += " opacity-90";
+        if (selectedDoctors.length === 0) {
+            return {
+                statusCode: 404,
+                body: JSON.stringify({ error: 'Tidak ada dokter yang ditemukan dengan ID tersebut' })
+            };
         }
 
-        const formatFullDate = (dateStr) => {
-            if (!dateStr) return '';
-            const [day, month, year] = dateStr.split('-');
-            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
-            return `${parseInt(day, 10)} ${months[parseInt(month, 10) - 1]} ${year}`;
-        };
+        console.log(`Memproses ${selectedDoctors.length} dokter:`, selectedDoctors.map(d => d.nama));
 
-        const doctorsHTML = selectedDoctors.map(doctor => {
-            const leaveDatesText = (doctor.cutiMulai === doctor.cutiSelesai) 
-                ? formatFullDate(doctor.cutiMulai) 
-                : `${formatFullDate(doctor.cutiMulai)} - ${formatFullDate(doctor.cutiSelesai)}`;
-            const photoSrc = doctor.fotourl ? imageToBase64(doctor.fotourl) : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
-            return `
-                <div class="${itemClass}">
-                    <img src="${photoSrc}" class="${photoClass}" alt="Foto ${doctor.nama}">
-                    <div class="${textContainerClass}">
-                        <h3 class="${nameClass}">${doctor.nama}</h3>
-                        <p class="${specialtyClass}">${doctor.spesialis}</p>
-                        <p class="${dateClass}">Tidak praktek: <strong class="font-semibold">${leaveDatesText}</strong></p>
-                    </div>
-                </div>`;
-        }).join('');
-        
-        const doctorListContainerHTML = `<div class="${containerClass}">${doctorsHTML}</div>`;
+        // Process images to base64
+        const doctorsWithProcessedImages = await Promise.all(
+            selectedDoctors.map(async (doctor) => {
+                const processedPhoto = await imageToBase64(doctor.fotourl);
+                return { ...doctor, fotourl: processedPhoto };
+            })
+        );
+
+        const doctorListContainerHTML = generateDoctorHTML(doctorsWithProcessedImages, selectedTheme);
+        const processedLogo = await imageToBase64(customLogo);
+
+        // Load and process template
         const templatePath = path.resolve(process.cwd(), 'public/story-template.html');
-        let htmlContent = fs.readFileSync(templatePath, 'utf8')
+        let htmlContent = await fs.readFile(templatePath, 'utf8');
+        
+        htmlContent = htmlContent
             .replace('{{THEME_CLASS}}', `theme-${selectedTheme}`)
-            .replace('{{LOGO_SRC}}', imageToBase64('public/asset/logo/logo.png'))
+            .replace('{{LOGO_SRC}}', processedLogo)
             .replace('{{DOCTOR_LIST_HTML}}', doctorListContainerHTML);
 
-        browser = await puppeteer.launch({
+        // Launch browser and generate screenshot
+        const browserOptions = {
             args: chromium.args,
             defaultViewport: { width: 1080, height: 1920 },
             executablePath: await chromium.executablePath(),
-            headless: chromium.headless,
-        });
+            headless: true,
+        };
+
+        console.log('Launching browser...');
+        browser = await puppeteer.launch(browserOptions);
+        
         const page = await browser.newPage();
-        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-        const imageBuffer = await page.screenshot({ type: 'png' });
+        await page.setViewport({ width: 1080, height: 1920 });
+        
+        console.log('Setting content...');
+        await page.setContent(htmlContent, { 
+            waitUntil: ['networkidle0', 'load', 'domcontentloaded'],
+            timeout: 30000
+        });
+
+        // Wait for images to load
+        console.log('Menunggu gambar加载...');
+        await page.evaluate(async () => {
+            const images = Array.from(document.images);
+            await Promise.all(images.map(img => {
+                if (img.complete) return;
+                return new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = resolve; // Continue even if some images fail
+                });
+            }));
+        });
+
+        // Additional wait for stability
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        console.log('Taking screenshot...');
+        const imageBuffer = await page.screenshot({ 
+            type: 'png',
+            fullPage: false
+        });
+
+        console.log('Screenshot berhasil dibuat');
 
         return {
             statusCode: 200,
-            headers: { 'Content-Type': 'image/png' },
+            headers: { 
+                'Content-Type': 'image/png',
+                'Cache-Control': 'public, max-age=300' // Cache 5 menit
+            },
             body: imageBuffer.toString('base64'),
             isBase64Encoded: true,
         };
+
     } catch (error) {
         console.error("Error dalam handler:", error);
-        return { statusCode: 500, body: JSON.stringify({ error: 'Oops, gagal membuat gambar.', details: error.message })};
+        
+        return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                error: 'Gagal membuat gambar story',
+                message: error.message,
+                details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            })
+        };
     } finally {
-        if (browser) await browser.close();
+        if (browser) {
+            try {
+                await browser.close();
+                console.log('Browser closed');
+            } catch (closeError) {
+                console.error('Error closing browser:', closeError);
+            }
+        }
     }
 };
