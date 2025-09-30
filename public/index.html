@@ -46,6 +46,20 @@
         #story-preview .flex .items-center img.rounded-full {
             object-position: center 10%;
         }
+
+        /* Pattern dot untuk background putih */
+        .pattern-dots {
+            background-image: radial-gradient(circle, #94a3b8 1.5px, transparent 2px);
+            background-size: 25px 25px;
+            background-position: 0 0;
+        }
+
+        /* Style untuk tanggal cuti - merah dan besar */
+        .cuti-date {
+            color: #dc2626 !important;
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
     </style>
 </head>
 <body class="bg-slate-100 flex flex-col md:flex-row md:h-screen md:overflow-hidden">
@@ -76,7 +90,7 @@
                     <option value="gradient-blue" selected>Biru & Hijau (Default)</option>
                     <option value="gradient-purple">Ungu & Pink</option>
                     <option value="gradient-orange">Oranye & Kuning</option>
-                    <option value="solid-white">Putih Solid</option>
+                    <option value="solid-white">Putih dengan Pattern Dot</option>
                 </select>
             </div>
             <div class="pt-4">
@@ -93,7 +107,7 @@
 
     <div class="flex-grow bg-slate-100 flex items-center justify-center py-10 md:p-4">
         <div id="preview-container" class="w-full h-full flex items-center justify-center">
-            <div id="story-preview" class="flex flex-col p-16 shadow-2xl">
+            <div id="story-preview" class="flex flex-col p-16 shadow-2xl pattern-dots">
                 <div class="flex-shrink-0 flex justify-center items-center relative z-10">
                     <img id="story-logo" src="asset/logo/logo.png" class="h-28" alt="Logo">
                 </div>
@@ -169,7 +183,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="ml-4 text-left">
                         <h3 class="text-2xl font-bold">${doctor.nama}</h3>
                         <p class="text-lg opacity-90">${doctor.spesialis}</p>
-                        <p class="text-lg mt-1"><strong class="font-semibold">${leaveDatesText}</strong></p>
+                        <p class="cuti-date text-xl mt-1"><strong class="font-semibold">${leaveDatesText}</strong></p>
                     </div>
                 </div>`;
         });
@@ -198,22 +212,25 @@ document.addEventListener('DOMContentLoaded', () => {
         switch(theme) {
             case 'gradient-purple':
                 storyPreview.style.background = 'linear-gradient(160deg, #5a189a, #c1121f, #f77f00)';
+                storyPreview.classList.remove('pattern-dots');
                 break;
             case 'gradient-orange':
                 storyPreview.style.background = 'linear-gradient(160deg, #f7b267, #f79d65, #f4845f)';
+                storyPreview.classList.remove('pattern-dots');
                 break;
             case 'solid-white':
                 storyPreview.style.background = '#ffffff';
-                storyPreview.style.backgroundImage = `
-                    radial-gradient(circle, #E5E7EB 1px, transparent 1.5px),
-                    radial-gradient(circle at 0% 0%, rgba(229, 231, 235, 0.5) 0%, transparent 40%),
-                    radial-gradient(circle at 100% 100%, rgba(229, 231, 235, 0.5) 0%, transparent 40%)
-                `;
-                storyPreview.style.backgroundSize = '20px 20px, 120% 120%, 120% 120%';
+                storyPreview.style.backgroundImage = 
+                    'radial-gradient(circle, #94a3b8 1.5px, transparent 2px), ' +
+                    'radial-gradient(circle at 0% 0%, rgba(148, 163, 184, 0.2) 0%, transparent 40%), ' +
+                    'radial-gradient(circle at 100% 100%, rgba(148, 163, 184, 0.2) 0%, transparent 40%)';
+                storyPreview.style.backgroundSize = '30px 30px, 120% 120%, 120% 120%';
                 storyPreview.style.color = '#1e293b';
+                storyPreview.classList.add('pattern-dots');
                 break;
             default:
                 storyPreview.style.background = 'linear-gradient(160deg, #192670, #4c9b32)';
+                storyPreview.classList.remove('pattern-dots');
                 break;
         }
         updateDoctorPreview();

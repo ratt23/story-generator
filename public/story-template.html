@@ -27,6 +27,19 @@
         #story-preview .bg-white { background-color: white !important; }
         #story-preview .overflow-hidden img { background-color: white; }
 
+        /* Pattern dot untuk background putih */
+        .pattern-dots {
+            background-image: radial-gradient(circle, #94a3b8 1.5px, transparent 2px);
+            background-size: 25px 25px;
+            background-position: 0 0;
+        }
+
+        /* Style untuk tanggal cuti - merah dan besar */
+        .cuti-date {
+            color: #dc2626 !important;
+            font-weight: bold;
+        }
+
         #story-preview.theme-gradient-blue { 
             background: linear-gradient(160deg, #192670, #4c9b32); color: white;
         }
@@ -39,20 +52,32 @@
         
         #story-preview.theme-solid-white { 
             background-color: #ffffff;
-            background-image:
-                radial-gradient(circle, #E5E7EB 1px, transparent 1.5px),
-                radial-gradient(circle at 0% 0%, rgba(229, 231, 235, 0.5) 0%, transparent 40%),
-                radial-gradient(circle at 100% 100%, rgba(229, 231, 235, 0.5) 0%, transparent 40%);
-            background-size:
-                20px 20px,
+            background-image: 
+                radial-gradient(circle, #cbd5e1 1.5px, transparent 2px),
+                radial-gradient(circle at 0% 0%, rgba(203, 213, 225, 0.3) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(203, 213, 225, 0.3) 0%, transparent 40%);
+            background-size: 
+                25px 25px,
                 120% 120%,
                 120% 120%;
             color: #1e293b;
         }
+
+        /* Pattern dot khusus untuk tema putih */
+        #story-preview.theme-solid-white.pattern-dots {
+            background-image: 
+                radial-gradient(circle, #94a3b8 1.5px, transparent 2px),
+                radial-gradient(circle at 0% 0%, rgba(148, 163, 184, 0.2) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(148, 163, 184, 0.2) 0%, transparent 40%);
+            background-size: 
+                30px 30px,
+                120% 120%,
+                120% 120%;
+        }
     </style>
 </head>
 <body>
-    <div id="story-preview" class="{{THEME_CLASS}}">
+    <div id="story-preview" class="{{THEME_CLASS}} pattern-dots">
         <div class="flex-shrink-0 flex justify-center items-center relative z-10">
             <img id="story-logo" src="{{LOGO_SRC}}" class="h-28" alt="Logo">
         </div>
