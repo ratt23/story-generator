@@ -19,16 +19,33 @@ let lastCacheTime = 0;
 // --- FUNGSI HELPER ---
 
 // Helper untuk fetch data dengan timeout
-function fetchData(url) {
+// Helper untuk fetch data dengan timeout dan penanganan redirect
+function fetchData(url, redirectCount = 0) {
+    // Batasi jumlah redirect untuk menghindari loop tak terbatas
+    if (redirectCount > 5) {
+        return Promise.reject(new Error('Terlalu banyak redirect.'));
+    }
+
     return new Promise((resolve, reject) => {
         const req = https.get(url, (res) => {
+            // Jika status code adalah 301 (Moved Permanently) atau 302 (Found)
+            if (res.statusCode === 301 || res.statusCode === 302) {
+                console.log(`Mengikuti redirect ke: ${res.headers.location}`);
+                // Panggil lagi fungsi ini dengan URL baru dari header 'location'
+                return resolve(fetchData(res.headers.location, redirectCount + 1));
+            }
+
+            // Jika status code bukan 2xx (bukan sukses)
             if (res.statusCode < 200 || res.statusCode >= 300) {
                 return reject(new Error(`StatusCode=${res.statusCode}`));
             }
+            
+            // Jika sukses, kumpulkan data seperti biasa
             let body = '';
             res.on('data', (chunk) => { body += chunk; });
             res.on('end', () => resolve(JSON.parse(body)));
         });
+
         req.on('error', (err) => reject(err));
         req.setTimeout(10000, () => { // Timeout 10 detik
             req.destroy();
@@ -36,7 +53,6 @@ function fetchData(url) {
         });
     });
 }
-
 
 // Mengubah gambar lokal menjadi Base64
 function imageToBase64(filePath) {
