@@ -9,7 +9,9 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Poppins', sans-serif; }
+        body { 
+            font-family: 'Poppins', sans-serif; 
+        }
         #story-preview {
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(160deg, #192670, #4c9b32);
@@ -19,6 +21,8 @@
             transform-origin: top left;
             position: relative;
             overflow: hidden;
+            /* Tambahkan transisi untuk efek scaling yang lebih mulus */
+            transition: transform 0.2s ease-in-out;
         }
         .montserrat { font-family: 'Montserrat', sans-serif; }
         #doctor-checkbox-list::-webkit-scrollbar { width: 8px; }
@@ -36,31 +40,31 @@
         }
     </style>
 </head>
-<body class="bg-gray-100 flex flex-col md:flex-row h-screen overflow-hidden">
+<body class="bg-slate-100 flex flex-col md:flex-row md:h-screen md:overflow-hidden">
 
-    <div class="w-full md:w-1/3 lg:w-1/4 bg-white p-6 shadow-lg overflow-y-auto">
+    <div class="w-full md:w-1/3 lg:w-1/4 bg-white p-6 shadow-lg md:overflow-y-auto flex-shrink-0 border-b md:border-b-0 md:border-r border-slate-200">
         <div class="mb-6">
-            <h1 class="text-2xl font-bold text-gray-800">Desain Story Cuti</h1>
-            <p class="text-gray-500">Gunakan panel ini untuk membuat gambar jadwal cuti.</p>
+            <h1 class="text-2xl font-bold text-slate-800">Desain Story Cuti</h1>
+            <p class="text-slate-500">Gunakan panel ini untuk membuat gambar jadwal cuti.</p>
         </div>
         
         <div id="loading-state" class="text-center py-8">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-            <p class="mt-4 text-gray-600">Memuat data dari Google Sheets...</p>
+            <p class="mt-4 text-slate-600">Memuat data dari Google Sheets...</p>
         </div>
 
         <div id="controls" class="hidden space-y-6">
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Dokter Cuti</label>
-                <div id="doctor-checkbox-list" class="w-full p-3 border border-gray-300 rounded-lg max-h-60 overflow-y-auto space-y-2"></div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Pilih Dokter Cuti</label>
+                <div id="doctor-checkbox-list" class="w-full p-3 border border-slate-300 rounded-lg max-h-60 overflow-y-auto space-y-2"></div>
             </div>
             <div>
-                <label for="logo-url" class="block text-sm font-medium text-gray-700 mb-1">URL Logo (Opsional)</label>
-                <input type="text" id="logo-url" placeholder="Biarkan kosong untuk logo default" class="w-full p-3 border border-gray-300 rounded-lg">
+                <label for="logo-url" class="block text-sm font-medium text-slate-700 mb-1">URL Logo (Opsional)</label>
+                <input type="text" id="logo-url" placeholder="Biarkan kosong untuk logo default" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
             </div>
             <div>
-                <label for="background-select" class="block text-sm font-medium text-gray-700 mb-1">Pilih Tema Background</label>
-                <select id="background-select" class="w-full p-3 border border-gray-300 rounded-lg">
+                <label for="background-select" class="block text-sm font-medium text-slate-700 mb-1">Pilih Tema Background</label>
+                <select id="background-select" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
                     <option value="gradient-blue" selected>Biru & Hijau (Default)</option>
                     <option value="gradient-purple">Ungu & Pink</option>
                     <option value="gradient-orange">Oranye & Kuning</option>
@@ -68,7 +72,7 @@
                 </select>
             </div>
             <div class="pt-4">
-                <button id="download-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                <button id="download-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors">
                     <span id="button-text">Pilih Dokter Dahulu</span>
                 </button>
             </div>
@@ -79,9 +83,9 @@
         </div>
     </div>
 
-    <div class="flex-grow bg-gray-100 flex items-center justify-center p-4 overflow-hidden">
-        <div id="preview-container" class="w-full h-full">
-            <div id="story-preview" class="flex flex-col p-16">
+    <div class="flex-grow bg-slate-100 flex items-center justify-center py-10 md:p-4">
+        <div id="preview-container" class="w-full h-full flex items-center justify-center">
+            <div id="story-preview" class="flex flex-col p-16 shadow-2xl">
                 <div id="dot-pattern-overlay" class="absolute inset-0 hidden"></div>
                 <div class="flex-shrink-0 flex justify-center items-center relative z-10">
                     <img id="story-logo" src="asset/logo/logo.png" class="h-28" alt="Logo">
@@ -106,11 +110,9 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // --- URL & KONFIGURASI ---
+    // URL & ELEMEN DOM (Tidak berubah)
     const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
     const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
-    
-    // --- ELEMEN DOM ---
     const controls = document.getElementById('controls');
     const loadingState = document.getElementById('loading-state');
     const errorState = document.getElementById('error-state');
@@ -121,7 +123,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const backgroundSelect = document.getElementById('background-select');
     const storyLogo = document.getElementById('story-logo');
 
-    // --- FUNGSI ---
+    // --- Perubahan 3: Logika resize preview dibuat lebih pintar ---
+    function resizePreview() {
+        const previewContainer = document.getElementById('preview-container');
+        const storyPreview = document.getElementById('story-preview');
+        if (!previewContainer || !storyPreview) return;
+        
+        const previewWidth = storyPreview.offsetWidth;
+        const previewHeight = storyPreview.offsetHeight;
+
+        let scale;
+
+        // Logika untuk DESKTOP (md breakpoint: 768px)
+        if (window.innerWidth >= 768) {
+            // Menyesuaikan preview agar pas di dalam kontainer tanpa terpotong
+            scale = Math.min(
+                previewContainer.clientWidth / previewWidth,
+                previewContainer.clientHeight / previewHeight
+            );
+        } else {
+            // Logika untuk MOBILE
+            // Menyesuaikan preview agar lebarnya pas dengan lebar kontainer
+            scale = previewContainer.clientWidth / previewWidth;
+        }
+
+        // Beri sedikit margin visual agar tidak terlalu mepet
+        storyPreview.style.transform = `scale(${scale * 0.92})`;
+        // Posisikan di tengah untuk tampilan mobile
+        storyPreview.style.transformOrigin = 'top center';
+    }
+
+
     function getSelectedDoctorIds() {
         return Array.from(document.querySelectorAll('#doctor-checkbox-list input:checked')).map(cb => cb.value);
     }
@@ -130,7 +162,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const selectedIds = getSelectedDoctorIds();
         if (selectedIds.length > 0) {
             downloadButton.disabled = false;
-            buttonText.textContent = `Generate & Download Story (${selectedIds.length})`;
+            buttonText.textContent = `Generate & Download (${selectedIds.length} Dokter)`;
         } else {
             downloadButton.disabled = true;
             buttonText.textContent = 'Pilih Dokter Dahulu';
@@ -141,17 +173,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const storyPreview = document.getElementById('story-preview');
         const dotPatternOverlay = document.getElementById('dot-pattern-overlay');
         storyPreview.style.background = '';
-        storyPreview.style.color = 'white';
+        storyPreview.style.color = 'white'; // default
         dotPatternOverlay.classList.add('hidden');
+
         switch(theme) {
-            case 'gradient-purple': storyPreview.style.background = 'linear-gradient(160deg, #5a189a, #c1121f, #f77f00)'; break;
-            case 'gradient-orange': storyPreview.style.background = 'linear-gradient(160deg, #f7b267, #f79d65, #f4845f)'; break;
+            case 'gradient-purple': 
+                storyPreview.style.background = 'linear-gradient(160deg, #5a189a, #c1121f, #f77f00)'; 
+                break;
+            case 'gradient-orange': 
+                storyPreview.style.background = 'linear-gradient(160deg, #f7b267, #f79d65, #f4845f)'; 
+                break;
             case 'solid-white': 
                 storyPreview.style.background = 'white'; 
-                storyPreview.style.color = '#374151'; 
+                storyPreview.style.color = '#1e293b'; // Warna teks gelap
                 dotPatternOverlay.classList.remove('hidden');
                 break;
-            default: storyPreview.style.background = 'linear-gradient(160deg, #192670, #4c9b32)'; break;
+            default: 
+                storyPreview.style.background = 'linear-gradient(160deg, #192670, #4c9b32)'; 
+                break;
         }
     }
 
@@ -176,9 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error(`Network response error`);
             return await response.json();
         } catch (error) {
-            console.error('Fetch error:', error);
-            showError();
-            return null;
+            showError(); return null;
         }
     }
 
@@ -190,53 +227,25 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function formatFullDate(dateStr) {
         if (!dateStr) return '';
-        const parts = dateStr.split('-');
-        if (parts.length !== 3) return dateStr;
-        const [day, month, year] = parts;
+        const [day, month, year] = dateStr.split('-');
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
         return `${parseInt(day, 10)} ${months[parseInt(month, 10) - 1]} ${year}`;
     }
-    
-    function resizePreview() {
-        const previewContainer = document.getElementById('preview-container');
-        if (!previewContainer) return;
-        const scale = Math.min(previewContainer.clientWidth / 1080, previewContainer.clientHeight / 1920);
-        document.getElementById('story-preview').style.transform = `scale(${scale})`;
-    }
 
     async function initialize() {
+        // Logika fetching dan populate data (tidak berubah)
         const [jadwalData, cutiData] = await Promise.all([
             fetchData(GOOGLE_SCRIPT_JADWAL_URL),
             fetchData(GOOGLE_SCRIPT_CUTI_URL)
         ]);
-
         if (!jadwalData || !cutiData) return;
-
-        // Logika untuk menggabungkan data tetap sama, hanya untuk menampilkan di checklist
-        const allDoctors = new Map();
-        for (const key in jadwalData) {
-            jadwalData[key].doctors.forEach(doc => {
-                allDoctors.set(doc.name.toLowerCase(), {
-                    spesialis: jadwalData[key].title
-                });
-            });
-        }
-        
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
+        const today = new Date(); today.setHours(0, 0, 0, 0);
         const combinedData = cutiData.map((cuti, index) => {
             const endDateParts = cuti.TanggalSelesaiCuti.split('-');
             if (endDateParts.length !== 3) return null;
-            
             const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
             if (endDate < today) return null;
-            
-            return {
-                id: `doc-${index}`,
-                nama: cuti.NamaDokter,
-                cutiSelesai: cuti.TanggalSelesaiCuti,
-            };
+            return { id: `doc-${index}`, nama: cuti.NamaDokter, cutiSelesai: cuti.TanggalSelesaiCuti };
         }).filter(Boolean);
 
         if (combinedData.length > 0) {
@@ -245,30 +254,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 const div = document.createElement('div');
                 div.className = 'flex items-center';
                 div.innerHTML = `
-                    <input id="${doc.id}" type="checkbox" value="${doc.id}" class="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 cursor-pointer">
-                    <label for="${doc.id}" class="ml-3 block text-sm font-medium text-gray-700 cursor-pointer">${doc.nama} (Cuti s/d ${formatFullDate(doc.cutiSelesai)})</label>
+                    <input id="${doc.id}" type="checkbox" value="${doc.id}" class="h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer">
+                    <label for="${doc.id}" class="ml-3 block text-sm font-medium text-slate-700 cursor-pointer">${doc.nama} (Cuti s/d ${formatFullDate(doc.cutiSelesai)})</label>
                 `;
                 doctorCheckboxList.appendChild(div);
             });
         } else {
-            doctorCheckboxList.innerHTML = '<p class="text-sm text-gray-500">Tidak ada jadwal cuti dokter saat ini.</p>';
+            doctorCheckboxList.innerHTML = '<p class="text-sm text-slate-500">Tidak ada jadwal cuti dokter saat ini.</p>';
         }
         
         loadingState.style.display = 'none';
         controls.style.display = 'block';
-
+        
+        // Panggil resize saat pertama kali load dan setiap kali ukuran window berubah
         resizePreview();
     }
 
-    // --- EVENT LISTENERS ---
+    // EVENT LISTENERS
     doctorCheckboxList.addEventListener('change', updateUiState);
     backgroundSelect.addEventListener('change', (e) => updateBackgroundPreview(e.target.value));
     logoUrlInput.addEventListener('input', (e) => {
-        if (e.target.value) {
-            storyLogo.src = e.target.value;
-        } else {
-            storyLogo.src = 'asset/logo/logo.png'; // Kembali ke default jika kosong
-        }
+        storyLogo.src = e.target.value || 'asset/logo/logo.png';
     });
     downloadButton.addEventListener('click', generateAndDownload);
     window.addEventListener('resize', resizePreview);
