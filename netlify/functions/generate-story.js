@@ -158,6 +158,9 @@ exports.handler = async (event) => {
             specialtyClass += " opacity-90";
         }
 
+        // Tambahkan background putih untuk container foto di semua tema
+        photoContainerClass += " bg-white overflow-hidden";
+
         const formatFullDate = (dateStr) => {
             if (!dateStr) return '';
             const [day, month, year] = dateStr.split('-');
@@ -171,10 +174,9 @@ exports.handler = async (event) => {
                 : `${formatFullDate(doctor.cutiMulai)} - ${formatFullDate(doctor.cutiSelesai)}`;
             const photoSrc = doctor.fotourl ? imageToBase64(doctor.fotourl) : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
             
-            // --- PERUBAHAN DI SINI: Foto dibungkus div dengan background putih ---
             return `
                 <div class="${itemClass}">
-                    <div class="${photoContainerClass} bg-white overflow-hidden">
+                    <div class="${photoContainerClass}">
                         <img src="${photoSrc}" class="w-full h-full object-cover" alt="Foto ${doctor.nama}">
                     </div>
                     <div class="${textContainerClass}">
@@ -183,7 +185,6 @@ exports.handler = async (event) => {
                         <p class="${dateClass}">Tidak praktek: <strong class="font-semibold">${leaveDatesText}</strong></p>
                     </div>
                 </div>`;
-            // --- AKHIR PERUBAHAN ---
         }).join('');
         
         const doctorListContainerHTML = `<div class="${containerClass}">${doctorsHTML}</div>`;
