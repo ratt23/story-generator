@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Desain Story Jadwal Cuti Dokter</title>
+    <title>Template Story Jadwal Cuti Dokter</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/dom-to-image-more@2.9.0/dist/dom-to-image-more.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
@@ -24,24 +23,12 @@
         .montserrat {
             font-family: 'Montserrat', sans-serif;
         }
-        /* Custom scrollbar */
-        #doctor-checkbox-list::-webkit-scrollbar {
-            width: 8px;
-        }
-        #doctor-checkbox-list::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        #doctor-checkbox-list::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 10px;
-        }
-        #doctor-checkbox-list::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-        /* Pastikan semua foto proporsional */
+        #doctor-checkbox-list::-webkit-scrollbar { width: 8px; }
+        #doctor-checkbox-list::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        #doctor-checkbox-list::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        #doctor-checkbox-list::-webkit-scrollbar-thumb:hover { background: #555; }
         #story-preview img {
-            object-fit: cover; /* bukan contain, agar tidak gepeng */
+            object-fit: cover;
         }
     </style>
 </head>
@@ -62,7 +49,7 @@
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-1">Pilih Dokter Cuti</label>
                 <div id="doctor-checkbox-list" class="w-full p-3 border border-gray-300 rounded-lg max-h-60 overflow-y-auto space-y-2">
-                    </div>
+                </div>
             </div>
             
             <div>
@@ -82,15 +69,8 @@
             </div>
 
             <div class="pt-4">
-                <button id="download-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105 disabled:bg-gray-400 disabled:cursor-not-allowed disabled:transform-none">
-                    <span id="button-text">Pilih Dokter Dahulu</span>
-                    <span id="button-spinner" class="hidden">
-                        <svg class="animate-spin h-5 w-5 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Mempersiapkan gambar...
-                    </span>
+                <button id="download-button" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg disabled:bg-gray-400" disabled>
+                    <span>Generate via API</span>
                 </button>
             </div>
         </div>
@@ -133,30 +113,28 @@
 
   <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // URL dan path tetap sama
         const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
         const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
         const LOCAL_WEBP_IMAGE_PATH = 'Asset/webp/';
         
         // ==========================================================
-        // PENAMBAHAN: URL untuk CORS Proxy
+        // DIHAPUS: URL CORS Proxy tidak lagi diperlukan
         // ==========================================================
-        const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
 
         const controls = document.getElementById('controls');
         const loadingState = document.getElementById('loading-state');
         const errorState = document.getElementById('error-state');
         const doctorCheckboxList = document.getElementById('doctor-checkbox-list');
-        const downloadButton = document.getElementById('download-button');
-        const buttonText = document.getElementById('button-text');
-        const buttonSpinner = document.getElementById('button-spinner');
         const logoUrlInput = document.getElementById('logo-url');
         const backgroundSelect = document.getElementById('background-select');
-
         const storyPreview = document.getElementById('story-preview');
         const storyLogo = document.getElementById('story-logo');
+        const downloadButton = document.getElementById('download-button');
         
         let combinedData = [];
 
+        // Fungsi fetch data tidak berubah
         async function fetchData(url) {
             try {
                 const response = await fetch(`${url}?t=${new Date().getTime()}`);
@@ -175,6 +153,7 @@
             errorState.style.display = 'block';
         }
         
+        // Fungsi utilitas tanggal tidak berubah
         function formatFullDate(dateStr) {
             if (!dateStr) return '';
             const parts = dateStr.split('-');
@@ -186,6 +165,7 @@
             return `${day} ${months[month]} ${year}`;
         }
 
+        // Fungsi untuk mendapatkan ID dokter yang dipilih tidak berubah
         function getSelectedDoctorIds() {
             const selectedDoctors = [];
             const checkboxes = doctorCheckboxList.querySelectorAll('input[type="checkbox"]:checked');
@@ -195,6 +175,7 @@
             return selectedDoctors;
         }
 
+        // Fungsi update preview disederhanakan, tidak perlu lagi mengatur state tombol download
         function updateStoryPreview(doctorIds) {
             const doctorsListContainer = document.getElementById('story-doctors-list');
             
@@ -207,7 +188,6 @@
                         <p>Pilih dokter dari panel kiri untuk melihat preview.</p>
                     </div>`;
                 downloadButton.disabled = true;
-                buttonText.textContent = 'Pilih Dokter Dahulu';
                 return;
             }
 
@@ -215,6 +195,7 @@
             let doctorHTML = '';
             const numDoctors = selectedDoctorsData.length;
             
+            // Logika penyesuaian ukuran tetap sama, ini bagian dari desain
             let containerClass = "w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12";
             let itemClass = "flex items-center w-full bg-white/20 rounded-3xl p-8 shadow-lg";
             let photoClass = "w-48 h-48 rounded-full object-cover border-8 border-white flex-shrink-0";
@@ -262,9 +243,9 @@
             
             doctorsListContainer.innerHTML = doctorHTML;
             downloadButton.disabled = false;
-            buttonText.textContent = `Generate Story (${numDoctors} Dokter)`;
         }
         
+        // Fungsi update background tidak berubah
         function updateBackground(theme) {
             storyPreview.style.background = '';
             storyPreview.style.color = 'white';
@@ -286,122 +267,14 @@
                     break;
             }
         }
+        
+        // ==========================================================
+        // DIHAPUS: Semua fungsi terkait konversi gambar dan download
+        // (toDataURL, waitForImagesToLoad, ensureLogoDataUrl, downloadStory)
+        // ==========================================================
 
-        function toDataURL(url) {
-            // ==========================================================
-            // PERBAIKAN: Melewatkan URL gambar melalui proxy
-            // Hanya jika URL bukan dari placeholder atau path lokal
-            // ==========================================================
-            const finalUrl = (url.startsWith('http') && !url.includes('placehold.co')) 
-                ? `${CORS_PROXY}${url}` 
-                : url;
-
-            return fetch(finalUrl, {mode:'cors'})
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok.');
-                    }
-                    return response.blob();
-                })
-                .then(blob => new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(blob);
-                }));
-        }
-
-        function waitForImagesToLoad(element) {
-            const images = Array.from(element.getElementsByTagName('img'));
-            const promises = images.map(img => {
-                return new Promise((resolve) => {
-                    if (img.complete) {
-                        resolve();
-                    } else {
-                        img.onload = resolve;
-                        img.onerror = resolve; 
-                    }
-                });
-            });
-            return Promise.all(promises);
-        }
-
-        async function ensureLogoDataUrl() {
-            try {
-                const dataUrl = await toDataURL(storyLogo.src);
-                storyLogo.src = dataUrl;
-            } catch (err) {
-                console.warn("Logo gagal dikonversi, pakai placeholder:", err);
-                storyLogo.src = 'https://placehold.co/300x100/192670/ffffff?text=Logo';
-            }
-        }
-
-        async function downloadStory() {
-            buttonSpinner.classList.remove('hidden');
-            buttonText.classList.add('hidden');
-            downloadButton.disabled = true;
-
-            const nodeToRender = storyPreview.cloneNode(true);
-            nodeToRender.style.width = '1080px';
-            nodeToRender.style.height = '1920px';
-            nodeToRender.style.position = 'absolute';
-            nodeToRender.style.top = '0';
-            nodeToRender.style.left = '-9999px';
-            document.body.appendChild(nodeToRender);
-
-            try {
-                const images = Array.from(nodeToRender.getElementsByTagName('img'));
-                const conversionPromises = images.map(img => {
-                    if (!img.src || img.src.startsWith('data:') || img.src.includes('placehold.co')) return Promise.resolve();
-                    return toDataURL(img.src).then(dataUrl => { img.src = dataUrl; }).catch(()=>{});
-                });
-                await Promise.all(conversionPromises);
-                await waitForImagesToLoad(nodeToRender);
-
-                const DPR = Math.max(window.devicePixelRatio || 1, 2);
-                const renderWidth = 1080 * DPR;
-                const renderHeight = 1920 * DPR;
-
-                const dataUrl = await domToImage.toPng(nodeToRender, {
-                    width: renderWidth,
-                    height: renderHeight,
-                    style: {
-                        transform: `scale(${DPR})`,
-                        transformOrigin: 'top left',
-                    },
-                    filter: (node) => true
-                });
-
-                const renderedImg = new Image();
-                renderedImg.src = dataUrl;
-                await new Promise((res) => { renderedImg.onload = res; renderedImg.onerror = res; });
-
-                const finalCanvas = document.createElement('canvas');
-                finalCanvas.width = 1080;
-                finalCanvas.height = 1920;
-                const ctx = finalCanvas.getContext('2d');
-                ctx.drawImage(renderedImg, 0, 0, finalCanvas.width, finalCanvas.height);
-
-                const downloadLink = document.createElement('a');
-                downloadLink.download = `story-jadwal-cuti.png`;
-                downloadLink.href = finalCanvas.toDataURL('image/png');
-                downloadLink.click();
-
-            } catch (e) {
-                console.error("Error generating image with dom-to-image-more:", e);
-                alert("Gagal membuat gambar. Periksa konsol untuk detail error CORS.");
-            } finally {
-                document.body.removeChild(nodeToRender);
-                buttonSpinner.classList.add('hidden');
-                buttonText.classList.remove('hidden');
-                downloadButton.disabled = false;
-            }
-        }
-
+        // Fungsi inisialisasi tidak berubah banyak, hanya lebih sederhana
         async function initialize() {
-            // Kita tidak perlu memastikan logo di awal jika logo itu lokal
-            // await ensureLogoDataUrl(); 
-
             const [jadwalData, cutiData] = await Promise.all([
                 fetchData(GOOGLE_SCRIPT_JADWAL_URL),
                 fetchData(GOOGLE_SCRIPT_CUTI_URL)
@@ -461,8 +334,8 @@
             
             loadingState.style.display = 'none';
             controls.style.display = 'block';
-            downloadButton.disabled = true;
 
+            // Menyesuaikan ukuran preview saat pertama kali dimuat
             const previewContainer = document.getElementById('preview-container');
             const scale = Math.min(
                 previewContainer.clientWidth / 1080,
@@ -476,15 +349,17 @@
             const selectedIds = getSelectedDoctorIds();
             updateStoryPreview(selectedIds);
         });
-        downloadButton.addEventListener('click', downloadStory);
-        logoUrlInput.addEventListener('change', async (e) => {
+        
+        logoUrlInput.addEventListener('change', (e) => {
             storyLogo.src = e.target.value;
-            // Tidak perlu konversi di sini, akan ditangani saat download
         });
+
         backgroundSelect.addEventListener('change', (e) => updateBackground(e.target.value));
 
+        // Panggil fungsi utama
         initialize();
         
+        // Event listener untuk resize window tetap berguna untuk preview
         window.addEventListener('resize', () => {
              const previewContainer = document.getElementById('preview-container');
              const scale = Math.min(
