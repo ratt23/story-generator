@@ -16,7 +16,8 @@
             color: white;
             width: 1080px;
             height: 1920px;
-            transform-origin: top center; /* Diubah agar scaling di mobile lebih baik */
+            /* Perubahan 1: Mengubah titik acuan scaling ke tengah untuk stabilitas */
+            transform-origin: center;
             position: relative;
             overflow: hidden;
             transition: transform 0.2s ease-in-out, background 0.3s, color 0.3s;
@@ -41,12 +42,10 @@
             <h1 class="text-2xl font-bold text-slate-800">Desain Story Cuti</h1>
             <p class="text-slate-500">Gunakan panel ini untuk membuat gambar jadwal cuti.</p>
         </div>
-        
         <div id="loading-state" class="text-center py-8">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
             <p class="mt-4 text-slate-600">Memuat data dari Google Sheets...</p>
         </div>
-
         <div id="controls" class="hidden space-y-6">
             <div>
                 <label class="block text-sm font-medium text-slate-700 mb-1">Pilih Dokter Cuti</label>
@@ -104,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // URL, Elemen DOM, dan Variabel Global
     const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
     const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
-    const LOCAL_WEBP_IMAGE_PATH = 'asset/webp/'; // Path relatif dari index.html
+    const LOCAL_WEBP_IMAGE_PATH = 'asset/webp/';
     const controls = document.getElementById('controls');
     const loadingState = document.getElementById('loading-state');
     const doctorCheckboxList = document.getElementById('doctor-checkbox-list');
@@ -112,8 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const buttonText = document.getElementById('button-text');
     const backgroundSelect = document.getElementById('background-select');
     const storyLogo = document.getElementById('story-logo');
-
-    // Perubahan 2: Variabel global untuk menyimpan data dokter yang lengkap
     let allCutiData = [];
 
     // --- FUNGSI-FUNGSI ---
@@ -122,41 +119,37 @@ document.addEventListener('DOMContentLoaded', () => {
         const previewContainer = document.getElementById('preview-container');
         const storyPreview = document.getElementById('story-preview');
         if (!previewContainer || !storyPreview) return;
+        
         const scale = (window.innerWidth >= 768)
             ? Math.min(previewContainer.clientWidth / 1080, previewContainer.clientHeight / 1920)
             : previewContainer.clientWidth / 1080;
+        
         storyPreview.style.transform = `scale(${scale * 0.92})`;
+        // Perubahan 2: Hapus baris di bawah ini agar menggunakan setting dari CSS saja
+        // storyPreview.style.transformOrigin = 'top center'; // <-- HAPUS BARIS INI
     }
 
     function getSelectedDoctorIds() {
         return Array.from(document.querySelectorAll('#doctor-checkbox-list input:checked')).map(cb => cb.value);
     }
     
-    // Perubahan 3: Fungsi baru untuk mengupdate preview dokter
     function updateDoctorPreview() {
         const doctorsListContainer = document.getElementById('story-doctors-list');
         const selectedIds = getSelectedDoctorIds();
-
         if (selectedIds.length === 0) {
             doctorsListContainer.innerHTML = `<div class="text-center text-4xl opacity-75 flex flex-col justify-center items-center h-full"><p>Pilih dokter dari panel kiri untuk melihat preview.</p></div>`;
             return;
         }
-
         const selectedDoctors = selectedIds.map(id => allCutiData.find(d => d.id === id)).filter(Boolean);
-        
-        // Menggunakan style yang lebih kecil untuk preview agar tidak terlalu ramai
         let doctorHTML = '';
         selectedDoctors.forEach(doctor => {
             const leaveDatesText = (doctor.cutiMulai === doctor.cutiSelesai)
                 ? formatFullDate(doctor.cutiMulai)
                 : `${formatFullDate(doctor.cutiMulai)} - ${formatFullDate(doctor.cutiSelesai)}`;
-
-            // Tentukan style kartu berdasarkan tema background
             const isLightTheme = backgroundSelect.value === 'solid-white';
             const cardClass = isLightTheme 
                 ? 'bg-slate-100 text-slate-800 border border-slate-200'
                 : 'bg-white/20 text-white';
-            
             doctorHTML += `
                 <div class="flex items-center w-full rounded-2xl p-4 shadow-md ${cardClass}">
                     <img src="${doctor.fotourl}" class="w-24 h-24 rounded-full object-cover border-4 border-white flex-shrink-0" alt="Foto ${doctor.nama}" onerror="this.src='https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'">
@@ -179,7 +172,7 @@ document.addEventListener('DOMContentLoaded', () => {
             downloadButton.disabled = true;
             buttonText.textContent = 'Pilih Dokter Dahulu';
         }
-        updateDoctorPreview(); // Panggil update preview dokter di sini
+        updateDoctorPreview();
     }
 
     function updateBackgroundPreview(theme) {
@@ -198,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             default: storyPreview.style.background = 'linear-gradient(160deg, #192670, #4c9b32)'; break;
         }
-        updateDoctorPreview(); // Panggil update preview lagi agar warna kartu ikut berubah
+        updateDoctorPreview();
     }
 
     function generateAndDownload() {
@@ -231,13 +224,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     async function initialize() {
-        // Perubahan 4: Logika inisialisasi sekarang mengambil data lengkap untuk preview
         const [jadwalData, cutiData] = await Promise.all([
             fetchData(GOOGLE_SCRIPT_JADWAL_URL),
             fetchData(GOOGLE_SCRIPT_CUTI_URL)
         ]);
         if (!jadwalData || !cutiData) return;
-
         const allDoctors = new Map();
         for (const key in jadwalData) {
             jadwalData[key].doctors.forEach(doc => {
@@ -248,16 +239,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
         }
-        
         const today = new Date(); today.setHours(0, 0, 0, 0);
-        
-        // Data lengkap disimpan ke variabel global
         allCutiData = cutiData.map((cuti, index) => {
             const endDateParts = cuti.TanggalSelesaiCuti.split('-');
             if (endDateParts.length !== 3) return null;
             const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
             if (endDate < today) return null;
-            
             const details = allDoctors.get(cuti.NamaDokter.toLowerCase());
             return {
                 id: `doc-${index}`,
@@ -268,7 +255,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 fotourl: details ? details.fotourl : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'
             };
         }).filter(Boolean);
-
         if (allCutiData.length > 0) {
             doctorCheckboxList.innerHTML = '';
             allCutiData.forEach(doc => {
@@ -283,10 +269,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             doctorCheckboxList.innerHTML = '<p class="text-sm text-slate-500">Tidak ada jadwal cuti dokter.</p>';
         }
-        
         loadingState.style.display = 'none';
         controls.style.display = 'block';
-        updateDoctorPreview(); // Panggil pertama kali untuk menampilkan placeholder
+        updateDoctorPreview();
         resizePreview();
     }
 
