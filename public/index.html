@@ -247,9 +247,11 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const key in jadwalData) {
             jadwalData[key].doctors.forEach(doc => {
                 const imageName = doc.image_webp ? doc.image_webp.split(/[\\/]/).pop() : '';
+                const imageUrl = imageName ? LOCAL_WEBP_IMAGE_PATH + encodeURIComponent(imageName) : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+
                 allDoctors.set(doc.name.toLowerCase(), {
                     spesialis: jadwalData[key].title,
-                    fotourl: imageName ? LOCAL_WEBP_IMAGE_PATH + encodeURIComponent(imageName) : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'
+                    fotourl: imageUrl
                 });
             });
         }
@@ -306,4 +308,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 </body>
-</html>     
+</html>

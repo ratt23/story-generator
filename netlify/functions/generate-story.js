@@ -81,7 +81,7 @@ async function imageToBase64(filePath) {
         const mimeType = mimeTypes[extension] || `image/${extension}`;
         return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
     } catch (error) {
-        console.error(`Gagal membaca file gambar: ${filePath}`, error);
+        console.error(`Gagal membaca file gambar: ${filePath}. Pastikan file ada di server dan path-nya benar.`, error);
         return 'https://placehold.co/200x200/e2e8f0/475569?text=Error';
     }
 }
@@ -129,10 +129,8 @@ async function getCombinedDoctorData() {
             if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
                 jadwalData[key].doctors.forEach(doc => {
                     if (doc && doc.name) {
-                        const imageName = doc.image_webp ? 
-                            path.basename(doc.image_webp) : '';
-                        const imagePath = imageName ? 
-                            path.join(LOCAL_WEBP_IMAGE_PATH, imageName) : '';
+                        const imageName = doc.image_webp ? path.basename(doc.image_webp) : '';
+                        const imagePath = imageName ? path.join(LOCAL_WEBP_IMAGE_PATH, imageName) : '';
                         
                         doctorMap.set(normalizeName(doc.name), {
                             nama: doc.name,
@@ -347,7 +345,7 @@ exports.handler = async (event) => {
             timeout: 30000
         });
 
-        console.log('Menunggu gambar加载...');
+        console.log('Menunggu gambar dimuat...');
         await page.evaluate(async () => {
             const images = Array.from(document.images);
             await Promise.all(images.map(img => {
