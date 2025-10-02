@@ -45,9 +45,11 @@ function fetchData(url, redirectCount = 0) {
         });
         
         req.on('error', (err) => reject(err));
-        req.setTimeout(15000, () => {
+        
+        // Batas waktu tunggu diatur ke 30 detik
+        req.setTimeout(30000, () => {
             req.destroy();
-            reject(new Error('Request timed out setelah 15 detik'));
+            reject(new Error('Request timed out setelah 30 detik'));
         });
     });
 }
