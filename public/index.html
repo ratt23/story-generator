@@ -140,11 +140,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const leaveDatesText = (doctor.cutiMulai === doctor.cutiSelesai)
                 ? formatFullDate(doctor.cutiMulai)
                 : `${formatFullDate(doctor.cutiMulai)} - ${formatFullDate(doctor.cutiSelesai)}`;
-            
             const isLightTheme = ['solid-white', 'solid-white-dots'].includes(backgroundSelect.value);
             const cardClass = isLightTheme 
                 ? 'bg-slate-100 text-slate-800 border border-slate-200'
                 : 'bg-white/20 text-white';
+            
             doctorHTML += `
                 <div class="flex items-center w-full rounded-2xl p-4 shadow-md ${cardClass}">
                     <img src="${doctor.fotourl}" class="w-24 h-24 rounded-full object-cover border-4 border-white flex-shrink-0" alt="Foto ${doctor.nama}" onerror="this.src='https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'">
@@ -194,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 storyPreview.style.backgroundSize = '20px 20px, 120% 120%, 120% 120%';
                 storyPreview.style.color = '#1e293b';
                 break;
-            // === LOGIKA BARU DITAMBAHKAN DI SINI ===
             case 'solid-white-dots':
                 storyPreview.style.background = '#ffffff';
                 storyPreview.style.backgroundImage = 'radial-gradient(circle, #D1D5DB 1px, transparent 1.5px)';
@@ -307,4 +306,4 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 </body>
-</html>
+</html>     

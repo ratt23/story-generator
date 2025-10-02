@@ -17,16 +17,6 @@ let cachedData = null;
 let lastCacheTime = 0;
 
 // --- FUNGSI HELPER ---
-function expandTitles(text) {
-    if (!text) return '';
-    return text
-        .replace(/dr\./g, 'Dokter')
-        .replace(/Sp\.JP/g, 'Spesialis Jantung')
-        .replace(/Sp\.P/g, 'Spesialis Paru')
-        .replace(/Sp\.DV/g, 'Spesialis Kulit dan Kelamin')
-        .replace(/M\.Ked/g, 'Magister Kedokteran,');
-}
-
 function fetchData(url, redirectCount = 0) {
     if (redirectCount > 5) {
         return Promise.reject(new Error('Terlalu banyak redirect.'));
@@ -198,7 +188,7 @@ function formatFullDate(dateStr) {
     const date = parseDate(dateStr);
     if (!date) return 'Format tanggal invalid';
 
-    const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
     const day = date.getDate();
     const month = months[date.getMonth()];
     const year = date.getFullYear();
@@ -264,15 +254,12 @@ function generateDoctorHTML(doctors, theme) {
             ? formatFullDate(doctor.cutiMulai) 
             : `${formatFullDate(doctor.cutiMulai)} - ${formatFullDate(doctor.cutiSelesai)}`;
 
-        const fullName = expandTitles(doctor.nama);
-        const fullSpecialty = expandTitles(doctor.spesialis);
-
         return `
             <div class="${styles.item}">
                 <img src="${doctor.fotourl}" class="${styles.photo}" alt="Foto ${doctor.nama}" onerror="this.src='https://placehold.co/200x200/e2e8f0/475569?text=Photo+Error'">
                 <div class="${styles.textContainer}">
-                    <h3 class="${styles.name}">${fullName}</h3>
-                    <p class="${styles.specialty}">${fullSpecialty}</p>
+                    <h3 class="${styles.name}">${doctor.nama}</h3>
+                    <p class="${styles.specialty}">${doctor.spesialis}</p>
                     <p class="${styles.date}">Tidak praktek: <strong class="font-semibold">${leaveDatesText}</strong></p>
                 </div>
             </div>`;
@@ -301,7 +288,6 @@ exports.handler = async (event) => {
     let browser = null;
 
     try {
-        // --- PERBAIKAN: Menambahkan 'solid-white-dots' ke daftar tema valid ---
         const validThemes = ['gradient-blue', 'gradient-purple', 'gradient-orange', 'solid-white', 'solid-white-dots'];
         if (!validThemes.includes(selectedTheme)) {
             return {
@@ -361,14 +347,14 @@ exports.handler = async (event) => {
             timeout: 30000
         });
 
-        console.log('Menunggu gambar dimuat...');
+        console.log('Menunggu gambar加载...');
         await page.evaluate(async () => {
             const images = Array.from(document.images);
             await Promise.all(images.map(img => {
                 if (img.complete) return;
                 return new Promise((resolve, reject) => {
                     img.onload = resolve;
-                    img.onerror = resolve;
+                    img.onerror = resolve; 
                 });
             }));
         });
