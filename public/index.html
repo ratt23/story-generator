@@ -9,18 +9,14 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
     <style>
-        body { 
-            font-family: 'Poppins', sans-serif; 
-        }
+        body { font-family: 'Poppins', sans-serif; }
         #story-preview {
             font-family: 'Poppins', sans-serif;
             background: linear-gradient(160deg, #192670, #4c9b32);
             color: white;
-            width: 1080px;
-            height: 1920px;
+            width: 1080px; height: 1920px;
             transform-origin: center;
-            position: relative;
-            overflow: hidden;
+            position: relative; overflow: hidden;
             transition: transform 0.2s ease-in-out, background 0.3s, color 0.3s;
         }
         .montserrat { font-family: 'Montserrat', sans-serif; }
@@ -87,8 +83,7 @@
                         <p class="text-5xl tracking-widest montserrat">PEMBERITAHUAN</p>
                         <h2 class="text-9xl font-extrabold mt-2 montserrat">DOKTER CUTI</h2>
                     </div>
-                    <div id="story-doctors-list" class="w-full flex flex-col items-center justify-center flex-grow space-y-6 px-12 relative z-10">
-                        </div>
+                    <div id="story-doctors-list" class="w-full flex flex-col items-center justify-center flex-grow space-y-6 px-12 relative z-10"></div>
                 </div>
                 <div class="flex-shrink-0 text-center relative z-10">
                     <p class="text-3xl font-semibold">Siloam Hospitals Ambon</p>
@@ -111,15 +106,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const storyLogo = document.getElementById('story-logo');
     let allCutiData = [];
 
+    // --- FUNGSI SLUG YANG SAMA DENGAN DI SERVER ---
+    function createDoctorSlug(doctorName) {
+        if (!doctorName) return '';
+        return doctorName.toLowerCase()
+            .replace(/(dr\.\s*|sp\.[a-z]+\s*|\s*,\s*m\.ked\s*|\s*,\s*)\b/g, '')
+            .replace(/[^\w\s-]/g, '')
+            .trim()
+            .replace(/\s+/g, '-');
+    }
+
     function resizePreview() {
         const previewContainer = document.getElementById('preview-container');
         const storyPreview = document.getElementById('story-preview');
         if (!previewContainer || !storyPreview) return;
-        
         const scale = (window.innerWidth >= 768)
             ? Math.min(previewContainer.clientWidth / 1080, previewContainer.clientHeight / 1920)
             : previewContainer.clientWidth / 1080;
-        
         storyPreview.style.transform = `scale(${scale * 0.92})`;
     }
 
@@ -186,19 +189,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
             case 'solid-white': 
                 storyPreview.style.background = '#ffffff';
-                storyPreview.style.backgroundImage = `
-                    radial-gradient(circle, #E5E7EB 1px, transparent 1.5px),
-                    radial-gradient(circle at 0% 0%, rgba(229, 231, 235, 0.5) 0%, transparent 40%),
-                    radial-gradient(circle at 100% 100%, rgba(229, 231, 235, 0.5) 0%, transparent 40%)
-                `;
+                storyPreview.style.backgroundImage = `radial-gradient(circle, #E5E7EB 1px, transparent 1.5px), radial-gradient(circle at 0% 0%, rgba(229, 231, 235, 0.5) 0%, transparent 40%), radial-gradient(circle at 100% 100%, rgba(229, 231, 235, 0.5) 0%, transparent 40%)`;
                 storyPreview.style.backgroundSize = '20px 20px, 120% 120%, 120% 120%';
-                storyPreview.style.color = '#1e293b';
+                storyPreview.style.color = '#1e2b3b';
                 break;
             case 'solid-white-dots':
                 storyPreview.style.background = '#ffffff';
                 storyPreview.style.backgroundImage = 'radial-gradient(circle, #D1D5DB 1px, transparent 1.5px)';
                 storyPreview.style.backgroundSize = '35px 35px';
-                storyPreview.style.color = '#1e293b';
+                storyPreview.style.color = '#1e2b3b';
                 break;
             default: 
                 storyPreview.style.background = 'linear-gradient(160deg, #192670, #4c9b32)'; 
@@ -244,10 +243,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!jadwalData || !cutiData) return;
 
         const allDoctors = new Map();
+        // --- LOGIKA OTOMATIS: Membuat path gambar dari nama dokter ---
         for (const key in jadwalData) {
             jadwalData[key].doctors.forEach(doc => {
-                const imageName = doc.image_webp ? doc.image_webp.split(/[\\/]/).pop() : '';
-                const imageUrl = imageName ? LOCAL_WEBP_IMAGE_PATH + encodeURIComponent(imageName) : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+                const doctorSlug = createDoctorSlug(doc.name);
+                const imageUrl = doctorSlug ? `${LOCAL_WEBP_IMAGE_PATH}${doctorSlug}.webp` : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
 
                 allDoctors.set(doc.name.toLowerCase(), {
                     spesialis: jadwalData[key].title,
