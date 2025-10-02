@@ -17,6 +17,16 @@ let cachedData = null;
 let lastCacheTime = 0;
 
 // --- FUNGSI HELPER ---
+function expandTitles(text) {
+    if (!text) return '';
+    return text
+        .replace(/dr\./g, 'Dokter')
+        .replace(/Sp\.JP/g, 'Spesialis Jantung')
+        .replace(/Sp\.P/g, 'Spesialis Paru')
+        .replace(/Sp\.DV/g, 'Spesialis Kulit dan Kelamin')
+        .replace(/M\.Ked/g, 'Magister Kedokteran,');
+}
+
 function fetchData(url, redirectCount = 0) {
     if (redirectCount > 5) {
         return Promise.reject(new Error('Terlalu banyak redirect.'));
@@ -54,7 +64,6 @@ function fetchData(url, redirectCount = 0) {
 
 async function imageToBase64(filePath) {
     try {
-        // Handle external URLs
         if (filePath.startsWith('http')) {
             return filePath;
         }
@@ -94,7 +103,6 @@ function normalizeName(name) {
 function parseDate(dateStr) {
     if (!dateStr) return null;
     
-    // Format: DD-MM-YYYY
     const parts = dateStr.split('-');
     if (parts.length !== 3) return null;
     
@@ -126,7 +134,6 @@ async function getCombinedDoctorData() {
             throw new Error("Gagal mengambil data dari Google Sheets.");
         }
 
-        // Build doctor map for faster lookup
         const doctorMap = new Map();
         for (const key in jadwalData) {
             if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
@@ -177,7 +184,6 @@ async function getCombinedDoctorData() {
 
     } catch (error) {
         console.error('Error dalam getCombinedDoctorData:', error);
-        // Return cached data even if stale as fallback
         if (cachedData) {
             console.log('Menggunakan data cache lama karena error');
             return cachedData;
@@ -192,7 +198,7 @@ function formatFullDate(dateStr) {
     const date = parseDate(dateStr);
     if (!date) return 'Format tanggal invalid';
 
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+    const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     const day = date.getDate();
     const month = months[date.getMonth()];
     const year = date.getFullYear();
@@ -201,10 +207,9 @@ function formatFullDate(dateStr) {
 }
 
 function generateDoctorHTML(doctors, theme) {
-    const isLightTheme = theme === 'solid-white';
+    const isLightTheme = theme === 'solid-white' || theme === 'solid-white-dots';
     const numDoctors = doctors.length;
 
-    // Determine styling based on number of doctors
     let styles;
     if (numDoctors > 4) { // 5+ dokter
         styles = {
@@ -244,7 +249,6 @@ function generateDoctorHTML(doctors, theme) {
         };
     }
 
-    // Apply theme-specific styles
     if (isLightTheme) {
         styles.photo += " border-white shadow-md";
         styles.name += " text-slate-800";
@@ -260,12 +264,15 @@ function generateDoctorHTML(doctors, theme) {
             ? formatFullDate(doctor.cutiMulai) 
             : `${formatFullDate(doctor.cutiMulai)} - ${formatFullDate(doctor.cutiSelesai)}`;
 
+        const fullName = expandTitles(doctor.nama);
+        const fullSpecialty = expandTitles(doctor.spesialis);
+
         return `
             <div class="${styles.item}">
                 <img src="${doctor.fotourl}" class="${styles.photo}" alt="Foto ${doctor.nama}" onerror="this.src='https://placehold.co/200x200/e2e8f0/475569?text=Photo+Error'">
                 <div class="${styles.textContainer}">
-                    <h3 class="${styles.name}">${doctor.nama}</h3>
-                    <p class="${styles.specialty}">${doctor.spesialis}</p>
+                    <h3 class="${styles.name}">${fullName}</h3>
+                    <p class="${styles.specialty}">${fullSpecialty}</p>
                     <p class="${styles.date}">Tidak praktek: <strong class="font-semibold">${leaveDatesText}</strong></p>
                 </div>
             </div>`;
@@ -294,8 +301,8 @@ exports.handler = async (event) => {
     let browser = null;
 
     try {
-        // Validasi parameter
-        const validThemes = ['gradient-blue', 'gradient-purple', 'gradient-orange', 'solid-white'];
+        // --- PERBAIKAN: Menambahkan 'solid-white-dots' ke daftar tema valid ---
+        const validThemes = ['gradient-blue', 'gradient-purple', 'gradient-orange', 'solid-white', 'solid-white-dots'];
         if (!validThemes.includes(selectedTheme)) {
             return {
                 statusCode: 400,
@@ -317,7 +324,6 @@ exports.handler = async (event) => {
 
         console.log(`Memproses ${selectedDoctors.length} dokter:`, selectedDoctors.map(d => d.nama));
 
-        // Process images to base64
         const doctorsWithProcessedImages = await Promise.all(
             selectedDoctors.map(async (doctor) => {
                 const processedPhoto = await imageToBase64(doctor.fotourl);
@@ -328,7 +334,6 @@ exports.handler = async (event) => {
         const doctorListContainerHTML = generateDoctorHTML(doctorsWithProcessedImages, selectedTheme);
         const processedLogo = await imageToBase64(customLogo);
 
-        // Load and process template
         const templatePath = path.resolve(process.cwd(), 'public/story-template.html');
         let htmlContent = await fs.readFile(templatePath, 'utf8');
         
@@ -337,7 +342,6 @@ exports.handler = async (event) => {
             .replace('{{LOGO_SRC}}', processedLogo)
             .replace('{{DOCTOR_LIST_HTML}}', doctorListContainerHTML);
 
-        // Launch browser and generate screenshot
         const browserOptions = {
             args: chromium.args,
             defaultViewport: { width: 1080, height: 1920 },
@@ -357,20 +361,18 @@ exports.handler = async (event) => {
             timeout: 30000
         });
 
-        // Wait for images to load
-        console.log('Menunggu gambar加载...');
+        console.log('Menunggu gambar dimuat...');
         await page.evaluate(async () => {
             const images = Array.from(document.images);
             await Promise.all(images.map(img => {
                 if (img.complete) return;
                 return new Promise((resolve, reject) => {
                     img.onload = resolve;
-                    img.onerror = resolve; // Continue even if some images fail
+                    img.onerror = resolve;
                 });
             }));
         });
 
-        // Additional wait for stability
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         console.log('Taking screenshot...');
@@ -385,7 +387,7 @@ exports.handler = async (event) => {
             statusCode: 200,
             headers: { 
                 'Content-Type': 'image/png',
-                'Cache-Control': 'public, max-age=300' // Cache 5 menit
+                'Cache-Control': 'public, max-age=300'
             },
             body: imageBuffer.toString('base64'),
             isBase64Encoded: true,
