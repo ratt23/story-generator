@@ -60,7 +60,8 @@
                     <option value="gradient-blue" selected>Biru & Hijau (Default)</option>
                     <option value="gradient-purple">Ungu & Pink</option>
                     <option value="gradient-orange">Oranye & Kuning</option>
-                    <option value="solid-white">Putih Solid</option>
+                    <option value="solid-white">Putih Polos</option>
+                    <option value="solid-white-dots">Putih Solid dengan Dots</option>
                 </select>
             </div>
             <div class="pt-4">
@@ -139,7 +140,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const leaveDatesText = (doctor.cutiMulai === doctor.cutiSelesai)
                 ? formatFullDate(doctor.cutiMulai)
                 : `${formatFullDate(doctor.cutiMulai)} - ${formatFullDate(doctor.cutiSelesai)}`;
-            const isLightTheme = backgroundSelect.value === 'solid-white';
+            
+            const isLightTheme = ['solid-white', 'solid-white-dots'].includes(backgroundSelect.value);
             const cardClass = isLightTheme 
                 ? 'bg-slate-100 text-slate-800 border border-slate-200'
                 : 'bg-white/20 text-white';
@@ -190,6 +192,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     radial-gradient(circle at 100% 100%, rgba(229, 231, 235, 0.5) 0%, transparent 40%)
                 `;
                 storyPreview.style.backgroundSize = '20px 20px, 120% 120%, 120% 120%';
+                storyPreview.style.color = '#1e293b';
+                break;
+            // === LOGIKA BARU DITAMBAHKAN DI SINI ===
+            case 'solid-white-dots':
+                storyPreview.style.background = '#ffffff';
+                storyPreview.style.backgroundImage = 'radial-gradient(circle, #D1D5DB 1px, transparent 1.5px)';
+                storyPreview.style.backgroundSize = '35px 35px';
                 storyPreview.style.color = '#1e293b';
                 break;
             default: 
