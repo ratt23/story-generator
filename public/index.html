@@ -304,13 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const endDateParts = cuti.TanggalSelesaiCuti.split('-');
             if (endDateParts.length !== 3) return null;
             const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
-            if (endDate < today) return null;
-            
-<<<<<<< HEAD
-            const details = allDoctors.get(cuti.NamaDokter.toLowerCase().trim());
-=======
-            const details = allDoctors.get(cuti.NamaDokter.toLowerCase());
->>>>>>> 6131bf3bc581c58960bbe1642bef9a7596e908d7
+            if (endDate < today) return null;          
             return {
                 id: `doc-${index}`,
                 nama: cuti.NamaDokter,
