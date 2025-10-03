@@ -7,8 +7,8 @@ const path = require('path');
 const https = require('https');
 
 // --- URL & KONFIGURASI ---
-const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
-const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
+// Cukup satu URL, kita akan tambahkan parameter ?data=master atau ?data=cuti
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwH_pHdGZPeBx0k9S0A0y-YLGE0Fpusc5S3mkAJsMH83F9RVNeFpUt8YPK91esJSomSew/exec'; // <-- GANTI DENGAN URL BARU ANDA
 const LOCAL_WEBP_IMAGE_DIR = 'public/asset/webp/';
 const CACHE_DURATION_MS = 5 * 60 * 1000;
 
@@ -40,24 +40,6 @@ function fetchData(url, redirectCount = 0) {
         });
     });
 }
-
-function createDoctorSlug(doctorName) {
-    if (!doctorName) return '';
-    return doctorName
-        .toLowerCase()
-        // hapus prefix dr./drg.
-        .replace(/\b(dr|drg)\b\.?\s*/g, '')
-        // hapus gelar spesialis umum: Sp.xxx, M.xxx, Subsp.xxx
-        .replace(/\bsp\.[a-z]+\b/gi, '')
-        .replace(/\bm\.[a-z]+\b/gi, '')
-        .replace(/\bsubsp\.[a-z]+\b/gi, '')
-        // hapus tanda baca
-        .replace(/[.,()]/g, '')
-        // rapikan spasi
-        .trim()
-        .replace(/\s+/g, '-');
-}
-
 
 async function fileExists(filePath) {
     try {
@@ -93,6 +75,7 @@ function parseDate(dateStr) {
     if (!dateStr) return null;
     const parts = dateStr.split('-');
     if (parts.length !== 3) return null;
+    // Asumsi format dd-MM-yyyy
     const [day, month, year] = parts.map(p => parseInt(p, 10));
     if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
     return new Date(year, month - 1, day);
@@ -104,55 +87,43 @@ async function getCombinedDoctorData() {
         console.log('Menggunakan data cache');
         return cachedData;
     }
-
-    console.log('Mengambil data terbaru dari Google Sheets...');
     
     try {
-        const [jadwalData, cutiData] = await Promise.all([
-            fetchData(GOOGLE_SCRIPT_JADWAL_URL),
-            fetchData(GOOGLE_SCRIPT_CUTI_URL)
+        console.log('Mengambil data master dan cuti...');
+        const [masterDoctorData, cutiData] = await Promise.all([
+            fetchData(`${GOOGLE_SCRIPT_URL}?data=master`),
+            fetchData(`${GOOGLE_SCRIPT_URL}?data=cuti`)
         ]);
-        if (!jadwalData || !cutiData) throw new Error("Gagal mengambil data dari Google Sheets.");
-
-        const doctorMap = new Map();
-        for (const key in jadwalData) {
-            if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
-                for (const doc of jadwalData[key].doctors) {
-                    if (doc && doc.name) {
-                        const doctorKey = createDoctorSlug(doc.name);
-                        const imagePath = path.join(LOCAL_WEBP_IMAGE_DIR, `${doctorKey}.webp`);
-                        
-                        if (!doctorMap.has(doctorKey)) {
-                            doctorMap.set(doctorKey, {
-                                nama: doc.name,
-                                spesialis: jadwalData[key].title || 'Spesialis tidak diketahui',
-                                fotourl: imagePath
-                            });
-                        }
-                    }
-                }
-            }
-        }
+        if (!masterDoctorData || !cutiData) throw new Error("Gagal mengambil data master atau cuti.");
+        if (masterDoctorData.error) throw new Error(`Error dari Google Script Master: ${masterDoctorData.message}`);
+        if (cutiData.error) throw new Error(`Error dari Google Script Cuti: ${cutiData.message}`);
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         const combinedData = cutiData
-            .filter(cuti => cuti && cuti.NamaDokter && cuti.TanggalSelesaiCuti)
+            .filter(cuti => cuti && cuti.id_doc && cuti.tanggal_selesai_cuti)
             .map((cuti, index) => {
-                const endDate = parseDate(cuti.TanggalSelesaiCuti);
+                const endDate = parseDate(cuti.tanggal_selesai_cuti);
                 if (!endDate || endDate < today) return null;
                 
-                const doctorKey = createDoctorSlug(cuti.NamaDokter);
-                const doctorDetails = doctorMap.get(doctorKey);
+                const doctorId = String(cuti.id_doc).trim();
+                const doctorDetails = masterDoctorData[doctorId];
                 
+                if (!doctorDetails) {
+                    console.warn(`ID Dokter "${doctorId}" dari sheet cuti tidak ditemukan di sheet master.`);
+                    return null;
+                }
+
+                const imagePath = path.join(LOCAL_WEBP_IMAGE_DIR, `${doctorId}.webp`);
+
                 return {
                     id: `doc-${index}`,
-                    nama: doctorDetails ? doctorDetails.nama : cuti.NamaDokter,
-                    cutiMulai: cuti.TanggalMulaiCuti,
-                    cutiSelesai: cuti.TanggalSelesaiCuti,
-                    spesialis: doctorDetails ? doctorDetails.spesialis : 'Spesialis tidak ditemukan',
-                    fotourl: doctorDetails ? doctorDetails.fotourl : ''
+                    nama: doctorDetails.name,
+                    cutiMulai: cuti.tanggal_mulai_cuti,
+                    cutiSelesai: cuti.tanggal_selesai_cuti,
+                    spesialis: doctorDetails.specialty,
+                    fotourl: imagePath
                 };
             })
             .filter(Boolean);
@@ -161,6 +132,7 @@ async function getCombinedDoctorData() {
         lastCacheTime = now;
         console.log(`Berhasil memuat data ${combinedData.length} dokter`);
         return combinedData;
+
     } catch (error) {
         console.error('Error dalam getCombinedDoctorData:', error);
         if (cachedData) return cachedData;

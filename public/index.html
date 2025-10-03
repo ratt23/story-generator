@@ -115,8 +115,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
-    const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
+    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwH_pHdGZPeBx0k9S0A0y-YLGE0Fpusc5S3mkAJsMH83F9RVNeFpUt8YPK91esJSomSew/exec'; // <-- GANTI DENGAN URL BARU ANDA
     const LOCAL_WEBP_IMAGE_PATH = 'asset/webp/';
     const controls = document.getElementById('controls');
     const loadingState = document.getElementById('loading-state');
@@ -127,23 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const storyLogo = document.getElementById('story-logo');
     let allCutiData = [];
 
-  function createDoctorSlug(doctorName) {
-    if (!doctorName) return '';
-    return doctorName
-        .toLowerCase()
-        // hapus prefix dr./drg.
-        .replace(/\b(dr|drg)\b\.?\s*/g, '')
-        // hapus gelar spesialis umum: Sp.xxx, M.xxx, Subsp.xxx
-        .replace(/\bsp\.[a-z]+\b/gi, '')
-        .replace(/\bm\.[a-z]+\b/gi, '')
-        .replace(/\bsubsp\.[a-z]+\b/gi, '')
-        // hapus tanda baca
-        .replace(/[.,()]/g, '')
-        // rapikan spasi
-        .trim()
-        .replace(/\s+/g, '-');
-}
-
+    // Fungsi createDoctorSlug sudah tidak diperlukan lagi
 
     function resizePreview() {
         const previewContainer = document.getElementById('preview-container');
@@ -246,9 +229,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function fetchData(url) {
         try {
-            const response = await fetch(`${url}?t=${new Date().getTime()}`);
+            const response = await fetch(`${url}&t=${new Date().getTime()}`); // Tambah cache buster
             if (!response.ok) throw new Error(`Network error`);
-            return await response.json();
+            const json = await response.json();
+            if (json.error) throw new Error(`API Error: ${json.message}`);
+            return json;
         } catch (error) {
             console.error('Fetch error:', error);
             document.getElementById('loading-state').style.display = 'none';
@@ -259,59 +244,45 @@ document.addEventListener('DOMContentLoaded', () => {
     
     function formatFullDate(dateStr) {
         if (!dateStr) return '';
+        // Asumsi format dd-MM-yyyy
         const [day, month, year] = dateStr.split('-');
+        if (!day || !month || !year) return dateStr;
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
         return `${parseInt(day, 10)} ${months[parseInt(month, 10) - 1]} ${year}`;
     }
 
     async function initialize() {
-        const [jadwalData, cutiData] = await Promise.all([
-            fetchData(GOOGLE_SCRIPT_JADWAL_URL),
-            fetchData(GOOGLE_SCRIPT_CUTI_URL)
+        const [masterDoctorData, cutiData] = await Promise.all([
+            fetchData(`${GOOGLE_SCRIPT_URL}?data=master`),
+            fetchData(`${GOOGLE_SCRIPT_URL}?data=cuti`)
         ]);
-        if (!jadwalData || !cutiData) return;
-
-        const allDoctors = new Map();
-        for (const key in jadwalData) {
-            if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
-                jadwalData[key].doctors.forEach(doc => {
-                    if (!doc || !doc.name) return;
-
-                    const doctorKey = createDoctorSlug(doc.name);
-                    const imageUrl = doctorKey ? `${LOCAL_WEBP_IMAGE_PATH}${doctorKey}.webp` : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
-
-                    if (!allDoctors.has(doctorKey)) {
-                         allDoctors.set(doctorKey, {
-                            nama: doc.name,
-                            spesialis: jadwalData[key].title,
-                            fotourl: imageUrl
-                        });
-                    }
-                });
-            }
-        }
+        if (!masterDoctorData || !cutiData) return;
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        allCutiData = cutiData.map((cuti, index) => {
-            const endDateParts = cuti.TanggalSelesaiCuti.split('-');
-            if (endDateParts.length !== 3) return null;
-            const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
-            if (endDate < today) return null;
-            
-            const doctorKey = createDoctorSlug(cuti.NamaDokter);
-            const details = allDoctors.get(doctorKey);
-            
-            return {
-                id: `doc-${index}`,
-                nama: details ? details.nama : cuti.NamaDokter,
-                cutiMulai: cuti.TanggalMulaiCuti,
-                cutiSelesai: cuti.TanggalSelesaiCuti,
-                spesialis: details ? details.spesialis : 'N/A',
-                fotourl: details ? details.fotourl : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'
-            };
-        }).filter(Boolean);
+        allCutiData = cutiData
+            .filter(cuti => cuti && cuti.id_doc && cuti.tanggal_selesai_cuti)
+            .map((cuti, index) => {
+                const endDate = parseDate(cuti.tanggal_selesai_cuti);
+                if (!endDate || endDate < today) return null;
+                
+                const doctorId = String(cuti.id_doc).trim();
+                const details = masterDoctorData[doctorId];
+
+                if (!details) return null;
+                
+                const imageUrl = `${LOCAL_WEBP_IMAGE_PATH}${doctorId}.webp`;
+                
+                return {
+                    id: `doc-${index}`,
+                    nama: details.name,
+                    cutiMulai: cuti.tanggal_mulai_cuti,
+                    cutiSelesai: cuti.tanggal_selesai_cuti,
+                    spesialis: details.specialty,
+                    fotourl: imageUrl
+                };
+            }).filter(Boolean);
 
         if (allCutiData.length > 0) {
             doctorCheckboxList.innerHTML = '';
