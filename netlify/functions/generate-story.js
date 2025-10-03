@@ -6,14 +6,17 @@ const fs = require('fs').promises;
 const path = require('path');
 const https = require('https');
 
+// --- URL & KONFIGURASI ---
 const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
 const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
 const LOCAL_WEBP_IMAGE_DIR = 'public/asset/webp/';
 const CACHE_DURATION_MS = 5 * 60 * 1000;
 
+// --- MEKANISME CACHING ---
 let cachedData = null;
 let lastCacheTime = 0;
 
+// --- FUNGSI HELPER ---
 function fetchData(url, redirectCount = 0) {
     if (redirectCount > 5) return Promise.reject(new Error('Terlalu banyak redirect.'));
     return new Promise((resolve, reject) => {
@@ -42,11 +45,11 @@ function createDoctorSlug(doctorName) {
     if (!doctorName) return '';
     return doctorName
         .toLowerCase()
-        .replace(/\b(dr|drg)\b\.?\s*/gi, '')
-        .replace(/\bsp\.[a-z]+\b/gi, '')
-        .replace(/\bm\.[a-z]+\b/gi, '')
-        .replace(/\bsubsp\.[a-z]+\b/gi, '')
-        .replace(/\b[a-z]{2,}\b/gi, '')
+        .replace(/\b(dr|drg)\b\.?\s*/g, '')
+        .replace(/,?\s*sp\.[\w\.\(\)-]+/g, '')
+        .replace(/,?\s*m\.[\w\.]+/g, '')
+        .replace(/,?\s*subsp\.?[\w\.]+/g, '')
+        .replace(/,?\s*[A-Z]{2,}/g, '')
         .replace(/[.,()]/g, '')
         .trim()
         .replace(/\s+/g, '-');

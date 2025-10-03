@@ -131,17 +131,214 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!doctorName) return '';
         return doctorName
             .toLowerCase()
-            .replace(/\b(dr|drg)\b\.?\s*/gi, '')
-            .replace(/\bsp\.[a-z]+\b/gi, '')
-            .replace(/\bm\.[a-z]+\b/gi, '')
-            .replace(/\bsubsp\.[a-z]+\b/gi, '')
-            .replace(/\b[a-z]{2,}\b/gi, '')
+            .replace(/\b(dr|drg)\b\.?\s*/g, '')
+            .replace(/,?\s*sp\.[\w\.\(\)-]+/g, '')
+            .replace(/,?\s*m\.[\w\.]+/g, '')
+            .replace(/,?\s*subsp\.?[\w\.]+/g, '')
+            .replace(/,?\s*[A-Z]{2,}/g, '')
             .replace(/[.,()]/g, '')
             .trim()
             .replace(/\s+/g, '-');
     }
 
-    // ... kode lain tetap sama (tidak berubah) ...
+    function resizePreview() {
+        const previewContainer = document.getElementById('preview-container');
+        const storyPreview = document.getElementById('story-preview');
+        if (!previewContainer || !storyPreview) return;
+        const scale = (window.innerWidth >= 768)
+            ? Math.min(previewContainer.clientWidth / 1080, previewContainer.clientHeight / 1920)
+            : previewContainer.clientWidth / 1080;
+        storyPreview.style.transform = `scale(${scale * 0.92})`;
+    }
+
+    function getSelectedDoctorIds() {
+        return Array.from(document.querySelectorAll('#doctor-checkbox-list input:checked')).map(cb => cb.value);
+    }
+    
+    function updateDoctorPreview() {
+        const doctorsListContainer = document.getElementById('story-doctors-list');
+        const selectedIds = getSelectedDoctorIds();
+        if (selectedIds.length === 0) {
+            doctorsListContainer.innerHTML = `<div class="text-center text-4xl opacity-75 flex flex-col justify-center items-center h-full"><p>Pilih dokter dari panel kiri untuk melihat preview.</p></div>`;
+            return;
+        }
+        const selectedDoctors = selectedIds.map(id => allCutiData.find(d => d.id === id)).filter(Boolean);
+        let doctorHTML = '';
+        selectedDoctors.forEach(doctor => {
+            const leaveDatesText = (doctor.cutiMulai === doctor.cutiSelesai)
+                ? formatFullDate(doctor.cutiMulai)
+                : `${formatFullDate(doctor.cutiMulai)} - ${formatFullDate(doctor.cutiSelesai)}`;
+            const isLightTheme = ['solid-white', 'solid-white-dots'].includes(backgroundSelect.value);
+            const cardClass = isLightTheme 
+                ? 'bg-slate-100 text-slate-800 border border-slate-200'
+                : 'bg-white/20 text-white';
+            
+            doctorHTML += `
+                <div class="flex items-center w-full rounded-2xl p-4 shadow-md ${cardClass}">
+                    <img src="${doctor.fotourl}" class="w-24 h-24 rounded-full object-cover border-4 border-white flex-shrink-0" alt="Foto ${doctor.nama}" onerror="this.src='https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'">
+                    <div class="ml-4 text-left">
+                        <h3 class="text-2xl font-bold">${doctor.nama}</h3>
+                        <p class="text-lg opacity-90">${doctor.spesialis}</p>
+                        <p class="text-lg mt-1"><strong class="font-semibold">${leaveDatesText}</strong></p>
+                    </div>
+                </div>`;
+        });
+        doctorsListContainer.innerHTML = doctorHTML;
+    }
+
+    function updateUiState() {
+        const selectedIds = getSelectedDoctorIds();
+        if (selectedIds.length > 0) {
+            downloadButton.disabled = false;
+            buttonText.textContent = `Generate & Download (${selectedIds.length} Dokter)`;
+        } else {
+            downloadButton.disabled = true;
+            buttonText.textContent = 'Pilih Dokter Dahulu';
+        }
+        updateDoctorPreview();
+    }
+
+    function updateBackgroundPreview(theme) {
+        const storyPreview = document.getElementById('story-preview');
+        storyPreview.style.backgroundImage = 'none';
+        storyPreview.style.backgroundSize = 'auto';
+        storyPreview.style.background = '';
+        storyPreview.style.color = 'white';
+        switch(theme) {
+            case 'gradient-purple': 
+                storyPreview.style.background = 'linear-gradient(160deg, #5a189a, #c1121f, #f77f00)'; 
+                break;
+            case 'gradient-orange': 
+                storyPreview.style.background = 'linear-gradient(160deg, #f7b267, #f79d65, #f4845f)'; 
+                break;
+            case 'solid-white': 
+                storyPreview.style.background = '#ffffff';
+                storyPreview.style.backgroundImage = `radial-gradient(circle, #E5E7EB 1px, transparent 1.5px), radial-gradient(circle at 0% 0%, rgba(229, 231, 235, 0.5) 0%, transparent 40%), radial-gradient(circle at 100% 100%, rgba(229, 231, 235, 0.5) 0%, transparent 40%)`;
+                storyPreview.style.backgroundSize = '20px 20px, 120% 120%, 120% 120%';
+                storyPreview.style.color = '#1e2b3b';
+                break;
+            case 'solid-white-dots':
+                storyPreview.style.background = '#ffffff';
+                storyPreview.style.backgroundImage = 'radial-gradient(circle, #D1D5DB 1px, transparent 1.5px)';
+                storyPreview.style.backgroundSize = '35px 35px';
+                storyPreview.style.color = '#1e2b3b';
+                break;
+            default: 
+                storyPreview.style.background = 'linear-gradient(160deg, #192670, #4c9b32)'; 
+                break;
+        }
+        updateDoctorPreview(); 
+    }
+
+    function generateAndDownload() {
+        const params = new URLSearchParams();
+        params.append('doctors', getSelectedDoctorIds().join(','));
+        params.append('theme', backgroundSelect.value);
+        if (document.getElementById('logo-url').value) {
+            params.append('logo', document.getElementById('logo-url').value);
+        }
+        window.open(`/.netlify/functions/generate-story?${params.toString()}`, '_blank');
+    }
+    
+    async function fetchData(url) {
+        try {
+            const response = await fetch(`${url}?t=${new Date().getTime()}`);
+            if (!response.ok) throw new Error(`Network error`);
+            return await response.json();
+        } catch (error) {
+            console.error('Fetch error:', error);
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('error-state').style.display = 'block';
+            return null;
+        }
+    }
+    
+    function formatFullDate(dateStr) {
+        if (!dateStr) return '';
+        const [day, month, year] = dateStr.split('-');
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+        return `${parseInt(day, 10)} ${months[parseInt(month, 10) - 1]} ${year}`;
+    }
+
+    async function initialize() {
+        const [jadwalData, cutiData] = await Promise.all([
+            fetchData(GOOGLE_SCRIPT_JADWAL_URL),
+            fetchData(GOOGLE_SCRIPT_CUTI_URL)
+        ]);
+        if (!jadwalData || !cutiData) return;
+
+        const allDoctors = new Map();
+        for (const key in jadwalData) {
+            if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
+                jadwalData[key].doctors.forEach(doc => {
+                    if (!doc || !doc.name) return;
+
+                    const doctorKey = createDoctorSlug(doc.name);
+                    const imageUrl = doctorKey ? `${LOCAL_WEBP_IMAGE_PATH}${doctorKey}.webp` : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+
+                    if (!allDoctors.has(doctorKey)) {
+                         allDoctors.set(doctorKey, {
+                            nama: doc.name,
+                            spesialis: jadwalData[key].title,
+                            fotourl: imageUrl
+                        });
+                    }
+                });
+            }
+        }
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        allCutiData = cutiData.map((cuti, index) => {
+            const endDateParts = cuti.TanggalSelesaiCuti.split('-');
+            if (endDateParts.length !== 3) return null;
+            const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
+            if (endDate < today) return null;
+            
+            const doctorKey = createDoctorSlug(cuti.NamaDokter);
+            const details = allDoctors.get(doctorKey);
+            
+            return {
+                id: `doc-${index}`,
+                nama: details ? details.nama : cuti.NamaDokter,
+                cutiMulai: cuti.TanggalMulaiCuti,
+                cutiSelesai: cuti.TanggalSelesaiCuti,
+                spesialis: details ? details.spesialis : 'N/A',
+                fotourl: details ? details.fotourl : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'
+            };
+        }).filter(Boolean);
+
+        if (allCutiData.length > 0) {
+            doctorCheckboxList.innerHTML = '';
+            allCutiData.forEach(doc => {
+                const div = document.createElement('div');
+                div.className = 'flex items-center';
+                div.innerHTML = `
+                    <input id="${doc.id}" type="checkbox" value="${doc.id}" class="h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer">
+                    <label for="${doc.id}" class="ml-3 block text-sm font-medium text-slate-700 cursor-pointer">${doc.nama} (Cuti s/d ${formatFullDate(doc.cutiSelesai)})</label>
+                `;
+                doctorCheckboxList.appendChild(div);
+            });
+        } else {
+            doctorCheckboxList.innerHTML = '<p class="text-sm text-slate-500">Tidak ada jadwal cuti dokter.</p>';
+        }
+        
+        loadingState.style.display = 'none';
+        controls.style.display = 'block';
+        updateDoctorPreview();
+        resizePreview();
+    }
+
+    doctorCheckboxList.addEventListener('change', updateUiState);
+    backgroundSelect.addEventListener('change', (e) => updateBackgroundPreview(e.target.value));
+    document.getElementById('logo-url').addEventListener('input', (e) => {
+        storyLogo.src = e.target.value || 'asset/logo/logo.png';
+    });
+    downloadButton.addEventListener('click', generateAndDownload);
+    window.addEventListener('resize', resizePreview);
+    
+    initialize();
 });
 </script>
 </body>
