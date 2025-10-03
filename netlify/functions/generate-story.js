@@ -43,11 +43,16 @@ function fetchData(url, redirectCount = 0) {
 
 function createDoctorSlug(doctorName) {
     if (!doctorName) return '';
-    return doctorName.toLowerCase()
-        .replace(/(dr\.\s*|sp\.[a-z]+\s*|\s*,\s*m\.ked\s*|\s*,\s*)\b/g, '')
+    return doctorName
+        .toLowerCase()
+        // 1. Hapus semua gelar umum, gelar spesifik dari log, dan tanda baca
+        .replace(/dr\.|\ssp\.[\w\-]+|,|\.|\b(m\.kes|m\.biomed|fiatcvs|fics|aifo-k|mars|subsp|onk|kgh|k)\b/g, ' ')
+        // 2. Hapus karakter non-alphanumeric yang mungkin tersisa
         .replace(/[^\w\s-]/g, '')
+        // 3. Hilangkan spasi berlebih di awal/akhir
         .trim()
-        .replace(/\s+/g, '-');
+        // 4. Ganti spasi atau tanda hubung berlebih dengan satu tanda hubung
+        .replace(/[\s-]+/g, '-');
 }
 
 async function fileExists(filePath) {

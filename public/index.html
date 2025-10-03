@@ -129,11 +129,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createDoctorSlug(doctorName) {
         if (!doctorName) return '';
-        return doctorName.toLowerCase()
-            .replace(/(dr\.\s*|sp\.[a-z]+\s*|\s*,\s*m\.ked\s*|\s*,\s*)\b/g, '')
+        return doctorName
+            .toLowerCase()
+            // 1. Hapus semua gelar umum, gelar spesifik dari log, dan tanda baca
+            .replace(/dr\.|\ssp\.[\w\-]+|,|\.|\b(m\.kes|m\.biomed|fiatcvs|fics|aifo-k|mars|subsp|onk|kgh|k)\b/g, ' ')
+            // 2. Hapus karakter non-alphanumeric yang mungkin tersisa
             .replace(/[^\w\s-]/g, '')
+            // 3. Hilangkan spasi berlebih di awal/akhir
             .trim()
-            .replace(/\s+/g, '-');
+            // 4. Ganti spasi atau tanda hubung berlebih dengan satu tanda hubung
+            .replace(/[\s-]+/g, '-');
     }
 
     function resizePreview() {
@@ -263,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!jadwalData || !cutiData) return;
 
         const allDoctors = new Map();
-        // --- GANTI DENGAN KODE INI ---
+        // --- LOGIKA HIBRIDA BARU YANG SUDAH DIPERBAIKI ---
         for (const key in jadwalData) {
             if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
                 jadwalData[key].doctors.forEach(doc => {
@@ -273,7 +278,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     // Prioritas 1: Coba gunakan nama file dari kolom 'image_webp'
                     if (doc.image_webp) {
-                        // Ambil hanya nama filenya saja, untuk keamanan
                         const imageNameFromSheet = doc.image_webp.split('/').pop(); 
                         finalImageUrl = `${LOCAL_WEBP_IMAGE_PATH}${imageNameFromSheet}`;
                     } else {
@@ -291,7 +295,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
         }
-        // --- BATAS AKHIR KODE PENGGANTI ---
         
         const today = new Date(); today.setHours(0, 0, 0, 0);
         
@@ -301,7 +304,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
             if (endDate < today) return null;
             
-            const details = allDoctors.get(cuti.NamaDokter.toLowerCase());
+            const details = allDoctors.get(cuti.NamaDokter.toLowerCase().trim());
             return {
                 id: `doc-${index}`,
                 nama: cuti.NamaDokter,
