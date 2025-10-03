@@ -127,19 +127,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const storyLogo = document.getElementById('story-logo');
     let allCutiData = [];
 
-    function createDoctorSlug(doctorName) {
-        if (!doctorName) return '';
-        return doctorName
-            .toLowerCase()
-            .replace(/\b(dr|drg)\b\.?\s*/g, '')
-            .replace(/,?\s*sp\.[\w\.\(\)-]+/g, '')
-            .replace(/,?\s*m\.[\w\.]+/g, '')
-            .replace(/,?\s*subsp\.?[\w\.]+/g, '')
-            .replace(/,?\s*[A-Z]{2,}/g, '')
-            .replace(/[.,()]/g, '')
-            .trim()
-            .replace(/\s+/g, '-');
-    }
+  function createDoctorSlug(doctorName) {
+    if (!doctorName) return '';
+    return doctorName
+        .toLowerCase()
+        // hapus prefix dr./drg.
+        .replace(/\b(dr|drg)\b\.?\s*/g, '')
+        // hapus gelar spesialis umum: Sp.xxx, M.xxx, Subsp.xxx
+        .replace(/\bsp\.[a-z]+\b/gi, '')
+        .replace(/\bm\.[a-z]+\b/gi, '')
+        .replace(/\bsubsp\.[a-z]+\b/gi, '')
+        // hapus tanda baca
+        .replace(/[.,()]/g, '')
+        // rapikan spasi
+        .trim()
+        .replace(/\s+/g, '-');
+}
+
 
     function resizePreview() {
         const previewContainer = document.getElementById('preview-container');
