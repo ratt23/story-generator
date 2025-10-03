@@ -45,10 +45,15 @@ function createDoctorSlug(doctorName) {
     if (!doctorName) return '';
     return doctorName
         .toLowerCase()
-        .replace(/dr\.|\ssp\.[\w\-]+|,|\.|\b(m\.kes|m\.biomed|fiatcvs|fics|aifo-k|mars|subsp|onk|kgh|k)\b/g, ' ')
-        .replace(/[^\w\s-]/g, '')
+        .replace(/\b(dr|drg)\b\.?\s*/g, '')
+        .replace(/,?\s*sp\.[\w\.\(\)-]+/g, '')
+        .replace(/,?\s*m\.[\w\.]+/g, '')
+        .replace(/,?\s*subsp\.?[\w\.]+/g, '')
+        .replace(/,?\s*[A-Z]{2,}/g, '')
+        .replace(/[.,()]/g, '')
         .trim()
-        .replace(/[\s-]+/g, '-');
+        .replace(/\s+/g, '-');
+}
 }
 
 async function fileExists(filePath) {

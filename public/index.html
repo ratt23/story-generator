@@ -131,10 +131,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!doctorName) return '';
         return doctorName
             .toLowerCase()
-            .replace(/dr\.|\ssp\.[\w\-]+|,|\.|\b(m\.kes|m\.biomed|fiatcvs|fics|aifo-k|mars|subsp|onk|kgh|k)\b/g, ' ')
-            .replace(/[^\w\s-]/g, '')
+            .replace(/\b(dr|drg)\b\.?\s*/g, '')
+            .replace(/,?\s*sp\.[\w\.\(\)-]+/g, '')
+            .replace(/,?\s*m\.[\w\.]+/g, '')
+            .replace(/,?\s*subsp\.?[\w\.]+/g, '')
+            .replace(/,?\s*[A-Z]{2,}/g, '')
+            .replace(/[.,()]/g, '')
             .trim()
-            .replace(/[\s-]+/g, '-');
+            .replace(/\s+/g, '-');
     }
 
     function resizePreview() {
@@ -200,7 +204,6 @@ document.addEventListener('DOMContentLoaded', () => {
         storyPreview.style.backgroundSize = 'auto';
         storyPreview.style.background = '';
         storyPreview.style.color = 'white';
-
         switch(theme) {
             case 'gradient-purple': 
                 storyPreview.style.background = 'linear-gradient(160deg, #5a189a, #c1121f, #f77f00)'; 
@@ -243,7 +246,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error(`Network error`);
             return await response.json();
         } catch (error) {
-            console.getElementById('loading-state').style.display = 'none';
+            console.error('Fetch error:', error);
+            document.getElementById('loading-state').style.display = 'none';
             document.getElementById('error-state').style.display = 'block';
             return null;
         }
@@ -269,15 +273,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 jadwalData[key].doctors.forEach(doc => {
                     if (!doc || !doc.name) return;
 
-                    const doctorSlug = createDoctorSlug(doc.name);
-                    const imageUrl = doctorSlug 
-                        ? `${LOCAL_WEBP_IMAGE_PATH}${doctorSlug}.webp` 
-                        : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+                    const doctorKey = createDoctorSlug(doc.name);
+                    const imageUrl = doctorKey ? `${LOCAL_WEBP_IMAGE_PATH}${doctorKey}.webp` : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
 
-                    allDoctors.set(doc.name.toLowerCase().trim(), {
-                        spesialis: jadwalData[key].title,
-                        fotourl: imageUrl
-                    });
+                    if (!allDoctors.has(doctorKey)) {
+                         allDoctors.set(doctorKey, {
+                            nama: doc.name,
+                            spesialis: jadwalData[key].title,
+                            fotourl: imageUrl
+                        });
+                    }
                 });
             }
         }
@@ -291,10 +296,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
             if (endDate < today) return null;
             
-            const details = allDoctors.get(cuti.NamaDokter.toLowerCase().trim());
+            const doctorKey = createDoctorSlug(cuti.NamaDokter);
+            const details = allDoctors.get(doctorKey);
+            
             return {
                 id: `doc-${index}`,
-                nama: cuti.NamaDokter,
+                nama: details ? details.nama : cuti.NamaDokter,
                 cutiMulai: cuti.TanggalMulaiCuti,
                 cutiSelesai: cuti.TanggalSelesaiCuti,
                 spesialis: details ? details.spesialis : 'N/A',
