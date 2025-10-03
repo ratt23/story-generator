@@ -1,0 +1,36 @@
+# netlify.toml
+
+# =======================================================
+# Pengaturan Dasar Build
+# Memberitahu Netlify di mana file-file penting Anda berada.
+# =======================================================
+[build]
+  # Direktori ini berisi file statis seperti index.html yang akan dipublikasikan.
+  publish = "public"
+  # Direktori ini berisi semua file serverless functions Anda.
+  functions = "netlify/functions"
+
+
+# =======================================================
+# Pengaturan Umum untuk SEMUA Functions
+# Pengaturan di sini berlaku untuk setiap file di dalam folder /functions.
+# =======================================================
+[functions]
+  # Memastikan biner Chromium untuk Puppeteer disertakan dengan benar saat deploy.
+  external_node_modules = ["@sparticuz/chromium"]
+  # Menggunakan bundler esbuild yang cepat untuk functions.
+  node_bundler = "esbuild"
+
+
+# =======================================================
+# Pengaturan KHUSUS untuk Fungsi 'generate-story'
+# Pengaturan di sini hanya berlaku untuk fungsi generate-story.js.
+# =======================================================
+[functions."generate-story"]
+  # Memerintahkan Netlify untuk menyertakan folder 'public' (dan isinya)
+  # saat mendeploy fungsi ini, agar index.html bisa ditemukan.
+  included_files = ["public/**"]
+  
+  # Memberi waktu ekstra (25 detik) agar Puppeteer sempat berjalan,
+  # karena prosesnya bisa lebih lama dari batas default (10 detik).
+  timeout = 25
