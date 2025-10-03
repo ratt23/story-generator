@@ -45,10 +45,14 @@ function createDoctorSlug(doctorName) {
     if (!doctorName) return '';
     return doctorName
         .toLowerCase()
-        .replace(/dr\.|\ssp\.[\w\-]+|,|\.|\b(m\.kes|m\.biomed|fiatcvs|fics|aifo-k|mars|subsp|onk|kgh|k)\b/g, ' ')
-        .replace(/[^\w\s-]/g, '')
+        .replace(/\b(dr|drg)\b\.?\s*/g, '')
+        .replace(/,?\s*sp\.[\w\.\(\)-]+/g, '')
+        .replace(/,?\s*m\.[\w\.]+/g, '')
+        .replace(/,?\s*subsp\.?[\w\.]+/g, '')
+        .replace(/,?\s*[A-Z]{2,}/g, '')
+        .replace(/[.,()]/g, '')
         .trim()
-        .replace(/[\s-]+/g, '-');
+        .replace(/\s+/g, '-');
 }
 
 async function fileExists(filePath) {
@@ -81,10 +85,6 @@ async function imageToBase64(filePath) {
     }
 }
 
-function normalizeName(name) {
-    return name.toLowerCase().trim().replace(/\s+/g, ' ');
-}
-
 function parseDate(dateStr) {
     if (!dateStr) return null;
     const parts = dateStr.split('-');
@@ -111,20 +111,20 @@ async function getCombinedDoctorData() {
         if (!jadwalData || !cutiData) throw new Error("Gagal mengambil data dari Google Sheets.");
 
         const doctorMap = new Map();
-        // --- LOGIKA PENCARIAN GAMBAR HANYA DENGAN SLUG ---
         for (const key in jadwalData) {
             if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
                 for (const doc of jadwalData[key].doctors) {
                     if (doc && doc.name) {
-                        // Selalu buat path gambar dari slug nama dokter
-                        const doctorSlug = createDoctorSlug(doc.name);
-                        const imagePath = path.join(LOCAL_WEBP_IMAGE_DIR, `${doctorSlug}.webp`);
+                        const doctorKey = createDoctorSlug(doc.name);
+                        const imagePath = path.join(LOCAL_WEBP_IMAGE_DIR, `${doctorKey}.webp`);
                         
-                        doctorMap.set(normalizeName(doc.name), {
-                            nama: doc.name,
-                            spesialis: jadwalData[key].title || 'Spesialis tidak diketahui',
-                            fotourl: imagePath // Langsung gunakan path dari slug
-                        });
+                        if (!doctorMap.has(doctorKey)) {
+                            doctorMap.set(doctorKey, {
+                                nama: doc.name,
+                                spesialis: jadwalData[key].title || 'Spesialis tidak diketahui',
+                                fotourl: imagePath
+                            });
+                        }
                     }
                 }
             }
@@ -138,14 +138,17 @@ async function getCombinedDoctorData() {
             .map((cuti, index) => {
                 const endDate = parseDate(cuti.TanggalSelesaiCuti);
                 if (!endDate || endDate < today) return null;
-                const doctorDetails = doctorMap.get(normalizeName(cuti.NamaDokter));
+                
+                const doctorKey = createDoctorSlug(cuti.NamaDokter);
+                const doctorDetails = doctorMap.get(doctorKey);
+                
                 return {
                     id: `doc-${index}`,
-                    nama: cuti.NamaDokter,
+                    nama: doctorDetails ? doctorDetails.nama : cuti.NamaDokter,
                     cutiMulai: cuti.TanggalMulaiCuti,
                     cutiSelesai: cuti.TanggalSelesaiCuti,
                     spesialis: doctorDetails ? doctorDetails.spesialis : 'Spesialis tidak ditemukan',
-                    fotourl: doctorDetails?.fotourl || ''
+                    fotourl: doctorDetails ? doctorDetails.fotourl : ''
                 };
             })
             .filter(Boolean);
@@ -180,11 +183,11 @@ function generateDoctorHTML(doctors, theme) {
     const numDoctors = doctors.length;
 
     let styles;
-    if (numDoctors > 4) { // 5+ dokter
+    if (numDoctors > 4) {
         styles = { container: "w-full flex flex-col items-center justify-center flex-grow space-y-4 px-8", item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-2xl p-4 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-2xl p-4 shadow-lg", photo: "w-32 h-32 rounded-full object-cover border-4 flex-shrink-0", textContainer: "ml-4 text-left", name: "text-3xl font-bold", specialty: "text-xl", date: "text-xl mt-2" };
-    } else if (numDoctors > 2) { // 3-4 dokter
+    } else if (numDoctors > 2) {
         styles = { container: "w-full flex flex-col items-center justify-center flex-grow space-y-6 px-10", item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-3xl p-6 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-3xl p-6 shadow-lg", photo: "w-40 h-40 rounded-full object-cover border-8 flex-shrink-0", textContainer: "ml-6 text-left", name: "text-4xl font-bold", specialty: "text-2xl", date: "text-2xl mt-3" };
-    } else { // 1-2 dokter
+    } else {
         styles = { container: "w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12", item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-3xl p-8 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-3xl p-8 shadow-lg", photo: "w-48 h-48 rounded-full object-cover border-8 flex-shrink-0", textContainer: "ml-8 text-left", name: "text-5xl font-bold", specialty: "text-3xl", date: "text-3xl mt-4" };
     }
 
