@@ -131,13 +131,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!doctorName) return '';
         return doctorName
             .toLowerCase()
-            // 1. Hapus semua gelar umum, gelar spesifik dari log, dan tanda baca
             .replace(/dr\.|\ssp\.[\w\-]+|,|\.|\b(m\.kes|m\.biomed|fiatcvs|fics|aifo-k|mars|subsp|onk|kgh|k)\b/g, ' ')
-            // 2. Hapus karakter non-alphanumeric yang mungkin tersisa
             .replace(/[^\w\s-]/g, '')
-            // 3. Hilangkan spasi berlebih di awal/akhir
             .trim()
-            // 4. Ganti spasi atau tanda hubung berlebih dengan satu tanda hubung
             .replace(/[\s-]+/g, '-');
     }
 
@@ -268,32 +264,21 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!jadwalData || !cutiData) return;
 
         const allDoctors = new Map();
-        // --- LOGIKA HIBRIDA BARU YANG SUDAH DIPERBAIKI ---
+        // --- LOGIKA HANYA DENGAN SLUG ---
         for (const key in jadwalData) {
-            if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
-                jadwalData[key].doctors.forEach(doc => {
-                    if (!doc || !doc.name) return; // Lewati jika data dokter tidak valid
+            jadwalData[key].doctors.forEach(doc => {
+                if (!doc || !doc.name) return;
 
-                    let finalImageUrl = 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+                const doctorSlug = createDoctorSlug(doc.name);
+                const imageUrl = doctorSlug 
+                    ? `${LOCAL_WEBP_IMAGE_PATH}${doctorSlug}.webp` 
+                    : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
 
-                    // Prioritas 1: Coba gunakan nama file dari kolom 'image_webp'
-                    if (doc.image_webp) {
-                        const imageNameFromSheet = doc.image_webp.split('/').pop(); 
-                        finalImageUrl = `${LOCAL_WEBP_IMAGE_PATH}${imageNameFromSheet}`;
-                    } else {
-                        // Prioritas 2: Jika tidak ada, buat dari slug nama dokter
-                        const doctorSlug = createDoctorSlug(doc.name);
-                        if (doctorSlug) {
-                            finalImageUrl = `${LOCAL_WEBP_IMAGE_PATH}${doctorSlug}.webp`;
-                        }
-                    }
-
-                    allDoctors.set(doc.name.toLowerCase().trim(), {
-                        spesialis: jadwalData[key].title || 'Spesialis tidak diketahui',
-                        fotourl: finalImageUrl
-                    });
+                allDoctors.set(doc.name.toLowerCase().trim(), {
+                    spesialis: jadwalData[key].title,
+                    fotourl: imageUrl
                 });
-            }
+            });
         }
         
         const today = new Date(); today.setHours(0, 0, 0, 0);
