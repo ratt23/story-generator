@@ -42,9 +42,7 @@ function fetchData(url, redirectCount = 0) {
 }
 
 /**
- * ## FUNGSI YANG DISESUAIKAN ##
- * Fungsi ini sekarang identik dengan yang ada di `index.html`
- * untuk memastikan konsistensi 100% antara preview dan hasil akhir.
+ * FUNGSI createDoctorSlug YANG SAMA PERSIS DENGAN FRONTEND
  */
 function createDoctorSlug(doctorName) {
     if (!doctorName) return '';
@@ -72,13 +70,58 @@ async function fileExists(filePath) {
     }
 }
 
+// Fungsi debug untuk melihat file yang tersedia
+async function debugImageFiles() {
+    try {
+        const files = await fs.readdir(path.resolve(process.cwd(), LOCAL_WEBP_IMAGE_DIR));
+        console.log('=== AVAILABLE IMAGE FILES ===');
+        files.forEach(file => {
+            if (file.endsWith('.webp')) {
+                console.log(`- ${file}`);
+            }
+        });
+        console.log('=============================');
+    } catch (error) {
+        console.error('Cannot read image directory:', error);
+    }
+}
+
+// Sistem fallback untuk mencari gambar dokter
+async function findDoctorImage(doctorName) {
+    const baseSlug = createDoctorSlug(doctorName);
+    const possiblePaths = [
+        path.join(LOCAL_WEBP_IMAGE_DIR, `${baseSlug}.webp`),
+        path.join(LOCAL_WEBP_IMAGE_DIR, `${baseSlug.toLowerCase()}.webp`),
+    ];
+    
+    for (const imagePath of possiblePaths) {
+        const absolutePath = path.resolve(process.cwd(), imagePath);
+        if (await fileExists(absolutePath)) {
+            console.log(`Found image for ${doctorName}: ${absolutePath}`);
+            return imagePath;
+        }
+    }
+    
+    console.log(`No image found for ${doctorName}, tried:`, possiblePaths);
+    return null;
+}
+
 async function imageToBase64(filePath) {
     if (!filePath) return 'https://placehold.co/200x200/e2e8f0/475569?text=NotFound';
     if (filePath.startsWith('http')) return filePath;
 
-    const absolutePath = path.resolve(process.cwd(), filePath);
+    // Handle relative paths correctly
+    let absolutePath;
+    if (filePath.startsWith('public/')) {
+        absolutePath = path.resolve(process.cwd(), filePath);
+    } else {
+        absolutePath = path.resolve(process.cwd(), 'public', filePath);
+    }
+
+    console.log(`Looking for image: ${absolutePath}`);
+    
     if (!(await fileExists(absolutePath))) {
-        console.warn(`File gambar tidak ditemukan di path: ${absolutePath}`);
+        console.warn(`File gambar tidak ditemukan: ${absolutePath}`);
         return 'https://placehold.co/200x200/e2e8f0/475569?text=NotFound';
     }
     
@@ -88,7 +131,7 @@ async function imageToBase64(filePath) {
         const mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
         return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
     } catch (error) {
-        console.error(`Gagal membaca file gambar: ${filePath}.`, error);
+        console.error(`Gagal membaca file: ${absolutePath}`, error);
         return 'https://placehold.co/200x200/e2e8f0/475569?text=Error';
     }
 }
@@ -111,6 +154,9 @@ async function getCombinedDoctorData() {
 
     console.log('Mengambil data terbaru dari Google Sheets...');
     
+    // Debug: Tampilkan file gambar yang tersedia
+    await debugImageFiles();
+    
     try {
         const [jadwalData, cutiData] = await Promise.all([
             fetchData(GOOGLE_SCRIPT_JADWAL_URL),
@@ -119,26 +165,32 @@ async function getCombinedDoctorData() {
         if (!jadwalData || !cutiData) throw new Error("Gagal mengambil data dari Google Sheets.");
 
         const doctorMap = new Map();
-        // Membangun peta dokter dari data jadwal
+        
+        // Logging untuk debugging slug
+        console.log('=== DOCTOR SLUG MAPPING ===');
         for (const key in jadwalData) {
             if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
                 for (const doc of jadwalData[key].doctors) {
                     if (doc && doc.name) {
                         const doctorSlug = createDoctorSlug(doc.name);
-                        const imagePath = path.join(LOCAL_WEBP_IMAGE_DIR, `${doctorSlug}.webp`);
+                        console.log(`- ${doc.name} -> ${doctorSlug}`);
+                        
+                        // Cari gambar dengan sistem fallback
+                        const imagePath = await findDoctorImage(doc.name);
                         
                         // Menggunakan slug sebagai kunci, sama seperti di frontend
                         if (!doctorMap.has(doctorSlug)) {
                             doctorMap.set(doctorSlug, {
                                 nama: doc.name,
                                 spesialis: jadwalData[key].title || 'Spesialis tidak diketahui',
-                                fotourl: imagePath 
+                                fotourl: imagePath || 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'
                             });
                         }
                     }
                 }
             }
         }
+        console.log('===========================');
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -153,13 +205,17 @@ async function getCombinedDoctorData() {
                 const doctorKey = createDoctorSlug(cuti.NamaDokter);
                 const doctorDetails = doctorMap.get(doctorKey);
                 
+                if (!doctorDetails) {
+                    console.warn(`Doctor details not found for: ${cuti.NamaDokter} (slug: ${doctorKey})`);
+                }
+                
                 return {
                     id: `doc-${index}`,
                     nama: doctorDetails ? doctorDetails.nama : cuti.NamaDokter,
                     cutiMulai: cuti.TanggalMulaiCuti,
                     cutiSelesai: cuti.TanggalSelesaiCuti,
                     spesialis: doctorDetails ? doctorDetails.spesialis : 'Spesialis tidak ditemukan',
-                    fotourl: doctorDetails ? doctorDetails.fotourl : ''
+                    fotourl: doctorDetails ? doctorDetails.fotourl : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'
                 };
             })
             .filter(Boolean);
@@ -196,17 +252,45 @@ function generateDoctorHTML(doctors, theme) {
 
     let styles;
     if (numDoctors > 4) { // 5+ dokter
-        styles = { container: "w-full flex flex-col items-center justify-center flex-grow space-y-4 px-8", item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-2xl p-4 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-2xl p-4 shadow-lg", photo: "w-32 h-32 rounded-full object-cover border-4 flex-shrink-0", textContainer: "ml-4 text-left", name: "text-3xl font-bold", specialty: "text-xl", date: "text-xl mt-2" };
+        styles = { 
+            container: "w-full flex flex-col items-center justify-center flex-grow space-y-4 px-8", 
+            item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-2xl p-4 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-2xl p-4 shadow-lg", 
+            photo: "w-32 h-32 rounded-full object-cover border-4 flex-shrink-0", 
+            textContainer: "ml-4 text-left", 
+            name: "text-3xl font-bold", 
+            specialty: "text-xl", 
+            date: "text-xl mt-2" 
+        };
     } else if (numDoctors > 2) { // 3-4 dokter
-        styles = { container: "w-full flex flex-col items-center justify-center flex-grow space-y-6 px-10", item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-3xl p-6 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-3xl p-6 shadow-lg", photo: "w-40 h-40 rounded-full object-cover border-8 flex-shrink-0", textContainer: "ml-6 text-left", name: "text-4xl font-bold", specialty: "text-2xl", date: "text-2xl mt-3" };
+        styles = { 
+            container: "w-full flex flex-col items-center justify-center flex-grow space-y-6 px-10", 
+            item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-3xl p-6 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-3xl p-6 shadow-lg", 
+            photo: "w-40 h-40 rounded-full object-cover border-8 flex-shrink-0", 
+            textContainer: "ml-6 text-left", 
+            name: "text-4xl font-bold", 
+            specialty: "text-2xl", 
+            date: "text-2xl mt-3" 
+        };
     } else { // 1-2 dokter
-        styles = { container: "w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12", item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-3xl p-8 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-3xl p-8 shadow-lg", photo: "w-48 h-48 rounded-full object-cover border-8 flex-shrink-0", textContainer: "ml-8 text-left", name: "text-5xl font-bold", specialty: "text-3xl", date: "text-3xl mt-4" };
+        styles = { 
+            container: "w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12", 
+            item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-3xl p-8 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-3xl p-8 shadow-lg", 
+            photo: "w-48 h-48 rounded-full object-cover border-8 flex-shrink-0", 
+            textContainer: "ml-8 text-left", 
+            name: "text-5xl font-bold", 
+            specialty: "text-3xl", 
+            date: "text-3xl mt-4" 
+        };
     }
 
     if (isLightTheme) {
-        styles.photo += " border-white shadow-md"; styles.name += " text-slate-800"; styles.specialty += " text-slate-600"; styles.date += " text-slate-600";
+        styles.photo += " border-white shadow-md"; 
+        styles.name += " text-slate-800"; 
+        styles.specialty += " text-slate-600"; 
+        styles.date += " text-slate-600";
     } else {
-        styles.photo += " border-white"; styles.specialty += " opacity-90";
+        styles.photo += " border-white"; 
+        styles.specialty += " opacity-90";
     }
 
     const doctorsHTML = doctors.map(doctor => {
@@ -249,7 +333,10 @@ exports.handler = async (event) => {
         console.log(`Memproses ${selectedDoctors.length} dokter:`, selectedDoctors.map(d => d.nama));
 
         const doctorsWithProcessedImages = await Promise.all(
-            selectedDoctors.map(async (doctor) => ({ ...doctor, fotourl: await imageToBase64(doctor.fotourl) }))
+            selectedDoctors.map(async (doctor) => ({ 
+                ...doctor, 
+                fotourl: await imageToBase64(doctor.fotourl) 
+            }))
         );
 
         const doctorListContainerHTML = generateDoctorHTML(doctorsWithProcessedImages, selectedTheme);
@@ -262,7 +349,12 @@ exports.handler = async (event) => {
             .replace('{{LOGO_SRC}}', processedLogo)
             .replace('{{DOCTOR_LIST_HTML}}', doctorListContainerHTML);
 
-        const browserOptions = { args: chromium.args, defaultViewport: { width: 1080, height: 1920 }, executablePath: await chromium.executablePath(), headless: true };
+        const browserOptions = { 
+            args: chromium.args, 
+            defaultViewport: { width: 1080, height: 1920 }, 
+            executablePath: await chromium.executablePath(), 
+            headless: true 
+        };
         browser = await puppeteer.launch(browserOptions);
         const page = await browser.newPage();
         await page.setViewport({ width: 1080, height: 1920 });
@@ -290,12 +382,20 @@ exports.handler = async (event) => {
         return {
             statusCode: 500,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ error: 'Gagal membuat gambar story', message: error.message, details: process.env.NODE_ENV === 'development' ? error.stack : undefined })
+            body: JSON.stringify({ 
+                error: 'Gagal membuat gambar story', 
+                message: error.message, 
+                details: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+            })
         };
     } finally {
         if (browser) {
-            try { await browser.close(); console.log('Browser closed'); } 
-            catch (closeError) { console.error('Error closing browser:', closeError); }
+            try { 
+                await browser.close(); 
+                console.log('Browser closed'); 
+            } catch (closeError) { 
+                console.error('Error closing browser:', closeError); 
+            }
         }
     }
 };
