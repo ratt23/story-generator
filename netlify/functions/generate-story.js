@@ -45,15 +45,17 @@ function createDoctorSlug(doctorName) {
     if (!doctorName) return '';
     return doctorName
         .toLowerCase()
-        // hapus prefix dr./drg.
-        .replace(/\b(dr|drg)\b\.?\s*/g, '')
-        // hapus gelar spesialis umum: Sp.xxx, M.xxx, Subsp.xxx
+        // hapus prefix dr / drg
+        .replace(/\b(dr|drg)\b\.?\s*/gi, '')
+        // hapus semua gelar medis (spesialis, magister, subsp, dll)
         .replace(/\bsp\.[a-z]+\b/gi, '')
         .replace(/\bm\.[a-z]+\b/gi, '')
         .replace(/\bsubsp\.[a-z]+\b/gi, '')
-        // hapus tanda baca
+        // hapus singkatan kapital di belakang (AIFO-K, KFM, FICS, FINACVS, dsb)
+        .replace(/\b[a-z\-]{2,}\b/gi, '')
+        // buang tanda baca
         .replace(/[.,()]/g, '')
-        // rapikan spasi
+        // rapikan spasi → ganti dengan '-'
         .trim()
         .replace(/\s+/g, '-');
 }
