@@ -88,7 +88,7 @@
             </div>
             <div id="error-state" class="hidden text-center py-8 bg-red-50 border-l-4 border-red-400 p-4">
                 <p class="font-bold text-red-800">Gagal Memuat Data</p>
-                <p class="text-sm text-red-600">Coba muat ulang halaman atau periksa koneksi internet.</p>
+                <p class="text-sm text-red-600" id="error-message">Coba muat ulang halaman atau periksa koneksi internet.</p>
             </div>
         </div>
 
@@ -115,7 +115,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4xloZHFB4MfrJ8lQEqCg6ZtO_QYnfchoXy6uR04vh88jE5oFb4nP4hBlN29fne3rL0Q/exec'; // <-- GANTI DENGAN URL BARU ANDA
+    const GOOGLE_SCRIPT_URL = 'PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE'; // <-- PENTING: GANTI DENGAN URL WEB APP ANDA
     const LOCAL_WEBP_IMAGE_PATH = 'asset/webp/';
     const controls = document.getElementById('controls');
     const loadingState = document.getElementById('loading-state');
@@ -126,7 +126,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const storyLogo = document.getElementById('story-logo');
     let allCutiData = [];
 
-    // Fungsi createDoctorSlug sudah tidak diperlukan lagi
+    function parseDate(dateStr) {
+        if (!dateStr || typeof dateStr !== 'string') return null;
+        const parts = dateStr.split('-');
+        if (parts.length !== 3) return null;
+        // Asumsi format dd-MM-yyyy dari Google Script
+        const [day, month, year] = parts.map(p => parseInt(p, 10));
+        if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
+        return new Date(year, month - 1, day);
+    }
 
     function resizePreview() {
         const previewContainer = document.getElementById('preview-container');
@@ -229,8 +237,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function fetchData(url) {
         try {
-            const response = await fetch(`${url}&t=${new Date().getTime()}`); // Tambah cache buster
-            if (!response.ok) throw new Error(`Network error`);
+            const response = await fetch(`${url}&t=${new Date().getTime()}`);
+            if (!response.ok) throw new Error(`Network error: ${response.statusText}`);
             const json = await response.json();
             if (json.error) throw new Error(`API Error: ${json.message}`);
             return json;
@@ -238,20 +246,28 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Fetch error:', error);
             document.getElementById('loading-state').style.display = 'none';
             document.getElementById('error-state').style.display = 'block';
+            document.getElementById('error-message').textContent = error.message;
             return null;
         }
     }
     
     function formatFullDate(dateStr) {
         if (!dateStr) return '';
-        // Asumsi format dd-MM-yyyy
-        const [day, month, year] = dateStr.split('-');
-        if (!day || !month || !year) return dateStr;
+        const date = parseDate(dateStr);
+        if (!date) return dateStr;
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
-        return `${parseInt(day, 10)} ${months[parseInt(month, 10) - 1]} ${year}`;
+        return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
     }
 
     async function initialize() {
+        if (GOOGLE_SCRIPT_URL.includes('https://script.google.com/macros/s/AKfycbz4xloZHFB4MfrJ8lQEqCg6ZtO_QYnfchoXy6uR04vh88jE5oFb4nP4hBlN29fne3rL0Q/exec') || GOOGLE_SCRIPT_URL === '') {
+            document.getElementById('loading-state').style.display = 'none';
+            const errorDiv = document.getElementById('error-state');
+            errorDiv.style.display = 'block';
+            document.getElementById('error-message').textContent = 'Kesalahan Konfigurasi: Anda belum memasukkan URL Google Script. Silakan ganti placeholder "PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE" di dalam kode dengan URL Web App Anda.';
+            return;
+        }
+        
         const [masterDoctorData, cutiData] = await Promise.all([
             fetchData(`${GOOGLE_SCRIPT_URL}?data=master`),
             fetchData(`${GOOGLE_SCRIPT_URL}?data=cuti`)
@@ -270,7 +286,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const doctorId = String(cuti.id_doc).trim();
                 const details = masterDoctorData[doctorId];
 
-                if (!details) return null;
+                if (!details) {
+                    console.warn(`ID Dokter ${doctorId} dari sheet cuti tidak ditemukan di master.`);
+                    return null;
+                }
                 
                 const imageUrl = `${LOCAL_WEBP_IMAGE_PATH}${doctorId}.webp`;
                 
@@ -318,3 +337,4 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
