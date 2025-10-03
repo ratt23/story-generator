@@ -8,7 +8,7 @@ const https = require('https');
 
 // --- URL & KONFIGURASI ---
 // Cukup satu URL, kita akan tambahkan parameter ?data=master atau ?data=cuti
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwxZ_CngiYCa-2yDz-fmC_g-BmXwgaQCQ1KxYTTCp1qKxy_F_eYgYOmxBry2LivbpO3qw/exec'; // <-- GANTI DENGAN URL BARU ANDA
+const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4xloZHFB4MfrJ8lQEqCg6ZtO_QYnfchoXy6uR04vh88jE5oFb4nP4hBlN29fne3rL0Q/exec'; // <-- GANTI DENGAN URL BARU ANDA
 const LOCAL_WEBP_IMAGE_DIR = 'public/asset/webp/';
 const CACHE_DURATION_MS = 5 * 60 * 1000;
 
