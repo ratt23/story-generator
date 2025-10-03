@@ -263,17 +263,35 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!jadwalData || !cutiData) return;
 
         const allDoctors = new Map();
+        // --- GANTI DENGAN KODE INI ---
         for (const key in jadwalData) {
-            jadwalData[key].doctors.forEach(doc => {
-                const doctorSlug = createDoctorSlug(doc.name);
-                const imageUrl = doctorSlug ? `${LOCAL_WEBP_IMAGE_PATH}${doctorSlug}.webp` : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+            if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
+                jadwalData[key].doctors.forEach(doc => {
+                    if (!doc || !doc.name) return; // Lewati jika data dokter tidak valid
 
-                allDoctors.set(doc.name.toLowerCase(), {
-                    spesialis: jadwalData[key].title,
-                    fotourl: imageUrl
+                    let finalImageUrl = 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+
+                    // Prioritas 1: Coba gunakan nama file dari kolom 'image_webp'
+                    if (doc.image_webp) {
+                        // Ambil hanya nama filenya saja, untuk keamanan
+                        const imageNameFromSheet = doc.image_webp.split('/').pop(); 
+                        finalImageUrl = `${LOCAL_WEBP_IMAGE_PATH}${imageNameFromSheet}`;
+                    } else {
+                        // Prioritas 2: Jika tidak ada, buat dari slug nama dokter
+                        const doctorSlug = createDoctorSlug(doc.name);
+                        if (doctorSlug) {
+                            finalImageUrl = `${LOCAL_WEBP_IMAGE_PATH}${doctorSlug}.webp`;
+                        }
+                    }
+
+                    allDoctors.set(doc.name.toLowerCase().trim(), {
+                        spesialis: jadwalData[key].title || 'Spesialis tidak diketahui',
+                        fotourl: finalImageUrl
+                    });
                 });
-            });
+            }
         }
+        // --- BATAS AKHIR KODE PENGGANTI ---
         
         const today = new Date(); today.setHours(0, 0, 0, 0);
         
