@@ -129,12 +129,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createDoctorSlug(doctorName) {
         if (!doctorName) return '';
+<<<<<<< HEAD
         return doctorName
             .toLowerCase()
             .replace(/dr\.|\ssp\.[\w\-]+|,|\.|\b(m\.kes|m\.biomed|fiatcvs|fics|aifo-k|mars|subsp|onk|kgh|k)\b/g, ' ')
             .replace(/[^\w\s-]/g, '')
             .trim()
             .replace(/[\s-]+/g, '-');
+=======
+        return doctorName.toLowerCase()
+            .replace(/(dr\.\s*|sp\.[a-z]+\s*|\s*,\s*m\.ked\s*|\s*,\s*)\b/g, '')
+            .replace(/[^\w\s-]/g, '')
+            .trim()
+            .replace(/\s+/g, '-');
+>>>>>>> 6131bf3bc581c58960bbe1642bef9a7596e908d7
     }
 
     function resizePreview() {
@@ -264,6 +272,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!jadwalData || !cutiData) return;
 
         const allDoctors = new Map();
+<<<<<<< HEAD
         // --- LOGIKA HANYA DENGAN SLUG ---
         for (const key in jadwalData) {
             jadwalData[key].doctors.forEach(doc => {
@@ -275,6 +284,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
 
                 allDoctors.set(doc.name.toLowerCase().trim(), {
+=======
+        for (const key in jadwalData) {
+            jadwalData[key].doctors.forEach(doc => {
+                const doctorSlug = createDoctorSlug(doc.name);
+                const imageUrl = doctorSlug ? `${LOCAL_WEBP_IMAGE_PATH}${doctorSlug}.webp` : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+
+                allDoctors.set(doc.name.toLowerCase(), {
+>>>>>>> 6131bf3bc581c58960bbe1642bef9a7596e908d7
                     spesialis: jadwalData[key].title,
                     fotourl: imageUrl
                 });
@@ -289,7 +306,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
             if (endDate < today) return null;
             
+<<<<<<< HEAD
             const details = allDoctors.get(cuti.NamaDokter.toLowerCase().trim());
+=======
+            const details = allDoctors.get(cuti.NamaDokter.toLowerCase());
+>>>>>>> 6131bf3bc581c58960bbe1642bef9a7596e908d7
             return {
                 id: `doc-${index}`,
                 nama: cuti.NamaDokter,

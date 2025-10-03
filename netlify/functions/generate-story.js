@@ -43,12 +43,20 @@ function fetchData(url, redirectCount = 0) {
 
 function createDoctorSlug(doctorName) {
     if (!doctorName) return '';
+<<<<<<< HEAD
     return doctorName
         .toLowerCase()
         .replace(/dr\.|\ssp\.[\w\-]+|,|\.|\b(m\.kes|m\.biomed|fiatcvs|fics|aifo-k|mars|subsp|onk|kgh|k)\b/g, ' ')
         .replace(/[^\w\s-]/g, '')
         .trim()
         .replace(/[\s-]+/g, '-');
+=======
+    return doctorName.toLowerCase()
+        .replace(/(dr\.\s*|sp\.[a-z]+\s*|\s*,\s*m\.ked\s*|\s*,\s*)\b/g, '')
+        .replace(/[^\w\s-]/g, '')
+        .trim()
+        .replace(/\s+/g, '-');
+>>>>>>> 6131bf3bc581c58960bbe1642bef9a7596e908d7
 }
 
 async function fileExists(filePath) {
@@ -111,19 +119,55 @@ async function getCombinedDoctorData() {
         if (!jadwalData || !cutiData) throw new Error("Gagal mengambil data dari Google Sheets.");
 
         const doctorMap = new Map();
+<<<<<<< HEAD
         // --- LOGIKA PENCARIAN GAMBAR HANYA DENGAN SLUG ---
+=======
+        // --- LOGIKA PENCARIAN GAMBAR HIBRIDA DIMULAI DI SINI ---
+>>>>>>> 6131bf3bc581c58960bbe1642bef9a7596e908d7
         for (const key in jadwalData) {
             if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
                 for (const doc of jadwalData[key].doctors) {
                     if (doc && doc.name) {
+<<<<<<< HEAD
                         // Selalu buat path gambar dari slug nama dokter
                         const doctorSlug = createDoctorSlug(doc.name);
                         const imagePath = path.join(LOCAL_WEBP_IMAGE_DIR, `${doctorSlug}.webp`);
+=======
+                        let imagePath = '';
+
+                        // Prioritas 1: Coba cari file dari kolom 'image_webp'
+                        const imageNameFromSheet = doc.image_webp ? path.basename(doc.image_webp) : '';
+                        if (imageNameFromSheet) {
+                            const potentialPath = path.join(LOCAL_WEBP_IMAGE_DIR, imageNameFromSheet);
+                            if (await fileExists(potentialPath)) {
+                                imagePath = potentialPath;
+                                console.log(`SUCCESS (image_webp): Ditemukan untuk ${doc.name} di ${imagePath}`);
+                            } else {
+                                console.warn(`WARN (image_webp): File di sheet tidak ditemukan: ${potentialPath}`);
+                            }
+                        }
+
+                        // Prioritas 2: Jika tidak berhasil, coba cari berdasarkan slug nama dokter
+                        if (!imagePath) {
+                            const doctorSlug = createDoctorSlug(doc.name);
+                            const slugPath = path.join(LOCAL_WEBP_IMAGE_DIR, `${doctorSlug}.webp`);
+                            if (await fileExists(slugPath)) {
+                                imagePath = slugPath;
+                                console.log(`SUCCESS (slug): Ditemukan untuk ${doc.name} di ${imagePath}`);
+                            } else {
+                                console.warn(`WARN (slug): File slug tidak ditemukan untuk ${doc.name}: ${slugPath}`);
+                            }
+                        }
+>>>>>>> 6131bf3bc581c58960bbe1642bef9a7596e908d7
                         
                         doctorMap.set(normalizeName(doc.name), {
                             nama: doc.name,
                             spesialis: jadwalData[key].title || 'Spesialis tidak diketahui',
+<<<<<<< HEAD
                             fotourl: imagePath // Langsung gunakan path dari slug
+=======
+                            fotourl: imagePath // Path yang berhasil ditemukan atau string kosong
+>>>>>>> 6131bf3bc581c58960bbe1642bef9a7596e908d7
                         });
                     }
                 }
