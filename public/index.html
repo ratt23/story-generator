@@ -129,7 +129,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createDoctorSlug(doctorName) {
         if (!doctorName) return '';
-
+        return doctorName
+            .toLowerCase()
+            .replace(/dr\.|\ssp\.[\w\-]+|,|\.|\b(m\.kes|m\.biomed|fiatcvs|fics|aifo-k|mars|subsp|onk|kgh|k)\b/g, ' ')
+            .replace(/[^\w\s-]/g, '')
+            .trim()
+            .replace(/[\s-]+/g, '-');
     }
 
     function resizePreview() {
@@ -238,7 +243,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) throw new Error(`Network error`);
             return await response.json();
         } catch (error) {
-            document.getElementById('loading-state').style.display = 'none';
+            console.getElementById('loading-state').style.display = 'none';
             document.getElementById('error-state').style.display = 'block';
             return null;
         }
@@ -259,20 +264,34 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!jadwalData || !cutiData) return;
 
         const allDoctors = new Map();
+        for (const key in jadwalData) {
+            if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
+                jadwalData[key].doctors.forEach(doc => {
+                    if (!doc || !doc.name) return;
 
-                    spesialis: jadwalData[key].title,
-                    fotourl: imageUrl
+                    const doctorSlug = createDoctorSlug(doc.name);
+                    const imageUrl = doctorSlug 
+                        ? `${LOCAL_WEBP_IMAGE_PATH}${doctorSlug}.webp` 
+                        : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+
+                    allDoctors.set(doc.name.toLowerCase().trim(), {
+                        spesialis: jadwalData[key].title,
+                        fotourl: imageUrl
+                    });
                 });
-            
-
+            }
+        }
         
-        const today = new Date(); today.setHours(0, 0, 0, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         
         allCutiData = cutiData.map((cuti, index) => {
             const endDateParts = cuti.TanggalSelesaiCuti.split('-');
             if (endDateParts.length !== 3) return null;
             const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
-            if (endDate < today) return null;          
+            if (endDate < today) return null;
+            
+            const details = allDoctors.get(cuti.NamaDokter.toLowerCase().trim());
             return {
                 id: `doc-${index}`,
                 nama: cuti.NamaDokter,
