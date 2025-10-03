@@ -88,7 +88,7 @@
             </div>
             <div id="error-state" class="hidden text-center py-8 bg-red-50 border-l-4 border-red-400 p-4">
                 <p class="font-bold text-red-800">Gagal Memuat Data</p>
-                <p class="text-sm text-red-600" id="error-message">Coba muat ulang halaman atau periksa koneksi internet.</p>
+                <p class="text-sm text-red-600">Coba muat ulang halaman atau periksa koneksi internet.</p>
             </div>
         </div>
 
@@ -115,7 +115,8 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const GOOGLE_SCRIPT_URL = 'PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE'; // <-- PENTING: GANTI DENGAN URL WEB APP ANDA
+    const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
+    const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
     const LOCAL_WEBP_IMAGE_PATH = 'asset/webp/';
     const controls = document.getElementById('controls');
     const loadingState = document.getElementById('loading-state');
@@ -126,15 +127,23 @@ document.addEventListener('DOMContentLoaded', () => {
     const storyLogo = document.getElementById('story-logo');
     let allCutiData = [];
 
-    function parseDate(dateStr) {
-        if (!dateStr || typeof dateStr !== 'string') return null;
-        const parts = dateStr.split('-');
-        if (parts.length !== 3) return null;
-        // Asumsi format dd-MM-yyyy dari Google Script
-        const [day, month, year] = parts.map(p => parseInt(p, 10));
-        if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
-        return new Date(year, month - 1, day);
-    }
+  function createDoctorSlug(doctorName) {
+    if (!doctorName) return '';
+    return doctorName
+        .toLowerCase()
+        // hapus prefix dr./drg.
+        .replace(/\b(dr|drg)\b\.?\s*/g, '')
+        // hapus gelar spesialis umum: Sp.xxx, M.xxx, Subsp.xxx
+        .replace(/\bsp\.[a-z]+\b/gi, '')
+        .replace(/\bm\.[a-z]+\b/gi, '')
+        .replace(/\bsubsp\.[a-z]+\b/gi, '')
+        // hapus tanda baca
+        .replace(/[.,()]/g, '')
+        // rapikan spasi
+        .trim()
+        .replace(/\s+/g, '-');
+}
+
 
     function resizePreview() {
         const previewContainer = document.getElementById('preview-container');
@@ -237,71 +246,72 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function fetchData(url) {
         try {
-            const response = await fetch(`${url}&t=${new Date().getTime()}`);
-            if (!response.ok) throw new Error(`Network error: ${response.statusText}`);
-            const json = await response.json();
-            if (json.error) throw new Error(`API Error: ${json.message}`);
-            return json;
+            const response = await fetch(`${url}?t=${new Date().getTime()}`);
+            if (!response.ok) throw new Error(`Network error`);
+            return await response.json();
         } catch (error) {
             console.error('Fetch error:', error);
             document.getElementById('loading-state').style.display = 'none';
             document.getElementById('error-state').style.display = 'block';
-            document.getElementById('error-message').textContent = error.message;
             return null;
         }
     }
     
     function formatFullDate(dateStr) {
         if (!dateStr) return '';
-        const date = parseDate(dateStr);
-        if (!date) return dateStr;
+        const [day, month, year] = dateStr.split('-');
         const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
-        return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+        return `${parseInt(day, 10)} ${months[parseInt(month, 10) - 1]} ${year}`;
     }
 
     async function initialize() {
-        if (GOOGLE_SCRIPT_URL.includes('https://script.google.com/macros/s/AKfycbz4xloZHFB4MfrJ8lQEqCg6ZtO_QYnfchoXy6uR04vh88jE5oFb4nP4hBlN29fne3rL0Q/exec') || GOOGLE_SCRIPT_URL === '') {
-            document.getElementById('loading-state').style.display = 'none';
-            const errorDiv = document.getElementById('error-state');
-            errorDiv.style.display = 'block';
-            document.getElementById('error-message').textContent = 'Kesalahan Konfigurasi: Anda belum memasukkan URL Google Script. Silakan ganti placeholder "PASTE_YOUR_GOOGLE_SCRIPT_URL_HERE" di dalam kode dengan URL Web App Anda.';
-            return;
-        }
-        
-        const [masterDoctorData, cutiData] = await Promise.all([
-            fetchData(`${GOOGLE_SCRIPT_URL}?data=master`),
-            fetchData(`${GOOGLE_SCRIPT_URL}?data=cuti`)
+        const [jadwalData, cutiData] = await Promise.all([
+            fetchData(GOOGLE_SCRIPT_JADWAL_URL),
+            fetchData(GOOGLE_SCRIPT_CUTI_URL)
         ]);
-        if (!masterDoctorData || !cutiData) return;
+        if (!jadwalData || !cutiData) return;
+
+        const allDoctors = new Map();
+        for (const key in jadwalData) {
+            if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
+                jadwalData[key].doctors.forEach(doc => {
+                    if (!doc || !doc.name) return;
+
+                    const doctorKey = createDoctorSlug(doc.name);
+                    const imageUrl = doctorKey ? `${LOCAL_WEBP_IMAGE_PATH}${doctorKey}.webp` : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+
+                    if (!allDoctors.has(doctorKey)) {
+                         allDoctors.set(doctorKey, {
+                            nama: doc.name,
+                            spesialis: jadwalData[key].title,
+                            fotourl: imageUrl
+                        });
+                    }
+                });
+            }
+        }
         
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        allCutiData = cutiData
-            .filter(cuti => cuti && cuti.id_doc && cuti.tanggal_selesai_cuti)
-            .map((cuti, index) => {
-                const endDate = parseDate(cuti.tanggal_selesai_cuti);
-                if (!endDate || endDate < today) return null;
-                
-                const doctorId = String(cuti.id_doc).trim();
-                const details = masterDoctorData[doctorId];
-
-                if (!details) {
-                    console.warn(`ID Dokter ${doctorId} dari sheet cuti tidak ditemukan di master.`);
-                    return null;
-                }
-                
-                const imageUrl = `${LOCAL_WEBP_IMAGE_PATH}${doctorId}.webp`;
-                
-                return {
-                    id: `doc-${index}`,
-                    nama: details.name,
-                    cutiMulai: cuti.tanggal_mulai_cuti,
-                    cutiSelesai: cuti.tanggal_selesai_cuti,
-                    spesialis: details.specialty,
-                    fotourl: imageUrl
-                };
-            }).filter(Boolean);
+        allCutiData = cutiData.map((cuti, index) => {
+            const endDateParts = cuti.TanggalSelesaiCuti.split('-');
+            if (endDateParts.length !== 3) return null;
+            const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
+            if (endDate < today) return null;
+            
+            const doctorKey = createDoctorSlug(cuti.NamaDokter);
+            const details = allDoctors.get(doctorKey);
+            
+            return {
+                id: `doc-${index}`,
+                nama: details ? details.nama : cuti.NamaDokter,
+                cutiMulai: cuti.TanggalMulaiCuti,
+                cutiSelesai: cuti.TanggalSelesaiCuti,
+                spesialis: details ? details.spesialis : 'N/A',
+                fotourl: details ? details.fotourl : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'
+            };
+        }).filter(Boolean);
 
         if (allCutiData.length > 0) {
             doctorCheckboxList.innerHTML = '';
@@ -337,4 +347,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-

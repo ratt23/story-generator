@@ -7,8 +7,8 @@ const path = require('path');
 const https = require('https');
 
 // --- URL & KONFIGURASI ---
-// Cukup satu URL, kita akan tambahkan parameter ?data=master atau ?data=cuti
-const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz4xloZHFB4MfrJ8lQEqCg6ZtO_QYnfchoXy6uR04vh88jE5oFb4nP4hBlN29fne3rL0Q/exec'; // <-- GANTI DENGAN URL BARU ANDA
+const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
+const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
 const LOCAL_WEBP_IMAGE_DIR = 'public/asset/webp/';
 const CACHE_DURATION_MS = 5 * 60 * 1000;
 
@@ -39,6 +39,28 @@ function fetchData(url, redirectCount = 0) {
             reject(new Error('Request timed out setelah 30 detik'));
         });
     });
+}
+
+/**
+ * ## FUNGSI YANG DISESUAIKAN ##
+ * Fungsi ini sekarang identik dengan yang ada di `index.html`
+ * untuk memastikan konsistensi 100% antara preview dan hasil akhir.
+ */
+function createDoctorSlug(doctorName) {
+    if (!doctorName) return '';
+    return doctorName
+        .toLowerCase()
+        // hapus prefix dr./drg.
+        .replace(/\b(dr|drg)\b\.?\s*/g, '')
+        // hapus gelar spesialis umum: Sp.xxx, M.xxx, Subsp.xxx
+        .replace(/\bsp\.[a-z]+\b/gi, '')
+        .replace(/\bm\.[a-z]+\b/gi, '')
+        .replace(/\bsubsp\.[a-z]+\b/gi, '')
+        // hapus tanda baca
+        .replace(/[.,()]/g, '')
+        // rapikan spasi
+        .trim()
+        .replace(/\s+/g, '-');
 }
 
 async function fileExists(filePath) {
@@ -75,7 +97,6 @@ function parseDate(dateStr) {
     if (!dateStr) return null;
     const parts = dateStr.split('-');
     if (parts.length !== 3) return null;
-    // Asumsi format dd-MM-yyyy
     const [day, month, year] = parts.map(p => parseInt(p, 10));
     if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
     return new Date(year, month - 1, day);
@@ -87,43 +108,58 @@ async function getCombinedDoctorData() {
         console.log('Menggunakan data cache');
         return cachedData;
     }
+
+    console.log('Mengambil data terbaru dari Google Sheets...');
     
     try {
-        console.log('Mengambil data master dan cuti...');
-        const [masterDoctorData, cutiData] = await Promise.all([
-            fetchData(`${GOOGLE_SCRIPT_URL}?data=master`),
-            fetchData(`${GOOGLE_SCRIPT_URL}?data=cuti`)
+        const [jadwalData, cutiData] = await Promise.all([
+            fetchData(GOOGLE_SCRIPT_JADWAL_URL),
+            fetchData(GOOGLE_SCRIPT_CUTI_URL)
         ]);
-        if (!masterDoctorData || !cutiData) throw new Error("Gagal mengambil data master atau cuti.");
-        if (masterDoctorData.error) throw new Error(`Error dari Google Script Master: ${masterDoctorData.message}`);
-        if (cutiData.error) throw new Error(`Error dari Google Script Cuti: ${cutiData.message}`);
+        if (!jadwalData || !cutiData) throw new Error("Gagal mengambil data dari Google Sheets.");
+
+        const doctorMap = new Map();
+        // Membangun peta dokter dari data jadwal
+        for (const key in jadwalData) {
+            if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
+                for (const doc of jadwalData[key].doctors) {
+                    if (doc && doc.name) {
+                        const doctorSlug = createDoctorSlug(doc.name);
+                        const imagePath = path.join(LOCAL_WEBP_IMAGE_DIR, `${doctorSlug}.webp`);
+                        
+                        // Menggunakan slug sebagai kunci, sama seperti di frontend
+                        if (!doctorMap.has(doctorSlug)) {
+                            doctorMap.set(doctorSlug, {
+                                nama: doc.name,
+                                spesialis: jadwalData[key].title || 'Spesialis tidak diketahui',
+                                fotourl: imagePath 
+                            });
+                        }
+                    }
+                }
+            }
+        }
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
         const combinedData = cutiData
-            .filter(cuti => cuti && cuti.id_doc && cuti.tanggal_selesai_cuti)
+            .filter(cuti => cuti && cuti.NamaDokter && cuti.TanggalSelesaiCuti)
             .map((cuti, index) => {
-                const endDate = parseDate(cuti.tanggal_selesai_cuti);
+                const endDate = parseDate(cuti.TanggalSelesaiCuti);
                 if (!endDate || endDate < today) return null;
                 
-                const doctorId = String(cuti.id_doc).trim();
-                const doctorDetails = masterDoctorData[doctorId];
+                // Mencocokkan dokter cuti dengan data di peta menggunakan slug yang sama
+                const doctorKey = createDoctorSlug(cuti.NamaDokter);
+                const doctorDetails = doctorMap.get(doctorKey);
                 
-                if (!doctorDetails) {
-                    console.warn(`ID Dokter "${doctorId}" dari sheet cuti tidak ditemukan di sheet master.`);
-                    return null;
-                }
-
-                const imagePath = path.join(LOCAL_WEBP_IMAGE_DIR, `${doctorId}.webp`);
-
                 return {
                     id: `doc-${index}`,
-                    nama: doctorDetails.name,
-                    cutiMulai: cuti.tanggal_mulai_cuti,
-                    cutiSelesai: cuti.tanggal_selesai_cuti,
-                    spesialis: doctorDetails.specialty,
-                    fotourl: imagePath
+                    nama: doctorDetails ? doctorDetails.nama : cuti.NamaDokter,
+                    cutiMulai: cuti.TanggalMulaiCuti,
+                    cutiSelesai: cuti.TanggalSelesaiCuti,
+                    spesialis: doctorDetails ? doctorDetails.spesialis : 'Spesialis tidak ditemukan',
+                    fotourl: doctorDetails ? doctorDetails.fotourl : ''
                 };
             })
             .filter(Boolean);
@@ -132,10 +168,9 @@ async function getCombinedDoctorData() {
         lastCacheTime = now;
         console.log(`Berhasil memuat data ${combinedData.length} dokter`);
         return combinedData;
-
     } catch (error) {
         console.error('Error dalam getCombinedDoctorData:', error);
-        if (cachedData) return cachedData;
+        if (cachedData) return cachedData; // Kembalikan cache lama jika pengambilan gagal
         throw error;
     }
 }
@@ -154,16 +189,17 @@ function formatFullDate(dateStr) {
     return `${day} ${month} ${year}`;
 }
 
+// Logika ini tetap dipertahankan karena merupakan "source of truth" untuk desain akhir
 function generateDoctorHTML(doctors, theme) {
     const isLightTheme = theme === 'solid-white' || theme === 'solid-white-dots';
     const numDoctors = doctors.length;
 
     let styles;
-    if (numDoctors > 4) {
+    if (numDoctors > 4) { // 5+ dokter
         styles = { container: "w-full flex flex-col items-center justify-center flex-grow space-y-4 px-8", item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-2xl p-4 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-2xl p-4 shadow-lg", photo: "w-32 h-32 rounded-full object-cover border-4 flex-shrink-0", textContainer: "ml-4 text-left", name: "text-3xl font-bold", specialty: "text-xl", date: "text-xl mt-2" };
-    } else if (numDoctors > 2) {
+    } else if (numDoctors > 2) { // 3-4 dokter
         styles = { container: "w-full flex flex-col items-center justify-center flex-grow space-y-6 px-10", item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-3xl p-6 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-3xl p-6 shadow-lg", photo: "w-40 h-40 rounded-full object-cover border-8 flex-shrink-0", textContainer: "ml-6 text-left", name: "text-4xl font-bold", specialty: "text-2xl", date: "text-2xl mt-3" };
-    } else {
+    } else { // 1-2 dokter
         styles = { container: "w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12", item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-3xl p-8 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-3xl p-8 shadow-lg", photo: "w-48 h-48 rounded-full object-cover border-8 flex-shrink-0", textContainer: "ml-8 text-left", name: "text-5xl font-bold", specialty: "text-3xl", date: "text-3xl mt-4" };
     }
 
