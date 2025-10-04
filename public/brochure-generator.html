@@ -319,5 +319,23 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('✅ Brochure Generator Ready');
 });
 </script>
+<!-- Tambahkan di panel kontrol -->
+<button onclick="refreshCache()" class="mt-4 bg-gray-600 text-white py-2 px-4 rounded text-sm">
+    🔄 Refresh Cache Manual
+</button>
+
+<script>
+async function refreshCache() {
+    try {
+        const response = await fetch('/.netlify/functions/cache-jadwal-data', {
+            method: 'POST'
+        });
+        const result = await response.json();
+        alert(result.message || 'Cache refreshed');
+    } catch (error) {
+        alert('Error refreshing cache: ' + error.message);
+    }
+}
+</script>
 </body>
 </html>
