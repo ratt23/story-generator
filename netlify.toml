@@ -5,6 +5,10 @@ functions = "netlify/functions"
 [functions]
 node_bundler = "esbuild"
 
+# Tambahkan konfigurasi Blobs
+[functions.environment]
+NETLIFY_BLOBS_SITE_ID = "your-site-id"
+
 [functions."generate-story"]
 external_node_modules = ["@sparticuz/chromium"]
 included_files = ["public/**"]
