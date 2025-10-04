@@ -48,7 +48,6 @@ async function getJadwalData() {
 }
 
 function generateHtmlForDoctors(data) {
-    // ... (Fungsi ini tidak perlu diubah, biarkan seperti sebelumnya)
     let html = '';
     data.forEach(spec => {
         html += `<div class="specialization-group">
@@ -69,7 +68,8 @@ function generateHtmlForDoctors(data) {
     return html;
 }
 
-async function createPdfPage(browser, templateName, data, pageNumber) {
+// FUNGSI INI DIUBAH: Sekarang menerima 'page' bukan 'browser'
+async function createPdfPage(page, templateName, data, pageNumber) {
     console.log(`[Langkah ${pageNumber}] Memulai pembuatan halaman PDF dari template: ${templateName}`);
     const templatePath = path.resolve(process.cwd(), 'public', templateName);
     let htmlContent = await fs.readFile(templatePath, 'utf8');
@@ -87,7 +87,6 @@ async function createPdfPage(browser, templateName, data, pageNumber) {
       .replace('{{COLUMN_2_HTML}}', generateHtmlForDoctors(column2))
       .replace('{{COLUMN_3_HTML}}', generateHtmlForDoctors(column3));
 
-    const page = await browser.newPage();
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
     const pdfBuffer = await page.pdf({
         format: 'A4',
@@ -95,7 +94,6 @@ async function createPdfPage(browser, templateName, data, pageNumber) {
         printBackground: true,
         margin: { top: '0cm', right: '0cm', bottom: '0cm', left: '0cm' }
     });
-    await page.close();
     console.log(`[Langkah ${pageNumber}] Berhasil membuat halaman PDF dari ${templateName}`);
     return pdfBuffer;
 }
@@ -127,8 +125,15 @@ exports.handler = async (event) => {
         browser = await puppeteer.launch(browserOptions);
         console.log("[Langkah 1] Browser berhasil diluncurkan.");
 
-        const insidePdfBuffer = await createPdfPage(browser, 'brochure-template-inside.html', insidePageData, 2);
-        const outsidePdfBuffer = await createPdfPage(browser, 'brochure-template-outside.html', outsidePageData, 3);
+        // PERUBAHAN UTAMA: Buat satu halaman dan gunakan kembali
+        const page = await browser.newPage();
+        console.log("Halaman browser virtual dibuat.");
+
+        const insidePdfBuffer = await createPdfPage(page, 'brochure-template-inside.html', insidePageData, 2);
+        const outsidePdfBuffer = await createPdfPage(page, 'brochure-template-outside.html', outsidePageData, 3);
+        
+        await page.close();
+        console.log("Halaman browser virtual ditutup.");
         
         console.log("[Langkah 4] Memulai penggabungan PDF...");
         const finalPdf = await PDFDocument.create();

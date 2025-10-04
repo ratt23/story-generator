@@ -8,8 +8,8 @@ node_bundler = "esbuild"
 
 [functions."generate-story"]
 included_files = ["public/**"]
-timeout = 25
+timeout = 26
 
 [functions."generate-brochure"]
 included_files = ["public/**"]
-timeout = 25
+timeout = 26
