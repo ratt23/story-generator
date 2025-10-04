@@ -116,21 +116,32 @@ exports.handler = async (event, context) => {
             throw new Error('Tidak ada data jadwal yang ditemukan.');
         }
 
-        // Logika pembagian data cerdas berdasarkan jumlah dokter untuk 4 kolom jadwal
-        const totalDoctors = allData.reduce((sum, spec) => sum + spec.doctors.length, 0);
-        const targetDoctorsPerColumn = totalDoctors / 4;
+        // --- LOGIKA PEMBAGIAN KOLOM DINAMIS BERDASARKAN SARAN PENGGUNA ---
         
-        const columns = [[], [], [], []];
-        let currentColumn = 0;
-        let currentColumnDoctorCount = 0;
+        // 1. Urutkan semua grup spesialisasi dari yang paling banyak dokternya ke yang paling sedikit.
+        // Ini memungkinkan kita menempatkan "balok besar" terlebih dahulu.
+        allData.sort((a, b) => b.doctors.length - a.doctors.length);
 
+        const columns = [[], [], [], []];
+        const columnDoctorCounts = [0, 0, 0, 0];
+
+        // 2. Loop melalui setiap grup spesialisasi yang sudah diurutkan.
         allData.forEach(spec => {
-            if (currentColumnDoctorCount >= targetDoctorsPerColumn && currentColumn < 3) {
-                currentColumn++;
-                currentColumnDoctorCount = 0;
+            // 3. Cari tahu kolom mana yang saat ini paling "kosong" (memiliki dokter paling sedikit).
+            let targetColumnIndex = 0;
+            let minDoctorsInColumn = columnDoctorCounts[0];
+            
+            for (let i = 1; i < columnDoctorCounts.length; i++) {
+                if (columnDoctorCounts[i] < minDoctorsInColumn) {
+                    minDoctorsInColumn = columnDoctorCounts[i];
+                    targetColumnIndex = i;
+                }
             }
-            columns[currentColumn].push(spec);
-            currentColumnDoctorCount += spec.doctors.length;
+
+            // 4. Masukkan grup spesialisasi saat ini ke dalam kolom yang paling kosong tersebut.
+            columns[targetColumnIndex].push(spec);
+            // Update jumlah dokter di kolom itu.
+            columnDoctorCounts[targetColumnIndex] += spec.doctors.length;
         });
 
         const [outsideColumn1Data, insideColumn1Data, insideColumn2Data, insideColumn3Data] = columns;
