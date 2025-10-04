@@ -1,231 +1,233 @@
-const fs = require('fs').promises;
-const path = require('path');
-const { getStore } = require('@netlify/blobs');
-const https = require('https');
-
-const CACHE_KEY = 'jadwal-dokter-cache';
-const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
-
-/**
- * Fungsi untuk fetch data dari URL dengan handle redirect
- */
-function fetchData(url, redirectCount = 0) {
-    if (redirectCount > 5) {
-        return Promise.reject(new Error('Terlalu banyak pengalihan (redirect).'));
-    }
-    
-    return new Promise((resolve, reject) => {
-        const req = https.get(url, (res) => {
-            if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307) {
-                const redirectUrl = new URL(res.headers.location, url).href;
-                console.log(`Redirect ke: ${redirectUrl}`);
-                return resolve(fetchData(redirectUrl, redirectCount + 1));
-            }
-            
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                return reject(new Error(`HTTP status code ${res.statusCode} untuk ${url}`));
-            }
-            
-            let body = '';
-            res.on('data', (chunk) => { 
-                body += chunk; 
-            });
-            
-            res.on('end', () => {
-                try {
-                    const parsedData = JSON.parse(body);
-                    resolve(parsedData);
-                } catch (e) {
-                    reject(new Error('Gagal mem-parsing respons JSON dari Google Sheets.'));
-                }
-            });
-        });
-        
-        req.on('error', (err) => {
-            reject(new Error(`Error koneksi: ${err.message}`));
-        });
-        
-        req.setTimeout(30000, () => {
-            req.destroy();
-            reject(new Error('Request timeout setelah 30 detik'));
-        });
-    });
-}
-
-/**
- * Mendapatkan store untuk Netlify Blobs dengan fallback
- */
-function getJadwalStore() {
-    try {
-        return getStore('jadwal-dokter');
-    } catch (error) {
-        console.log('Menggunakan fallback langsung ke Google Sheets:', error.message);
-        return null;
-    }
-}
-
-/**
- * Mengambil data jadwal dari cache atau langsung dari Google Sheets
- */
-async function getJadwalDataFromCache() {
-    try {
-        const jadwalStore = getJadwalStore();
-        
-        if (!jadwalStore) {
-            console.log('Store tidak tersedia, mengambil data langsung dari Google Sheets...');
-            return await getJadwalDataDirect();
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator Brosur Jadwal Dokter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .preview-container {
+            transform-origin: top left;
+            transform: scale(0.3);
+            width: 333%;
+            height: 333%;
         }
-        
-        console.log('Mencoba mengambil data dari cache...');
-        const rawData = await jadwalStore.get(CACHE_KEY);
-        
-        if (!rawData) {
-            console.log('Cache kosong, mengambil data langsung dari Google Sheets...');
-            return await getJadwalDataDirect();
+        .preview-wrapper {
+            width: 350px;
+            height: 250px;
+            overflow: hidden;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            background: #f8fafc;
         }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col">
+    <nav class="bg-white shadow-md w-full flex-shrink-0">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex h-16 items-center justify-between">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="font-bold text-xl text-slate-800">Kumpulan Tools</span>
+                    </div>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="index.html" class="text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-md px-3 py-2 text-sm font-medium">Design Story Cuti Dokter</a>
+                        <a href="brochure-generator.html" class="bg-blue-600 text-white rounded-md px-3 py-2 text-sm font-medium" aria-current="page">Brochure Jadwal Dokter</a>
+                        <a href="#" class="text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-md px-3 py-2 text-sm font-medium">Public Holiday Operational</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
 
-        const parsedData = JSON.parse(rawData);
-        console.log(`Berhasil mengambil data dari cache: ${Object.keys(parsedData).length} spesialisasi`);
-        
-        return Object.values(parsedData).map(spec => ({
-            title: spec.title,
-            doctors: spec.doctors.map(doc => ({ 
-                name: doc.name, 
-                schedule: doc.schedule 
-            })),
-        }));
-    } catch (error) {
-        console.log('Error akses cache, fallback ke Google Sheets:', error.message);
-        return await getJadwalDataDirect();
-    }
-}
+    <main class="flex-grow">
+        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Panel Kontrol -->
+                <div class="bg-white p-8 rounded-xl shadow-lg">
+                    <h1 class="text-3xl font-bold text-slate-800 mb-4">Generator Brosur Jadwal Dokter</h1>
+                    <p class="text-slate-600 mb-6">
+                        Tekan tombol di bawah ini untuk menghasilkan pratinjau brosur jadwal dokter terbaru dalam format HTML.
+                        Data akan diambil langsung dari Google Sheets.
+                    </p>
+                    <p class="text-sm text-slate-500 mb-6">
+                        Setelah pratinjau muncul di tab baru, gunakan fitur "Print" (Ctrl+P atau Cmd+P) di browser Anda dan pilih "Save as PDF" untuk membuat file PDF final.
+                    </p>
 
-/**
- * Fallback: Mengambil data langsung dari Google Sheets
- */
-async function getJadwalDataDirect() {
-    try {
-        console.log('Mengambil data langsung dari Google Sheets...');
-        const jadwalData = await fetchData(GOOGLE_SCRIPT_JADWAL_URL);
-        
-        if (!jadwalData || Object.keys(jadwalData).length === 0) {
-            throw new Error('Data dari Google Sheets kosong atau tidak valid.');
-        }
-        
-        console.log(`Berhasil mengambil data langsung: ${Object.keys(jadwalData).length} spesialisasi`);
-        
-        return Object.values(jadwalData).map(spec => ({
-            title: spec.title,
-            doctors: spec.doctors.map(doc => ({ 
-                name: doc.name, 
-                schedule: doc.schedule 
-            })),
-        }));
-    } catch (error) {
-        console.error('Gagal mengambil data langsung dari Google Sheets:', error);
-        throw new Error(`Tidak dapat mengambil data jadwal: ${error.message}`);
-    }
-}
+                    <button id="generate-button" class="w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all duration-300 ease-in-out transform hover:scale-105 mb-4">
+                        <span id="button-text">Generate Pratinjau Brosur</span>
+                    </button>
+                    
+                    <div id="status-container" class="text-left space-y-2">
+                        <!-- Status messages will appear here -->
+                    </div>
 
-/**
- * Menghasilkan potongan HTML untuk daftar dokter dalam satu spesialisasi.
- */
-function generateHtmlForDoctors(data) {
-    if (!data || data.length === 0) {
-        return '<div class="specialization-group"><p>Tidak ada data jadwal</p></div>';
-    }
-    
-    let html = '';
-    
-    data.forEach(spec => {
-        html += `<div class="specialization-group">
-            <h3 class="specialization-title">${spec.title}</h3>`;
-            
-        spec.doctors.forEach(doc => {
-            html += `<div class="doctor-card">
-                <p class="doctor-name">${doc.name}</p>
-                <div class="schedule-grid">`;
-                
-            // Filter hanya hari yang memiliki jadwal
-            const scheduleEntries = Object.entries(doc.schedule || {}).filter(([_, time]) => 
-                time && time.trim() !== '' && time.trim() !== '-'
-            );
-            
-            if (scheduleEntries.length === 0) {
-                html += `<div class="schedule-day">Jadwal tidak tersedia</div>`;
-            } else {
-                scheduleEntries.forEach(([day, time]) => {
-                    html += `<div class="schedule-day"><strong>${day.slice(0, 3)}:</strong> ${time}</div>`;
-                });
+                    <div class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <h3 class="font-semibold text-yellow-800 mb-2">Petunjuk Cetak:</h3>
+                        <ul class="text-sm text-yellow-700 list-disc list-inside space-y-1">
+                            <li>Setelah preview terbuka, tekan <kbd class="px-2 py-1 bg-gray-200 rounded">Ctrl+P</kbd> (Windows) atau <kbd class="px-2 py-1 bg-gray-200 rounded">Cmd+P</kbd> (Mac)</li>
+                            <li>Pilih printer "Save as PDF"</li>
+                            <li>Settings: Landscape, Margin -> None, Scale -> 100%</li>
+                            <li>Brosur dirancang untuk dicetak 2 halaman (trifold)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Panel Preview -->
+                <div class="bg-white p-8 rounded-xl shadow-lg">
+                    <h2 class="text-2xl font-bold text-slate-800 mb-4">Pratinjau Brosur</h2>
+                    <p class="text-slate-600 mb-4">
+                        Preview akan muncul di sini setelah brosur di-generate. Skala preview: 30% dari ukuran asli.
+                    </p>
+                    
+                    <div class="preview-wrapper mb-4">
+                        <div id="preview-content" class="preview-container">
+                            <!-- Preview akan dimuat di sini -->
+                            <div class="flex items-center justify-center h-full text-slate-500">
+                                <div class="text-center">
+                                    <div class="text-4xl mb-2">📄</div>
+                                    <p>Preview akan muncul di sini</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-center text-sm text-slate-500">
+                        <p>Halaman 1 (Dalam) & Halaman 2 (Luar) - Format Trifold</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const generateButton = document.getElementById('generate-button');
+    const buttonText = document.getElementById('button-text');
+    const statusContainer = document.getElementById('status-container');
+    const previewContent = document.getElementById('preview-content');
+
+    const addStatus = (message, isError = false) => {
+        const p = document.createElement('p');
+        p.textContent = message;
+        p.className = isError ? 'text-red-600' : 'text-green-600';
+        statusContainer.appendChild(p);
+        
+        // Auto-remove status messages after 10 seconds
+        setTimeout(() => {
+            if (p.parentElement) {
+                p.remove();
             }
-            
-            html += `</div></div>`;
-        });
+        }, 10000);
+    };
+
+    const clearStatus = () => {
+        statusContainer.innerHTML = '';
+    };
+
+    const updatePreview = (htmlContent) => {
+        previewContent.innerHTML = htmlContent;
         
-        html += `</div>`;
-    });
-    
-    return html;
-}
+        // Adjust iframe content for preview
+        const iframes = previewContent.querySelectorAll('iframe');
+        iframes.forEach(iframe => {
+            iframe.style.width = '297mm';
+            iframe.style.height = '210mm';
+        });
+    };
+
+    const generateBrochure = async () => {
+        generateButton.disabled = true;
+        buttonText.textContent = 'Memproses...';
+        clearStatus();
+        addStatus('Menghubungi server...');
+
+        try {
+            const response = await fetch('/.netlify/functions/generate-brochure');
+            addStatus('Menerima respons dari server...');
+            
+            if (!response.ok) {
+                throw new Error(`Server merespons dengan status: ${response.status}`);
+            }
+
+            const htmlContent = await response.text();
+            addStatus('Berhasil membuat HTML, memperbarui preview...');
+
+            // Update preview
+            updatePreview(htmlContent);
+            addStatus('Preview berhasil diperbarui!');
+
+            // Also open in new tab for printing
+            addStatus('Membuka tab baru untuk printing...');
+            const newTab = window.open();
+            newTab.document.open();
+            newTab.document.write(htmlContent);
+            newTab.document.close();
+            
+            addStatus('Selesai! Silakan simpan sebagai PDF dari tab baru.');
+
+        } catch (error) {
+            console.error("Gagal men-generate brosur:", error);
+            addStatus(`Terjadi kesalahan: ${error.message}`, true);
+            
+            // Show error in preview
+            previewContent.innerHTML = `
+                <div class="flex items-center justify-center h-full bg-red-50">
+                    <div class="text-center text-red-600">
+                        <div class="text-4xl mb-2">❌</div>
+                        <p class="font-semibold">Error</p>
+                        <p class="text-sm">${error.message}</p>
+                    </div>
+                </div>
+            `;
+        } finally {
+            generateButton.disabled = false;
+            buttonText.textContent = 'Generate Pratinjau Brosur';
+        }
+    };
+
+    generateButton.addEventListener('click', generateBrochure);
+});
 
 /**
- * Mengisi template inside dengan data
+ * Optimasi data untuk memastikan tidak lebih dari 2 halaman
  */
-async function fillInsideTemplate(templateHtml, data) {
-    // Distribusi data ke 3 kolom secara merata
-    const columns = [[], [], []];
-    data.forEach((spec, index) => {
-        columns[index % 3].push(spec);
-    });
+function optimizeDataForTwoPages(data) {
+    const maxDoctorsPerPage = 25; // Estimasi maksimal dokter per halaman
     
-    const generatedDate = new Date().toLocaleDateString('id-ID', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-    });
-    
-    return templateHtml
-        .replace('{{COLUMN_1_HTML}}', generateHtmlForDoctors(columns[0]))
-        .replace('{{COLUMN_2_HTML}}', generateHtmlForDoctors(columns[1]))
-        .replace('{{COLUMN_3_HTML}}', generateHtmlForDoctors(columns[2]))
-        .replace('{{GENERATED_DATE}}', generatedDate);
-}
-
-/**
- * Mengisi template outside dengan data
- */
-async function fillOutsideTemplate(templateHtml, data) {
-    // Untuk outside, kita juga bagi menjadi 2 kolom
-    const columns = [[], []];
-    data.forEach((spec, index) => {
-        columns[index % 2].push(spec);
-    });
-    
-    // Path ke logo putih - sesuaikan dengan path yang benar
-    const logoPath = path.resolve(process.cwd(), 'public', 'asset', 'logo', 'logo-putih.png');
-    let logoUrl = 'https://via.placeholder.com/150x50/FFFFFF/004082?text=LOGO';
-    
-    try {
-        // Coba baca logo lokal
-        await fs.access(logoPath);
-        const logoBuffer = await fs.readFile(logoPath);
-        logoUrl = `data:image/png;base64,${logoBuffer.toString('base64')}`;
-    } catch (error) {
-        console.log('Logo putih tidak ditemukan, menggunakan placeholder');
+    // Jika data terlalu banyak, potong atau optimasi
+    if (data.length > maxDoctorsPerPage * 2) {
+        console.warn(`Data terlalu banyak (${data.length} dokter), melakukan optimasi...`);
+        
+        // Prioritaskan spesialisasi dengan jadwal paling lengkap
+        return data
+            .map(spec => ({
+                ...spec,
+                priority: spec.doctors.reduce((acc, doc) => {
+                    const scheduleCount = Object.values(doc.schedule || {}).filter(time => 
+                        time && time.trim() !== '' && time.trim() !== '-'
+                    ).length;
+                    return acc + scheduleCount;
+                }, 0)
+            }))
+            .sort((a, b) => b.priority - a.priority)
+            .slice(0, maxDoctorsPerPage * 2)
+            .map(({ priority, ...spec }) => spec); // Hapus property priority
     }
     
-    return templateHtml
-        .replace('{{COLUMN_1_OUTSIDE}}', generateHtmlForDoctors(columns[0]))
-        .replace('{{COLUMN_2_OUTSIDE}}', generateHtmlForDoctors(columns[1]))
-        .replace('{{LOGO_SILOAM_PUTIH}}', logoUrl);
+    return data;
 }
 
-// Handler utama
+// Dalam handler utama, tambahkan optimasi data:
 exports.handler = async (event, context) => {
     console.log('=== FUNGSI GENERATE-BROCHURE DIMULAI ===');
     
     try {
-        const allData = await getJadwalDataFromCache();
+        let allData = await getJadwalDataFromCache();
         
         if (!allData || allData.length === 0) {
             throw new Error('Tidak ada data jadwal yang ditemukan.');
@@ -233,81 +235,20 @@ exports.handler = async (event, context) => {
         
         console.log(`Data berhasil diambil: ${allData.length} spesialisasi`);
         
+        // Optimasi data untuk 2 halaman
+        allData = optimizeDataForTwoPages(allData);
+        console.log(`Data setelah optimasi: ${allData.length} spesialisasi`);
+        
         // Pisahkan data untuk halaman dalam dan luar
         const outsideSpecializations = ["Urologi", "Kulit & Kelamin"];
         const outsidePageData = allData.filter(spec => outsideSpecializations.includes(spec.title));
         const insidePageData = allData.filter(spec => !outsideSpecializations.includes(spec.title));
         
-        console.log(`Halaman dalam: ${insidePageData.length} spesialisasi`);
-        console.log(`Halaman luar: ${outsidePageData.length} spesialisasi`);
-
-        // Baca template files
-        const insideTemplatePath = path.resolve(process.cwd(), 'public', 'brochure-template-inside.html');
-        const outsideTemplatePath = path.resolve(process.cwd(), 'public', 'brochure-template-outside.html');
-
-        console.log('Membaca template files...');
-        const [insideTemplate, outsideTemplate] = await Promise.all([
-            fs.readFile(insideTemplatePath, 'utf8'),
-            fs.readFile(outsideTemplatePath, 'utf8')
-        ]);
-
-        // Isi template dengan data
-        console.log('Mengisi template dengan data...');
-        const insideHtml = await fillInsideTemplate(insideTemplate, insidePageData);
-        const outsideHtml = await fillOutsideTemplate(outsideTemplate, outsidePageData);
-
-        // Gabungkan kedua halaman
-        const finalHtml = `
-            ${insideHtml}
-            <div style="page-break-after: always;"></div>
-            ${outsideHtml}
-        `;
-
-        console.log('=== FUNGSI GENERATE-BROCHURE BERHASIL ===');
-        
-        return {
-            statusCode: 200,
-            headers: { 
-                'Content-Type': 'text/html',
-                'Cache-Control': 'no-cache, no-store, must-revalidate'
-            },
-            body: finalHtml,
-        };
+        // ... kode selanjutnya tetap sama
     } catch (error) {
-        console.error("!!! ERROR DALAM HANDLER generate-brochure:", error);
-        
-        const errorHtml = `
-            <!DOCTYPE html>
-            <html lang="id">
-            <head>
-                <meta charset="UTF-8">
-                <title>Error - Generator Brosur</title>
-                <script src="https://cdn.tailwindcss.com"></script>
-            </head>
-            <body class="bg-red-50 min-h-screen flex items-center justify-center">
-                <div class="bg-white p-8 rounded-lg shadow-md max-w-md w-full">
-                    <div class="text-center">
-                        <div class="text-red-500 text-6xl mb-4">⚠️</div>
-                        <h1 class="text-2xl font-bold text-red-700 mb-4">Terjadi Kesalahan</h1>
-                        <p class="text-gray-600 mb-4">${error.message}</p>
-                        <div class="bg-gray-100 p-4 rounded text-sm text-left">
-                            <p><strong>Saran:</strong></p>
-                            <ul class="list-disc list-inside mt-2">
-                                <li>Pastikan koneksi internet stabil</li>
-                                <li>Coba refresh halaman</li>
-                                <li>Hubungi administrator jika masalah berlanjut</li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </body>
-            </html>
-        `;
-        
-        return {
-            statusCode: 500,
-            headers: { 'Content-Type': 'text/html' },
-            body: errorHtml,
-        };
+        // ... error handling
     }
 };
+</script>
+</body>
+</html>
