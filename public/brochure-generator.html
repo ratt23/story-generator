@@ -134,208 +134,80 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🚀 Brochure Generator Initialized');
-    
-    // Elements
     const previewButton = document.getElementById('preview-button');
-    const previewButtonText = document.getElementById('preview-button-text');
     const generateButton = document.getElementById('generate-button');
-    const generateButtonText = document.getElementById('generate-button-text');
     const statusContainer = document.getElementById('status-container');
     const previewContent = document.getElementById('preview-content');
 
-    // State
-    let isProcessing = false;
-
-    // Utility Functions
-    const addStatus = (message, isError = false, isPersistent = false) => {
-        const p = document.createElement('p');
-        p.textContent = message;
-        p.className = isError ? 'text-red-600 font-semibold' : 'text-green-600';
-        p.style.fontSize = '14px';
-        
-        if (!isPersistent) {
-            statusContainer.appendChild(p);
-            setTimeout(() => {
-                if (p.parentElement) p.remove();
-                // Jika tidak ada status lain, tampilkan default
-                if (statusContainer.children.length === 0) {
-                    showDefaultStatus();
-                }
-            }, 8000);
-        } else {
-            statusContainer.innerHTML = '';
-            statusContainer.appendChild(p);
-        }
+    const showStatus = (message, isError = false) => {
+        statusContainer.innerHTML = `<p class="${isError ? 'text-red-600' : 'text-green-600'}">${message}</p>`;
     };
 
-    const showDefaultStatus = () => {
-        statusContainer.innerHTML = `
-            <div class="text-center text-slate-500">
-                <p>Pilih salah satu tombol di atas</p>
-                <p class="text-sm">Preview untuk melihat di sini, Cetak untuk buka tab baru</p>
-            </div>
-        `;
-    };
-
-    const setLoadingState = (isLoading) => {
-        isProcessing = isLoading;
+    const setLoading = (isLoading) => {
         previewButton.disabled = isLoading;
         generateButton.disabled = isLoading;
-        
-        if (isLoading) {
-            previewButtonText.textContent = '⏳ Memproses...';
-            generateButtonText.textContent = '⏳ Memproses...';
-        } else {
-            previewButtonText.textContent = '👀 Preview Brosur';
-            generateButtonText.textContent = '🖨️ Cetak Brosur (New Tab)';
-        }
+        previewButton.textContent = isLoading ? '⏳ Memproses...' : '👀 Preview Brosur';
+        generateButton.textContent = isLoading ? '⏳ Memproses...' : '🖨️ Cetak Brosur';
     };
 
-    const updatePreview = (htmlContent) => {
-        try {
-            previewContent.innerHTML = htmlContent;
-            // Scroll ke atas preview
-            previewContent.parentElement.scrollTop = 0;
-        } catch (error) {
-            console.error('Error updating preview:', error);
-            previewContent.innerHTML = `
-                <div class="flex items-center justify-center h-full bg-red-50">
-                    <div class="text-center text-red-600">
-                        <div class="text-4xl mb-2">❌</div>
-                        <p class="font-semibold">Error Memuat Preview</p>
-                        <p class="text-sm">${error.message}</p>
-                    </div>
-                </div>
-            `;
-        }
-    };
-
-    const openPrintTab = (htmlContent) => {
-        try {
-            const newTab = window.open('', '_blank');
-            if (newTab) {
-                newTab.document.write(htmlContent);
-                newTab.document.close();
-                return true;
-            } else {
-                return false;
-            }
-        } catch (error) {
-            console.error('Error opening print tab:', error);
-            return false;
-        }
-    };
-
-    // Main Function
     const generateBrochure = async (action) => {
-        if (isProcessing) return;
-        
-        setLoadingState(true);
-        statusContainer.innerHTML = '';
+        setLoading(true);
+        showStatus('🔄 Memulai proses...');
 
         try {
-            addStatus('🔄 Memulai proses...', false, true);
+            const isPreview = action === 'preview';
+            const url = `/.netlify/functions/generate-brochure?preview=${isPreview}`;
             
-            // Tentukan URL berdasarkan action
-            const url = action === 'preview' 
-                ? '/.netlify/functions/generate-brochure?preview=true'
-                : '/.netlify/functions/generate-brochure';
+            showStatus('📡 Mengambil data dari Google Sheets...');
             
-            addStatus('📡 Mengambil data dari cache Netlify Blobs...', false, true);
-
             const response = await fetch(url);
             
             if (!response.ok) {
-                throw new Error(`Server error: ${response.status} - ${response.statusText}`);
+                throw new Error(`Server error: ${response.status}`);
             }
 
-            addStatus('✅ Data berhasil diambil dari cache', false, true);
+            showStatus('✅ Data berhasil diambil');
             
             const htmlContent = await response.text();
             
-            if (action === 'preview') {
-                addStatus('🎨 Menampilkan preview...', false, true);
-                updatePreview(htmlContent);
-                addStatus('✨ Preview berhasil diperbarui', false, true);
-                
-                // Kembali ke status default setelah 3 detik
-                setTimeout(() => {
-                    if (!isProcessing) {
-                        addStatus('👆 Klik "Cetak Brosur" untuk buka versi lengkap di tab baru', false, true);
-                    }
-                }, 3000);
-                
+            if (isPreview) {
+                // Update preview
+                previewContent.innerHTML = htmlContent;
+                showStatus('✨ Preview berhasil diperbarui');
             } else {
-                addStatus('🖨️ Membuka tab baru untuk cetak...', false, true);
-                const success = openPrintTab(htmlContent);
-                
-                if (success) {
-                    addStatus('✅ Tab cetak berhasil dibuka', false, true);
-                    setTimeout(() => {
-                        if (!isProcessing) {
-                            showDefaultStatus();
-                        }
-                    }, 3000);
-                } else {
-                    throw new Error('Popup diblokir. Silakan izinkan popup untuk situs ini.');
-                }
+                // Buka tab baru untuk cetak
+                const newTab = window.open();
+                newTab.document.write(htmlContent);
+                newTab.document.close();
+                showStatus('🎉 Tab cetak berhasil dibuka');
             }
 
         } catch (error) {
             console.error('Error:', error);
+            showStatus(`❌ Error: ${error.message}`, true);
             
-            let errorMessage = error.message;
-            if (error.message.includes('Failed to fetch')) {
-                errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet.';
-            } else if (error.message.includes('502')) {
-                errorMessage = 'Server sedang sibuk. Coba lagi dalam beberapa saat.';
-            }
-            
-            addStatus(`❌ Error: ${errorMessage}`, true, true);
-            
-            // Reset preview pada error
             if (action === 'preview') {
                 previewContent.innerHTML = `
                     <div class="flex items-center justify-center h-full bg-red-50">
                         <div class="text-center text-red-600">
                             <div class="text-4xl mb-2">⚠️</div>
-                            <h3 class="font-bold text-lg mb-2">Terjadi Kesalahan</h3>
-                            <p class="text-sm">${errorMessage}</p>
+                            <p>${error.message}</p>
                         </div>
                     </div>
                 `;
             }
         } finally {
-            setLoadingState(false);
+            setLoading(false);
         }
     };
 
-    // Event Listeners
+    // Event listeners
     previewButton.addEventListener('click', () => generateBrochure('preview'));
     generateButton.addEventListener('click', () => generateBrochure('print'));
 
-    // Initialize
-    console.log('✅ Brochure Generator Ready');
+    // Status awal
+    showStatus('✅ Sistem siap. Data diambil langsung dari Google Sheets.');
 });
-</script>
-<!-- Tambahkan di panel kontrol -->
-<button onclick="refreshCache()" class="mt-4 bg-gray-600 text-white py-2 px-4 rounded text-sm">
-    🔄 Refresh Cache Manual
-</button>
-
-<script>
-async function refreshCache() {
-    try {
-        const response = await fetch('/.netlify/functions/cache-jadwal-data', {
-            method: 'POST'
-        });
-        const result = await response.json();
-        alert(result.message || 'Cache refreshed');
-    } catch (error) {
-        alert('Error refreshing cache: ' + error.message);
-    }
-}
 </script>
 </body>
 </html>
