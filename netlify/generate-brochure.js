@@ -1,5 +1,3 @@
-const chromium = require('@sparticuz/chromium');
-const puppeteer = require('puppeteer-core');
 const fs = require('fs').promises;
 const path = require('path');
 const https = require('https');
@@ -22,10 +20,6 @@ async function fetchData(url) {
             });
         });
         req.on('error', (err) => reject(err));
-        req.setTimeout(20000, () => {
-            req.destroy();
-            reject(new Error('Request timed out setelah 20 detik'));
-        });
     });
 }
 
@@ -70,15 +64,10 @@ async function fillTemplate(templateHtml, data) {
 
 
 exports.handler = async () => {
-    let browser = null;
-    const startTime = Date.now();
-    const logTime = (step) => console.log(`[${(Date.now() - startTime) / 1000}s] ${step}`);
-
     try {
-        logTime("--- FUNGSI GENERATE-BROCHURE (LOGIKA BARU) DIMULAI ---");
+        console.log("--- FUNGSI GENERATE-BROCHURE (LOGIKA HTML) DIMULAI ---");
         
         const allData = await getJadwalData();
-        logTime(`Mengambil data jadwal selesai.`);
         
         const outsideSpecializations = ["Urologi", "Kulit & Kelamin"];
         const outsidePageData = allData.filter(spec => outsideSpecializations.includes(spec.title));
@@ -91,55 +80,31 @@ exports.handler = async () => {
             fs.readFile(insideTemplatePath, 'utf8'),
             fs.readFile(outsideTemplatePath, 'utf8')
         ]);
-        logTime("Membaca file template HTML selesai.");
 
         const insideHtml = await fillTemplate(insideTemplate, insidePageData);
         const outsideHtml = await fillTemplate(outsideTemplate, outsidePageData);
-        logTime("Mengisi template HTML selesai.");
 
-        const finalHtml = `${insideHtml}<div style="page-break-after: always;"></div>${outsideHtml}`;
+        // Gabungkan kedua HTML menjadi satu dengan pemisah halaman
+        const finalHtml = `
+            ${insideHtml}
+            <div style="page-break-after: always;"></div>
+            ${outsideHtml}
+        `;
 
-        logTime("Meluncurkan browser Chromium...");
-        browser = await puppeteer.launch({
-            args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
-            executablePath: await chromium.executablePath(),
-            headless: true,
-        });
-        logTime("Browser berhasil diluncurkan.");
-
-        const page = await browser.newPage();
-        
-        // --- PERUBAHAN UTAMA UNTUK KECEPATAN ---
-        await page.setContent(finalHtml, { waitUntil: 'domcontentloaded' });
-        logTime("Set content selesai.");
-
-        logTime("Membuat PDF dari HTML gabungan...");
-        const pdfBuffer = await page.pdf({
-            format: 'A4',
-            landscape: true,
-            printBackground: true,
-            margin: { top: '0cm', right: '0cm', bottom: '0cm', left: '0cm' }
-        });
-        logTime("Pembuatan PDF selesai.");
-
-        logTime("--- FUNGSI SELESAI SUKSES ---");
+        console.log("--- FUNGSI SELESAI SUKSES, MENGEMBALIKAN HTML ---");
 
         return {
             statusCode: 200,
-            headers: { 'Content-Type': 'application/pdf' },
-            body: pdfBuffer.toString('base64'),
-            isBase64Encoded: true,
+            headers: { 'Content-Type': 'text/html' },
+            body: finalHtml,
         };
     } catch (error) {
         console.error("!!! ERROR DALAM HANDLER:", error);
-        logTime("FUNGSI GAGAL DENGAN ERROR.");
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: 'Gagal membuat PDF brosur.', message: error.message }),
+            body: `<html><body><h1>Error</h1><p>${error.message}</p></body></html>`,
+            headers: { 'Content-Type': 'text/html' },
         };
-    } finally {
-        if (browser) await browser.close();
-        logTime("Browser ditutup.");
     }
 };
 
