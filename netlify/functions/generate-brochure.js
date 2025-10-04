@@ -7,7 +7,7 @@ const CACHE_KEY = 'jadwal-dokter-cache';
 const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
 
 /**
- * Fungsi untuk fetch data dari URL dengan handle redirect dan timeout yang lebih robust
+ * Fungsi untuk fetch data dari URL dengan handle redirect
  */
 function fetchData(url, redirectCount = 0) {
     if (redirectCount > 5) {
@@ -16,7 +16,6 @@ function fetchData(url, redirectCount = 0) {
     
     return new Promise((resolve, reject) => {
         const req = https.get(url, (res) => {
-            // Handle semua jenis redirect
             if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307) {
                 const redirectUrl = new URL(res.headers.location, url).href;
                 console.log(`Redirect ke: ${redirectUrl}`);
@@ -46,7 +45,6 @@ function fetchData(url, redirectCount = 0) {
             reject(new Error(`Error koneksi: ${err.message}`));
         });
         
-        // Timeout 30 detik
         req.setTimeout(30000, () => {
             req.destroy();
             reject(new Error('Request timeout setelah 30 detik'));
@@ -55,36 +53,19 @@ function fetchData(url, redirectCount = 0) {
 }
 
 /**
- * Mendapatkan store untuk Netlify Blobs dengan fallback konfigurasi
+ * Mendapatkan store untuk Netlify Blobs dengan fallback
  */
 function getJadwalStore() {
     try {
-        // Coba dengan konfigurasi otomatis (untuk production Netlify)
-        console.log('Mencoba konfigurasi Blobs otomatis...');
         return getStore('jadwal-dokter');
     } catch (error) {
-        // Fallback ke konfigurasi manual
-        console.log('Menggunakan konfigurasi manual untuk Blobs:', error.message);
-        
-        // Untuk environment development atau jika konfigurasi otomatis gagal
-        const siteID = process.env.NETLIFY_SITE_ID || process.env.SITE_ID;
-        const token = process.env.NETLIFY_ACCESS_TOKEN || process.env.ACCESS_TOKEN;
-        
-        if (!siteID || !token) {
-            console.warn('Environment variables untuk Blobs tidak ditemukan, menggunakan fallback langsung ke Google Sheets');
-            return null;
-        }
-        
-        return getStore({
-            name: 'jadwal-dokter',
-            siteID: siteID,
-            token: token
-        });
+        console.log('Menggunakan fallback langsung ke Google Sheets:', error.message);
+        return null;
     }
 }
 
 /**
- * Mengambil data jadwal dari cache. Jika cache tidak ada, fallback ke Google Sheets langsung.
+ * Mengambil data jadwal dari cache atau langsung dari Google Sheets
  */
 async function getJadwalDataFromCache() {
     try {
@@ -106,7 +87,6 @@ async function getJadwalDataFromCache() {
         const parsedData = JSON.parse(rawData);
         console.log(`Berhasil mengambil data dari cache: ${Object.keys(parsedData).length} spesialisasi`);
         
-        // Ubah format data agar sesuai dengan kebutuhan template
         return Object.values(parsedData).map(spec => ({
             title: spec.title,
             doctors: spec.doctors.map(doc => ({ 
@@ -134,7 +114,6 @@ async function getJadwalDataDirect() {
         
         console.log(`Berhasil mengambil data langsung: ${Object.keys(jadwalData).length} spesialisasi`);
         
-        // Ubah format data agar sesuai dengan kebutuhan template
         return Object.values(jadwalData).map(spec => ({
             title: spec.title,
             doctors: spec.doctors.map(doc => ({ 
@@ -150,10 +129,12 @@ async function getJadwalDataDirect() {
 
 /**
  * Menghasilkan potongan HTML untuk daftar dokter dalam satu spesialisasi.
- * @param {Array} data Array berisi data dokter dan jadwal
- * @returns {string} String HTML
  */
 function generateHtmlForDoctors(data) {
+    if (!data || data.length === 0) {
+        return '<div class="specialization-group"><p>Tidak ada data jadwal</p></div>';
+    }
+    
     let html = '';
     
     data.forEach(spec => {
@@ -165,11 +146,18 @@ function generateHtmlForDoctors(data) {
                 <p class="doctor-name">${doc.name}</p>
                 <div class="schedule-grid">`;
                 
-            Object.entries(doc.schedule).forEach(([day, time]) => {
-                if (time && time.trim() !== '') {
+            // Filter hanya hari yang memiliki jadwal
+            const scheduleEntries = Object.entries(doc.schedule || {}).filter(([_, time]) => 
+                time && time.trim() !== '' && time.trim() !== '-'
+            );
+            
+            if (scheduleEntries.length === 0) {
+                html += `<div class="schedule-day">Jadwal tidak tersedia</div>`;
+            } else {
+                scheduleEntries.forEach(([day, time]) => {
                     html += `<div class="schedule-day"><strong>${day.slice(0, 3)}:</strong> ${time}</div>`;
-                }
-            });
+                });
+            }
             
             html += `</div></div>`;
         });
@@ -181,35 +169,62 @@ function generateHtmlForDoctors(data) {
 }
 
 /**
- * Mengisi template HTML dengan data dokter yang sudah dibagi menjadi 3 kolom.
- * @param {string} templateHtml String template HTML
- * @param {Array} data Data jadwal dokter
- * @returns {string} String HTML yang sudah terisi
+ * Mengisi template inside dengan data
  */
-async function fillTemplate(templateHtml, data) {
+async function fillInsideTemplate(templateHtml, data) {
     // Distribusi data ke 3 kolom secara merata
     const columns = [[], [], []];
     data.forEach((spec, index) => {
         columns[index % 3].push(spec);
     });
     
+    const generatedDate = new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+    });
+    
     return templateHtml
         .replace('{{COLUMN_1_HTML}}', generateHtmlForDoctors(columns[0]))
         .replace('{{COLUMN_2_HTML}}', generateHtmlForDoctors(columns[1]))
         .replace('{{COLUMN_3_HTML}}', generateHtmlForDoctors(columns[2]))
-        .replace('{{GENERATED_DATE}}', new Date().toLocaleDateString('id-ID', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric'
-        }));
+        .replace('{{GENERATED_DATE}}', generatedDate);
 }
 
-// Handler utama yang dipanggil oleh Netlify
+/**
+ * Mengisi template outside dengan data
+ */
+async function fillOutsideTemplate(templateHtml, data) {
+    // Untuk outside, kita juga bagi menjadi 2 kolom
+    const columns = [[], []];
+    data.forEach((spec, index) => {
+        columns[index % 2].push(spec);
+    });
+    
+    // Path ke logo putih - sesuaikan dengan path yang benar
+    const logoPath = path.resolve(process.cwd(), 'public', 'asset', 'logo', 'logo-putih.png');
+    let logoUrl = 'https://via.placeholder.com/150x50/FFFFFF/004082?text=LOGO';
+    
+    try {
+        // Coba baca logo lokal
+        await fs.access(logoPath);
+        const logoBuffer = await fs.readFile(logoPath);
+        logoUrl = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+    } catch (error) {
+        console.log('Logo putih tidak ditemukan, menggunakan placeholder');
+    }
+    
+    return templateHtml
+        .replace('{{COLUMN_1_OUTSIDE}}', generateHtmlForDoctors(columns[0]))
+        .replace('{{COLUMN_2_OUTSIDE}}', generateHtmlForDoctors(columns[1]))
+        .replace('{{LOGO_SILOAM_PUTIH}}', logoUrl);
+}
+
+// Handler utama
 exports.handler = async (event, context) => {
     console.log('=== FUNGSI GENERATE-BROCHURE DIMULAI ===');
     
     try {
-        // Ambil data jadwal (dari cache atau langsung dari Google Sheets)
         const allData = await getJadwalDataFromCache();
         
         if (!allData || allData.length === 0) {
@@ -238,10 +253,10 @@ exports.handler = async (event, context) => {
 
         // Isi template dengan data
         console.log('Mengisi template dengan data...');
-        const insideHtml = await fillTemplate(insideTemplate, insidePageData);
-        const outsideHtml = await fillTemplate(outsideTemplate, outsidePageData);
+        const insideHtml = await fillInsideTemplate(insideTemplate, insidePageData);
+        const outsideHtml = await fillOutsideTemplate(outsideTemplate, outsidePageData);
 
-        // Gabungkan kedua halaman dengan pemisah halaman untuk dicetak
+        // Gabungkan kedua halaman
         const finalHtml = `
             ${insideHtml}
             <div style="page-break-after: always;"></div>
@@ -266,7 +281,6 @@ exports.handler = async (event, context) => {
             <html lang="id">
             <head>
                 <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <title>Error - Generator Brosur</title>
                 <script src="https://cdn.tailwindcss.com"></script>
             </head>
@@ -284,9 +298,6 @@ exports.handler = async (event, context) => {
                                 <li>Hubungi administrator jika masalah berlanjut</li>
                             </ul>
                         </div>
-                        <button onclick="window.history.back()" class="mt-6 bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700 transition-colors">
-                            Kembali
-                        </button>
                     </div>
                 </div>
             </body>
