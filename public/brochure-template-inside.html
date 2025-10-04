@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>Jadwal Dokter Trifold Brochure - Halaman Dalam</title>
-    <script src="https://cdn/tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
     <style>
         @page { size: A4 landscape; margin: 0; }
@@ -13,60 +13,70 @@
             margin: 0; padding: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
-            font-size: 10px;
         }
-        /* PERUBAHAN UTAMA: MENGGUNAKAN CSS MULTI-COLUMN */
-        .multi-column-container {
+        .trifold-container {
+            display: flex;
+            width: 100%;
             height: 100%;
-            padding: 15px;
+        }
+        .panel {
+            width: 33.33%;
+            padding: 12px; /* Padding diperkecil */
+            border-right: 1px solid #e2e8f0;
             box-sizing: border-box;
-            column-count: 3; /* Secara otomatis membuat 3 kolom */
-            column-gap: 30px; /* Jarak antar kolom */
-            column-fill: auto; /* Memastikan konten mengalir secara seimbang */
+            height: 210mm;
         }
         .specialization-group {
-            margin-bottom: 12px;
-            break-inside: avoid; /* Mencegah grup terpotong antar kolom */
+            margin-bottom: 10px; /* Jarak diperkecil */
+            break-inside: avoid;
         }
         .specialization-title {
             font-family: 'Montserrat', sans-serif;
-            font-weight: 800;
-            font-size: 14px;
+            font-weight: 700;
+            font-size: 13px; /* Ukuran judul diperkecil */
             color: #1e3a8a;
-            margin-bottom: 8px;
-            padding-bottom: 4px;
-            border-bottom: 2px solid #3b82f6;
+            margin-bottom: 6px;
+            padding-bottom: 3px;
+            border-bottom: 1.5px solid #3b82f6;
         }
         .doctor-card {
-            padding: 8px;
-            margin-bottom: 8px;
-            border-radius: 6px;
-            border-left: 3px solid #3b82f6;
-            background: #f8fafc;
+            padding: 6px; /* Padding kartu diperkecil */
+            margin-bottom: 6px;
+            border-radius: 4px;
+            border-left: 2.5px solid #3b82f6;
+            background: #fdfdfd;
         }
         .doctor-name {
             font-weight: 600;
             color: #1e293b;
-            margin-bottom: 4px;
-            font-size: 11px;
+            margin-bottom: 3px;
+            font-size: 10px; /* Ukuran nama diperkecil */
         }
         .schedule-grid {
             display: flex;
             flex-wrap: wrap;
-            gap: 2px 8px;
-            font-size: 10px;
+            gap: 1px 6px; /* Jarak jadwal diperkecil */
+            font-size: 9px; /* Ukuran jadwal diperkecil */
+            line-height: 1.4;
         }
         .schedule-day { color: #475569; }
-        .schedule-day strong { color: #1e293b; }
+        .schedule-day strong { color: #1e293b; font-weight: 600; }
         .montserrat { font-family: 'Montserrat', sans-serif; }
     </style>
 </head>
 <body>
-    <div class="multi-column-container">
-        <h1 class="montserrat font-extrabold text-xl text-blue-900 mb-1">Jadwal Poliklinik Dokter Spesialis</h1>
-        <p class="text-xs text-gray-600 mb-4">Siloam Hospitals Ambon (Update: {{GENERATED_DATE}})</p>
-        
-        {{ALL_INSIDE_HTML}}
+    <div class="trifold-container">
+        <div class="panel">
+            <h1 class="montserrat font-extrabold text-lg text-blue-900 mb-1">Jadwal Poliklinik Dokter Spesialis</h1>
+            <p style="font-size: 9px;" class="text-gray-600 mb-3">Siloam Hospitals Ambon (Update: {{GENERATED_DATE}})</p>
+            {{COLUMN_1_HTML}}
+        </div>
+        <div class="panel">
+            {{COLUMN_2_HTML}}
+        </div>
+        <div class="panel">
+            {{COLUMN_3_HTML}}
+        </div>
     </div>
 </body>
 </html>
