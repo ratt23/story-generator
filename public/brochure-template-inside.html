@@ -2,16 +2,18 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Brosur Jadwal Dokter - Halaman Dalam</title>
+    <title>Jadwal Dokter Trifold Brochure - Halaman Dalam</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
     <style>
         @page { size: A4 landscape; margin: 0; }
-        body { 
-            font-family: Arial, sans-serif;
-            width: 297mm;
-            height: 210mm;
+        body {
+            font-family: 'Poppins', sans-serif;
+            width: 297mm; height: 210mm;
             margin: 0;
             padding: 0;
-            display: flex;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
         .trifold-container {
             display: flex;
@@ -19,89 +21,63 @@
             height: 100%;
         }
         .panel {
-            width: 99mm;
-            padding: 15px 10px;
-            border-right: 1px solid #ddd;
+            padding: 20px;
+            border-right: 1px solid #e2e8f0;
             box-sizing: border-box;
         }
-        .panel:last-child {
-            border-right: none;
-        }
         .specialization-group {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
         .specialization-title {
-            font-weight: bold;
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 800;
+            font-size: 18px;
             color: #1e3a8a;
-            font-size: 16px;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
             border-bottom: 2px solid #3b82f6;
         }
         .doctor-card {
             background: #f8fafc;
-            padding: 10px;
-            margin-bottom: 10px;
-            border-radius: 5px;
+            padding: 12px;
+            margin-bottom: 12px;
+            border-radius: 8px;
             border-left: 4px solid #3b82f6;
         }
         .doctor-name {
-            font-weight: bold;
+            font-weight: 600;
+            color: #1e293b;
             margin-bottom: 8px;
             font-size: 14px;
         }
         .schedule-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 5px;
+            gap: 6px;
             font-size: 12px;
         }
         .schedule-day {
-            color: #555;
+            color: #475569;
         }
         .schedule-day strong {
-            color: #000;
+            color: #1e293b;
         }
-        .no-data {
-            color: #666;
-            font-style: italic;
-        }
-        .header {
-            margin-bottom: 15px;
-        }
-        .header h1 {
-            font-size: 20px;
-            color: #1e3a8a;
-            margin: 0 0 5px 0;
-        }
-        .header p {
-            font-size: 12px;
-            color: #666;
-            margin: 0;
-        }
-        @media print {
-            body { margin: 0; }
-            .panel { border-right: 1px solid #ccc; }
+        .montserrat {
+            font-family: 'Montserrat', sans-serif;
         }
     </style>
 </head>
 <body>
     <div class="trifold-container">
-        <div class="panel">
-            <div class="header">
-                <h1>Jadwal Dokter</h1>
-                <p>Poliklinik Spesialis</p>
-            </div>
+        <div class="panel" style="width: 33.33%">
             {{COLUMN_1_HTML}}
         </div>
-        <div class="panel">
+        <div class="panel" style="width: 33.33%">
             {{COLUMN_2_HTML}}
         </div>
-        <div class="panel">
-            <div class="header">
-                <h1>Siloam Hospitals</h1>
-                <p>Ambon (Update: {{GENERATED_DATE}})</p>
-            </div>
+        <div class="panel" style="width: 33.33%">
+            <h1 class="montserrat font-extrabold text-2xl text-blue-900 mb-2">Jadwal Poliklinik Dokter Spesialis</h1>
+            <p class="text-sm text-gray-600 mb-4">Siloam Hospitals Ambon (Update: {{GENERATED_DATE}})</p>
             {{COLUMN_3_HTML}}
         </div>
     </div>
