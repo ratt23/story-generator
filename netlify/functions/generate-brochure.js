@@ -1,42 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
-const { getStore } = require('@netlify/blobs');
 
-const CACHE_KEY = 'jadwal-dokter-cache';
-
-// Fungsi fetchData yang lebih robust
-function fetchData(url) {
-    return new Promise((resolve, reject) => {
-        const https = require('https');
-        const req = https.get(url, (res) => {
-            let data = '';
-            
-            res.on('data', (chunk) => {
-                data += chunk;
-            });
-            
-            res.on('end', () => {
-                try {
-                    const parsed = JSON.parse(data);
-                    resolve(parsed);
-                } catch (e) {
-                    reject(new Error('Failed to parse JSON response: ' + e.message));
-                }
-            });
-        });
-        
-        req.on('error', (err) => {
-            reject(new Error('Request failed: ' + err.message));
-        });
-        
-        req.setTimeout(10000, () => {
-            req.destroy();
-            reject(new Error('Request timeout'));
-        });
-    });
-}
-
-// Fallback data untuk testing
+// Fallback data yang lebih lengkap
 const fallbackData = [
     {
         title: "Penyakit Dalam",
@@ -45,8 +10,17 @@ const fallbackData = [
                 name: "Dr. John Doe, Sp.PD",
                 schedule: {
                     Senin: "08:00 - 12:00",
-                    Selasa: "13:00 - 17:00",
-                    Rabu: "08:00 - 12:00"
+                    Selasa: "13:00 - 17:00", 
+                    Rabu: "08:00 - 12:00",
+                    Kamis: "13:00 - 17:00"
+                }
+            },
+            {
+                name: "Dr. Sarah Smith, Sp.PD",
+                schedule: {
+                    Rabu: "13:00 - 17:00",
+                    Kamis: "08:00 - 12:00",
+                    Jumat: "08:00 - 12:00"
                 }
             }
         ]
@@ -55,10 +29,23 @@ const fallbackData = [
         title: "Anak",
         doctors: [
             {
-                name: "Dr. Jane Smith, Sp.A",
+                name: "Dr. Jane Wilson, Sp.A",
                 schedule: {
-                    Kamis: "08:00 - 12:00",
+                    Senin: "13:00 - 17:00",
+                    Rabu: "08:00 - 12:00",
                     Jumat: "13:00 - 17:00"
+                }
+            }
+        ]
+    },
+    {
+        title: "Bedah",
+        doctors: [
+            {
+                name: "Dr. Michael Brown, Sp.B",
+                schedule: {
+                    Selasa: "08:00 - 12:00",
+                    Kamis: "08:00 - 12:00"
                 }
             }
         ]
@@ -66,62 +53,52 @@ const fallbackData = [
 ];
 
 /**
- * Mengambil data jadwal - dengan fallback jika ada masalah
+ * Mengambil data jadwal - menggunakan fallback untuk testing
  */
 async function getJadwalData() {
     try {
-        console.log('Mencoba mengambil data dari cache...');
-        const jadwalStore = getStore('jadwal-dokter');
-        const rawData = await jadwalStore.get(CACHE_KEY);
-        
-        if (rawData) {
-            const parsedData = JSON.parse(rawData);
-            console.log('Data berhasil diambil dari cache');
-            return Object.values(parsedData).map(spec => ({
-                title: spec.title,
-                doctors: spec.doctors.map(doc => ({ 
-                    name: doc.name, 
-                    schedule: doc.schedule 
-                })),
-            }));
-        }
-        
-        throw new Error('Cache kosong');
+        console.log('Menggunakan fallback data untuk testing');
+        return fallbackData;
     } catch (error) {
-        console.log('Menggunakan fallback data:', error.message);
+        console.log('Error, menggunakan fallback data:', error.message);
         return fallbackData;
     }
 }
 
 /**
- * Menghasilkan HTML untuk daftar dokter
+ * Menghasilkan HTML untuk daftar dokter dengan formatting yang benar
  */
 function generateHtmlForDoctors(data) {
     if (!data || data.length === 0) {
-        return '<div class="specialization-group"><p class="text-gray-500">Tidak ada data jadwal</p></div>';
+        return '<div class="specialization-group"><p class="text-gray-500" style="color: #64748b; font-style: italic;">Tidak ada data jadwal</p></div>';
     }
     
     let html = '';
     
     data.forEach(spec => {
+        if (!spec.doctors || spec.doctors.length === 0) return;
+        
         html += `<div class="specialization-group">
-            <h3 class="specialization-title">${spec.title}</h3>`;
+            <h3 class="specialization-title">${spec.title || 'Spesialis'}</h3>`;
             
         spec.doctors.forEach(doc => {
+            if (!doc.name) return;
+            
             html += `<div class="doctor-card">
                 <p class="doctor-name">${doc.name}</p>
                 <div class="schedule-grid">`;
                 
-            // Filter hanya hari yang memiliki jadwal
-            const scheduleEntries = Object.entries(doc.schedule || {}).filter(([_, time]) => 
-                time && time.trim() !== '' && time.trim() !== '-'
-            );
-            
+            // Filter dan format jadwal
+            const scheduleEntries = Object.entries(doc.schedule || {})
+                .filter(([day, time]) => time && time.trim() !== '' && time.trim() !== '-')
+                .slice(0, 6); // Batasi maksimal 6 jadwal per dokter
+                
             if (scheduleEntries.length === 0) {
-                html += `<div class="schedule-day">Jadwal tidak tersedia</div>`;
+                html += `<div class="schedule-day" style="grid-column: 1 / -1;">Jadwal tidak tersedia</div>`;
             } else {
                 scheduleEntries.forEach(([day, time]) => {
-                    html += `<div class="schedule-day"><strong>${day.slice(0, 3)}:</strong> ${time}</div>`;
+                    const dayAbbr = day.substring(0, 3);
+                    html += `<div class="schedule-day"><strong>${dayAbbr}:</strong> ${time}</div>`;
                 });
             }
             
@@ -138,7 +115,7 @@ function generateHtmlForDoctors(data) {
  * Mengisi template dengan data
  */
 async function fillTemplate(templateHtml, data) {
-    // Distribusi data ke 3 kolom
+    // Distribusi data ke 3 kolom secara seimbang
     const columns = [[], [], []];
     data.forEach((spec, index) => {
         columns[index % 3].push(spec);
@@ -150,14 +127,14 @@ async function fillTemplate(templateHtml, data) {
         year: 'numeric'
     });
     
-    return templateHtml
+    // Replace semua placeholder
+    let filledTemplate = templateHtml
         .replace(/{{COLUMN_1_HTML}}/g, generateHtmlForDoctors(columns[0]))
         .replace(/{{COLUMN_2_HTML}}/g, generateHtmlForDoctors(columns[1]))
         .replace(/{{COLUMN_3_HTML}}/g, generateHtmlForDoctors(columns[2]))
-        .replace(/{{GENERATED_DATE}}/g, generatedDate)
-        .replace(/{{COLUMN_1_OUTSIDE}}/g, generateHtmlForDoctors(columns[0]))
-        .replace(/{{COLUMN_2_OUTSIDE}}/g, generateHtmlForDoctors(columns[1]))
-        .replace(/{{LOGO_SILOAM_PUTIH}}/g, 'https://via.placeholder.com/150x50/FFFFFF/004082?text=SILOAM');
+        .replace(/{{GENERATED_DATE}}/g, generatedDate);
+    
+    return filledTemplate;
 }
 
 // Handler utama
@@ -169,41 +146,23 @@ exports.handler = async (event, context) => {
         const allData = await getJadwalData();
         console.log('Data berhasil diambil:', allData.length, 'spesialisasi');
         
-        // Baca template files dengan error handling
+        // Baca template files
         let insideTemplate, outsideTemplate;
+        const templateDir = path.join(process.cwd(), 'public');
         
         try {
-            const insideTemplatePath = path.join(process.cwd(), 'public', 'brochure-template-inside.html');
-            const outsideTemplatePath = path.join(process.cwd(), 'public', 'brochure-template-outside.html');
-            
-            console.log('Membaca template dari:', insideTemplatePath);
-            
-            [insideTemplate, outsideTemplate] = await Promise.all([
-                fs.readFile(insideTemplatePath, 'utf8'),
-                fs.readFile(outsideTemplatePath, 'utf8')
-            ]);
+            insideTemplate = await fs.readFile(path.join(templateDir, 'brochure-template-inside.html'), 'utf8');
+            outsideTemplate = await fs.readFile(path.join(templateDir, 'brochure-template-outside.html'), 'utf8');
+            console.log('Template files berhasil dibaca');
         } catch (templateError) {
             console.error('Error membaca template:', templateError);
-            // Fallback template sederhana
-            insideTemplate = `
-                <!DOCTYPE html>
-                <html>
-                <head><meta charset="UTF-8"><title>Brosur</title></head>
-                <body>
-                    <h1>Jadwal Dokter</h1>
-                    {{COLUMN_1_HTML}}
-                    {{COLUMN_2_HTML}} 
-                    {{COLUMN_3_HTML}}
-                    <p>Update: {{GENERATED_DATE}}</p>
-                </body>
-                </html>
-            `;
-            outsideTemplate = insideTemplate;
+            throw new Error('Template files tidak ditemukan');
         }
 
-        // Isi template
+        // Isi template dengan data
+        console.log('Mengisi template dengan data...');
         const insideHtml = await fillTemplate(insideTemplate, allData);
-        const outsideHtml = await fillTemplate(outsideTemplate, allData);
+        const outsideHtml = await fillTemplate(outsideTemplate, allData.slice(0, 2)); // Batasi data untuk outside
 
         // Gabungkan halaman
         const finalHtml = insideHtml + '<div style="page-break-after: always;"></div>' + outsideHtml;
@@ -214,7 +173,7 @@ exports.handler = async (event, context) => {
             statusCode: 200,
             headers: { 
                 'Content-Type': 'text/html; charset=utf-8',
-                'Cache-Control': 'no-cache'
+                'Cache-Control': 'no-cache, no-store, must-revalidate'
             },
             body: finalHtml,
         };
@@ -222,15 +181,48 @@ exports.handler = async (event, context) => {
     } catch (error) {
         console.error('!!! ERROR CRITICAL:', error);
         
-        // Return error page yang sederhana
+        // Return error page yang informatif
         const errorHtml = `
             <!DOCTYPE html>
             <html>
-            <head><meta charset="UTF-8"><title>Error</title></head>
+            <head>
+                <meta charset="UTF-8">
+                <title>Error - Generator Brosur</title>
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        background: #fef2f2; 
+                        color: #dc2626; 
+                        padding: 40px; 
+                        text-align: center;
+                    }
+                    .error-container {
+                        max-width: 500px;
+                        margin: 0 auto;
+                        background: white;
+                        padding: 30px;
+                        border-radius: 10px;
+                        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                    }
+                    h1 { margin-bottom: 20px; }
+                    button { 
+                        background: #dc2626; 
+                        color: white; 
+                        border: none; 
+                        padding: 10px 20px; 
+                        border-radius: 5px; 
+                        cursor: pointer;
+                        margin-top: 20px;
+                    }
+                </style>
+            </head>
             <body>
-                <h1>Terjadi Kesalahan</h1>
-                <p>${error.message}</p>
-                <p>Silakan coba lagi atau hubungi administrator.</p>
+                <div class="error-container">
+                    <h1>⚠️ Terjadi Kesalahan</h1>
+                    <p><strong>Error:</strong> ${error.message}</p>
+                    <p>Silakan coba lagi atau hubungi administrator.</p>
+                    <button onclick="window.location.reload()">Coba Lagi</button>
+                </div>
             </body>
             </html>
         `;
