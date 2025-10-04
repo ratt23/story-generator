@@ -63,7 +63,7 @@
                 <div class="bg-white p-8 rounded-xl shadow-lg">
                     <h1 class="text-3xl font-bold text-slate-800 mb-4">Generator Brosur Jadwal Dokter</h1>
                     <p class="text-slate-600 mb-6">
-                        Data diambil dari cache Netlify Blobs yang sudah tersimpan. Pastikan fungsi cache sudah dijalankan.
+                        Gunakan tombol di bawah untuk melihat pratinjau atau mencetak brosur. Anda bisa mengubah gambar cover di panel opsi.
                     </p>
 
                     <div class="button-group">
@@ -77,27 +77,31 @@
                     
                     <div id="status-container" class="space-y-2 min-h-24 bg-slate-50 p-4 rounded-lg">
                         <div class="text-center text-slate-500">
-                            <p>Pilih salah satu tombol di atas</p>
-                            <p class="text-sm">Preview untuk melihat di sini, Cetak untuk buka tab baru</p>
+                            <p>Sistem siap. Pilih tombol di atas.</p>
                         </div>
                     </div>
 
-                    <div class="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h3 class="font-semibold text-blue-800 mb-2">ℹ️ Informasi Data</h3>
-                        <ul class="text-sm text-blue-700 list-disc list-inside space-y-1">
-                            <li>Data diambil dari <strong>Netlify Blobs Cache</strong></li>
-                            <li>Cache diperbarui otomatis setiap 10 menit</li>
-                            <li>Pastikan fungsi cache-jadwal-data berjalan normal</li>
-                        </ul>
+                    <div id="cover-options" class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <h3 class="font-semibold text-gray-800 mb-3">🎨 Opsi Tampilan Cover</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="cover-image-url" class="block text-sm font-medium text-slate-700 mb-1">Gambar Utama Cover</label>
+                                <input type="text" id="cover-image-url" value="asset/brochure/1.png" placeholder="Masukkan URL atau path lokal" class="w-full p-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label for="background-image-url" class="block text-sm font-medium text-slate-700 mb-1">Gambar Latar Belakang Cover</label>
+                                <input type="text" id="background-image-url" value="asset/brochure/2.png" placeholder="Masukkan URL atau path lokal" class="w-full p-2 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                                <p class="text-xs text-gray-500 mt-1">Contoh path lokal: 'asset/brochure/namafile.png'</p>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                         <h3 class="font-semibold text-yellow-800 mb-2">🖨️ Petunjuk Cetak</h3>
                         <ul class="text-sm text-yellow-700 list-disc list-inside space-y-1">
-                            <li>Setelah tab baru terbuka, tekan <kbd class="px-2 py-1 bg-gray-200 rounded text-xs">Ctrl+P</kbd> (Windows) atau <kbd class="px-2 py-1 bg-gray-200 rounded text-xs">Cmd+P</kbd> (Mac)</li>
+                            <li>Setelah tab baru terbuka, tekan <kbd class="px-2 py-1 bg-gray-200 rounded text-xs">Ctrl+P</kbd> atau <kbd class="px-2 py-1 bg-gray-200 rounded text-xs">Cmd+P</kbd></li>
                             <li>Pilih printer <strong>"Save as PDF"</strong></li>
                             <li>Settings: <strong>Landscape, Margin → None, Scale → 100%</strong></li>
-                            <li>Brosur dirancang untuk dicetak <strong>2 halaman (trifold)</strong></li>
                         </ul>
                     </div>
                 </div>
@@ -105,9 +109,8 @@
                 <div class="bg-white p-8 rounded-xl shadow-lg min-w-0">
                     <h2 class="text-2xl font-bold text-slate-800 mb-4">Pratinjau Brosur</h2>
                     <p class="text-slate-600 mb-4">
-                        Klik "Preview Brosur" untuk melihat pratinjau di sini dalam ukuran penuh. Gunakan scroll untuk menavigasi.
+                        Klik "Preview Brosur" untuk melihat pratinjau di sini dalam ukuran penuh.
                     </p>
-                    
                     <div class="preview-container mb-4">
                         <div id="preview-content" class="preview-content">
                             <div class="flex items-center justify-center h-full text-slate-400">
@@ -115,7 +118,6 @@
                                     <div class="text-5xl mb-3">📋</div>
                                     <p class="text-lg font-medium">Preview Brosur</p>
                                     <p class="text-sm">Klik tombol "Preview Brosur" di sebelah</p>
-                                    <p class="text-xs mt-2">Data akan diambil dari cache Netlify Blobs</p>
                                 </div>
                             </div>
                         </div>
@@ -146,29 +148,36 @@ document.addEventListener('DOMContentLoaded', function() {
     const generateBrochure = async (action) => {
         setLoading(true);
         showStatus('🔄 Memulai proses...');
-
         try {
             const isPreview = action === 'preview';
-            const url = `/.netlify/functions/generate-brochure?preview=${isPreview}`;
             
-            showStatus('📡 Mengambil data dari cache...');
+            // Ambil URL gambar dari input
+            const coverImageUrl = document.getElementById('cover-image-url').value;
+            const backgroundImageUrl = document.getElementById('background-image-url').value;
+
+            // Buat URL dengan query parameter untuk gambar
+            const params = new URLSearchParams({
+                preview: isPreview,
+                cover: coverImageUrl,
+                bg: backgroundImageUrl
+            });
+            const url = `/.netlify/functions/generate-brochure?${params.toString()}`;
             
+            showStatus('📡 Mengambil data dan memproses gambar...');
             const response = await fetch(url);
             
             if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
+                const errorText = await response.text();
+                throw new Error(`Server error: ${response.status} - ${errorText}`);
             }
 
             showStatus('✅ Data berhasil diambil');
-            
             const htmlContent = await response.text();
             
             if (isPreview) {
-                // Update preview
                 previewContent.innerHTML = htmlContent;
                 showStatus('✨ Preview berhasil diperbarui');
             } else {
-                // Buka tab baru untuk cetak
                 const newTab = window.open();
                 newTab.document.write(htmlContent);
                 newTab.document.close();
@@ -178,27 +187,17 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Error:', error);
             showStatus(`❌ Error: ${error.message}`, true);
-            
             if (action === 'preview') {
-                previewContent.innerHTML = `
-                    <div class="flex items-center justify-center h-full bg-red-50">
-                        <div class="text-center text-red-600">
-                            <div class="text-4xl mb-2">⚠️</div>
-                            <p>${error.message}</p>
-                        </div>
-                    </div>
-                `;
+                previewContent.innerHTML = `<div class="p-4 bg-red-50 text-red-700"><strong>Error:</strong> ${error.message}</div>`;
             }
         } finally {
             setLoading(false);
         }
     };
 
-    // Event listeners
     previewButton.addEventListener('click', () => generateBrochure('preview'));
     generateButton.addEventListener('click', () => generateBrochure('print'));
 
-    // Status awal
     showStatus('✅ Sistem siap. Silakan generate brosur.');
 });
 </script>
