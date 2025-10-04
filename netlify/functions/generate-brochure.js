@@ -1,38 +1,59 @@
-const fs = require('fs').promises;
 const path = require('path');
 const { getStore } = require('@netlify/blobs');
 const https = require('https');
 
 const CACHE_KEY = 'jadwal-dokter-cache';
-const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY_oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
+const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
 
-// Helper function untuk mengubah gambar lokal menjadi Data URI (base64)
-async function imageToUrl(imagePathOrUrl) {
-    if (!imagePathOrUrl || imagePathOrUrl.startsWith('http')) {
-        return imagePathOrUrl || ''; // Kembalikan URL eksternal atau string kosong
+/**
+ * Mengambil gambar dari URL publiknya dan mengubahnya menjadi base64 Data URI.
+ * Ini adalah cara yang andal untuk mengakses aset di lingkungan serverless.
+ * @param {string} pathOrUrl - Path lokal (e.g., 'asset/logo.png') atau URL eksternal.
+ * @param {string} host - Host dari website (e.g., 'myapp.netlify.app').
+ * @returns {Promise<string>} Data URI gambar atau URL eksternal.
+ */
+async function processImage(pathOrUrl, host) {
+    if (!pathOrUrl) return '';
+    if (pathOrUrl.startsWith('http')) {
+        return pathOrUrl; // Gunakan URL eksternal secara langsung
     }
-    // Asumsikan ini adalah path lokal, relatif terhadap folder public
-    const absolutePath = path.resolve(process.cwd(), 'public', imagePathOrUrl);
+
+    // Bangun URL lengkap untuk aset lokal
+    const fullUrl = `https://${host}/${pathOrUrl}`;
+
     try {
-        const imageBuffer = await fs.readFile(absolutePath);
-        const extension = path.extname(absolutePath).toLowerCase().slice(1);
+        const imageBuffer = await new Promise((resolve, reject) => {
+            const request = https.get(fullUrl, (response) => {
+                if (response.statusCode < 200 || response.statusCode >= 300) {
+                    return reject(new Error(`Gagal mengambil gambar (${response.statusCode}): ${fullUrl}`));
+                }
+                const data = [];
+                response.on('data', (chunk) => data.push(chunk));
+                response.on('end', () => resolve(Buffer.concat(data)));
+            });
+            request.on('error', (err) => reject(err));
+            request.setTimeout(15000, () => { // Timeout 15 detik
+                request.destroy();
+                reject(new Error('Request gambar timeout'));
+            });
+        });
+
+        const extension = path.extname(pathOrUrl).toLowerCase().slice(1);
         const mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
         return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
     } catch (error) {
-        console.error(`Gambar lokal tidak ditemukan atau gagal dibaca: ${absolutePath}`, error);
-        return ''; // Kembalikan kosong jika error
+        console.error(`Gagal memproses gambar dari URL: ${fullUrl}`, error);
+        return ''; // Kembalikan string kosong jika gagal
     }
 }
 
+
 function fetchData(url, redirectCount = 0) {
-    if (redirectCount > 5) {
-        return Promise.reject(new Error('Terlalu banyak pengalihan (redirect).'));
-    }
+    if (redirectCount > 5) return Promise.reject(new Error('Terlalu banyak pengalihan.'));
     return new Promise((resolve, reject) => {
         const req = https.get(url, (res) => {
             if ([301, 302, 307].includes(res.statusCode)) {
-                const redirectUrl = new URL(res.headers.location, url).href;
-                return resolve(fetchData(redirectUrl, redirectCount + 1));
+                return resolve(fetchData(new URL(res.headers.location, url).href, redirectCount + 1));
             }
             if (res.statusCode < 200 || res.statusCode >= 300) {
                 return reject(new Error(`HTTP status code ${res.statusCode}`));
@@ -40,11 +61,7 @@ function fetchData(url, redirectCount = 0) {
             let body = '';
             res.on('data', (chunk) => { body += chunk; });
             res.on('end', () => {
-                try {
-                    resolve(JSON.parse(body));
-                } catch (e) {
-                    reject(new Error('Gagal mem-parsing respons JSON.'));
-                }
+                try { resolve(JSON.parse(body)); } catch (e) { reject(new Error('Gagal parsing JSON.')); }
             });
         });
         req.on('error', (err) => reject(err));
@@ -61,8 +78,7 @@ async function getJadwalDataFromCache() {
         if (!jadwalStore) return await getJadwalDataDirect();
         const rawData = await jadwalStore.get(CACHE_KEY);
         if (!rawData) return await getJadwalDataDirect();
-        const parsedData = JSON.parse(rawData);
-        return Object.values(parsedData).map(spec => ({
+        return Object.values(JSON.parse(rawData)).map(spec => ({
             title: spec.title,
             doctors: spec.doctors.map(doc => ({ name: doc.name, schedule: doc.schedule })),
         }));
@@ -74,7 +90,7 @@ async function getJadwalDataFromCache() {
 async function getJadwalDataDirect() {
     const jadwalData = await fetchData(GOOGLE_SCRIPT_JADWAL_URL);
     if (!jadwalData || Object.keys(jadwalData).length === 0) {
-        throw new Error('Data dari Google Sheets kosong atau tidak valid.');
+        throw new Error('Data dari Google Sheets kosong.');
     }
     return Object.values(jadwalData).map(spec => ({
         title: spec.title,
@@ -104,12 +120,13 @@ function generateHtmlForDoctors(data) {
     return html;
 }
 
-exports.handler = async (event, context) => {
+exports.handler = async (event) => {
     try {
-        // Ambil parameter gambar dari URL
         const { cover, bg } = event.queryStringParameters || {};
-        const coverImage = cover || 'asset/brochure/1.png';
-        const backgroundImage = bg || 'asset/brochure/2.png';
+        const host = event.headers.host;
+        if (!host) {
+            throw new Error("Header 'host' tidak ditemukan, tidak bisa membangun URL gambar.");
+        }
 
         const allData = await getJadwalDataFromCache();
         if (!allData || allData.length === 0) {
@@ -121,24 +138,24 @@ exports.handler = async (event, context) => {
         const columnDoctorCounts = [0, 0, 0, 0];
         allData.forEach(spec => {
             let targetColumnIndex = 0;
-            let minDoctorsInColumn = columnDoctorCounts[0];
-            for (let i = 1; i < columnDoctorCounts.length; i++) {
-                if (columnDoctorCounts[i] < minDoctorsInColumn) {
-                    minDoctorsInColumn = columnDoctorCounts[i];
+            columnDoctorCounts.forEach((count, i) => {
+                if (count < columnDoctorCounts[targetColumnIndex]) {
                     targetColumnIndex = i;
                 }
-            }
+            });
             columns[targetColumnIndex].push(spec);
             columnDoctorCounts[targetColumnIndex] += spec.doctors.length;
         });
 
         const [outsideColumn1Data, insideColumn1Data, insideColumn2Data, insideColumn3Data] = columns;
         
-        const insideTemplatePath = path.resolve(process.cwd(), 'public', 'brochure-template-inside.html');
-        const outsideTemplatePath = path.resolve(process.cwd(), 'public', 'brochure-template-outside.html');
+        const insideTemplatePath = path.resolve(__dirname, '..', '..', 'public', 'brochure-template-inside.html');
+        const outsideTemplatePath = path.resolve(__dirname, '..', '..', 'public', 'brochure-template-outside.html');
+        
+        // Membaca template HTML (menggunakan fs.promises karena ini aman untuk template)
         const [insideTemplate, outsideTemplate] = await Promise.all([
-            fs.readFile(insideTemplatePath, 'utf8'),
-            fs.readFile(outsideTemplatePath, 'utf8')
+            require('fs').promises.readFile(insideTemplatePath, 'utf8'),
+            require('fs').promises.readFile(outsideTemplatePath, 'utf8')
         ]);
 
         const generatedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -149,11 +166,11 @@ exports.handler = async (event, context) => {
             .replace('{{COLUMN_3_HTML}}', generateHtmlForDoctors(insideColumn3Data))
             .replace('{{GENERATED_DATE}}', generatedDate);
 
-        // Proses semua gambar untuk dijadikan URL atau base64
+        // Proses semua gambar menggunakan metode fetch via URL
         const [logoUrl, finalCoverImageUrl, finalBgImageUrl] = await Promise.all([
-            imageToUrl('asset/logo/logo.png'),
-            imageToUrl(coverImage),
-            imageToUrl(backgroundImage)
+            processImage('asset/logo/logo.png', host),
+            processImage(cover || 'asset/brochure/1.png', host),
+            processImage(bg || 'asset/brochure/2.png', host)
         ]);
         
         const outsideHtml = outsideTemplate
