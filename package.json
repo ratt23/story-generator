@@ -1,18 +1,16 @@
 {
-  "name": "story-generator",
+  "name": "Graphicat-tools",
   "version": "1.0.0",
-  "description": "",
+  "description": "Generator tools by Graphicat by rattputt",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "netlify dev"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "@sparticuz/chromium": "^138.0.2",
-    "postgres": "^3.4.7",
-    "puppeteer-core": "^24.22.3"
-  }
+    "@sparticuz/chromium": "^123.0.1",
+    "pdf-lib": "^1.17.1",
+    "puppeteer-core": "^22.9.0"
+  },
+  "author": "Graphicat by rattputt",
+  "license": "ISC"
 }
-
