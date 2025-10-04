@@ -6,7 +6,9 @@ const https = require('https');
 const CACHE_KEY = 'jadwal-dokter-cache';
 const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
 
-// Fungsi fetchData tidak perlu diubah
+/**
+ * Fungsi untuk fetch data dari URL dengan handle redirect
+ */
 function fetchData(url, redirectCount = 0) {
     if (redirectCount > 5) {
         return Promise.reject(new Error('Terlalu banyak pengalihan (redirect).'));
@@ -23,7 +25,10 @@ function fetchData(url, redirectCount = 0) {
             let body = '';
             res.on('data', (chunk) => { body += chunk; });
             res.on('end', () => {
-                try { resolve(JSON.parse(body)); }
+                try { 
+                    const parsedData = JSON.parse(body);
+                    resolve(parsedData);
+                }
                 catch (e) { reject(new Error('Gagal mem-parsing respons JSON.')); }
             });
         });
@@ -35,15 +40,19 @@ function fetchData(url, redirectCount = 0) {
     });
 }
 
-// Fungsi getJadwalDataFromCache dan getJadwalDataDirect tidak perlu diubah
+/**
+ * Mengambil data jadwal dari cache atau langsung dari Google Sheets
+ */
 async function getJadwalDataFromCache() {
     try {
         const jadwalStore = getStore('jadwal-dokter');
         if (!jadwalStore) {
+            console.log('Store tidak tersedia, mengambil data langsung...');
             return await getJadwalDataDirect();
         }
         const rawData = await jadwalStore.get(CACHE_KEY);
         if (!rawData) {
+            console.log('Cache kosong, mengambil data langsung...');
             return await getJadwalDataDirect();
         }
         const parsedData = JSON.parse(rawData);
@@ -52,10 +61,14 @@ async function getJadwalDataFromCache() {
             doctors: spec.doctors.map(doc => ({ name: doc.name, schedule: doc.schedule })),
         }));
     } catch (error) {
+        console.log('Error akses cache, fallback ke Google Sheets:', error.message);
         return await getJadwalDataDirect();
     }
 }
 
+/**
+ * Fallback: Mengambil data langsung dari Google Sheets
+ */
 async function getJadwalDataDirect() {
     const jadwalData = await fetchData(GOOGLE_SCRIPT_JADWAL_URL);
     if (!jadwalData || Object.keys(jadwalData).length === 0) {
@@ -67,7 +80,9 @@ async function getJadwalDataDirect() {
     }));
 }
 
-// Fungsi generateHtmlForDoctors tidak perlu diubah
+/**
+ * Menghasilkan potongan HTML untuk daftar dokter dalam satu spesialisasi.
+ */
 function generateHtmlForDoctors(data) {
     if (!data || data.length === 0) return '';
     let html = '';
@@ -93,19 +108,17 @@ function generateHtmlForDoctors(data) {
     return html;
 }
 
-// Handler utama
+/**
+ * Handler utama Netlify Function
+ */
 exports.handler = async (event, context) => {
-    console.log('=== FUNGSI GENERATE-BROCHURE (VERSI 2 HALAMAN) DIMULAI ===');
-    
     try {
         const allData = await getJadwalDataFromCache();
         if (!allData || allData.length === 0) {
             throw new Error('Tidak ada data jadwal yang ditemukan.');
         }
         
-        // --- PERUBAHAN 1: Logika Distribusi Data Baru ---
-        // Kita punya 4 kolom untuk diisi jadwal (1 di luar, 3 di dalam).
-        // Kita bagi semua data spesialisasi secara merata ke 4 kolom tersebut.
+        // Logika Distribusi Data Dinamis ke 4 kolom
         const totalSpecializations = allData.length;
         const itemsPerColumn = Math.ceil(totalSpecializations / 4);
         
@@ -126,42 +139,39 @@ exports.handler = async (event, context) => {
             fs.readFile(outsideTemplatePath, 'utf8')
         ]);
 
-        // --- PERUBAHAN 2: Mengisi Template dengan Data yang Sudah Dibagi ---
         const generatedDate = new Date().toLocaleDateString('id-ID', {
             day: 'numeric', month: 'long', year: 'numeric'
         });
 
-        // Halaman Dalam (3 kolom jadwal)
+        // Mengisi Halaman Dalam
         const insideHtml = insideTemplate
             .replace('{{COLUMN_1_HTML}}', generateHtmlForDoctors(insideColumn1))
             .replace('{{COLUMN_2_HTML}}', generateHtmlForDoctors(insideColumn2))
             .replace('{{COLUMN_3_HTML}}', generateHtmlForDoctors(insideColumn3))
             .replace('{{GENERATED_DATE}}', generatedDate);
 
-        // Halaman Luar (1 kolom jadwal + cover belakang + cover depan)
-        // --- PERUBAHAN 3: Path Logo Diubah Sesuai Permintaan ---
+        // Path ke logo berwarna untuk cover putih
         const logoPath = path.resolve(process.cwd(), 'public', 'asset', 'logo', 'logo.png');
         let logoUrl = 'https://via.placeholder.com/150x50/004082/FFFFFF?text=LOGO';
         try {
             const logoBuffer = await fs.readFile(logoPath);
             logoUrl = `data:image/png;base64,${logoBuffer.toString('base64')}`;
         } catch (error) {
-            console.log('Logo utama tidak ditemukan, menggunakan placeholder.');
+            console.log('Logo utama (berwarna) tidak ditemukan, menggunakan placeholder.');
         }
 
+        // Mengisi Halaman Luar
         const outsideHtml = outsideTemplate
             .replace('{{COLUMN_1_OUTSIDE}}', generateHtmlForDoctors(outsideColumn1))
-            .replace('{{COLUMN_2_OUTSIDE}}', '<p>Informasi layanan dan fasilitas lainnya dapat ditambahkan di sini.</p>') // Kolom tengah belakang bisa diisi konten lain
-            .replace('{{LOGO_SILOAM_PUTIH}}', logoUrl); // Placeholder tetap sama, tapi isinya diubah
+            .replace('{{COLUMN_2_OUTSIDE}}', '') // Kosongkan kolom tengah belakang, atau isi dengan info lain
+            .replace('{{LOGO_SILOAM_WARNA}}', logoUrl);
 
-        // Gabungkan kedua halaman
+        // Gabungkan kedua halaman menjadi satu dokumen HTML
         const finalHtml = `
             ${insideHtml}
             <div style="page-break-after: always;"></div>
             ${outsideHtml}
         `;
-
-        console.log('=== FUNGSI GENERATE-BROCHURE BERHASIL (VERSI 2 HALAMAN) ===');
         
         return {
             statusCode: 200,
@@ -170,8 +180,11 @@ exports.handler = async (event, context) => {
         };
     } catch (error) {
         console.error("!!! ERROR DALAM HANDLER generate-brochure:", error);
-        // Error handling tidak perlu diubah
-        const errorHtml = `...`; // (Konten HTML error sama seperti sebelumnya)
+        
+        const errorHtml = `
+            <!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"><title>Error</title></head>
+            <body><h1>Terjadi Kesalahan</h1><p>${error.message}</p></body></html>
+        `;
         return {
             statusCode: 500,
             headers: { 'Content-Type': 'text/html' },
