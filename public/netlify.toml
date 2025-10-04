@@ -1,18 +1,30 @@
 [build]
-publish = "public"
-functions = "netlify/functions"
+  publish = "public"
+  functions = "netlify/functions"
 
 [functions]
-node_bundler = "esbuild"
+  node_bundler = "esbuild"
 
-[functions."generate-story"]
-external_node_modules = ["@sparticuz/chromium"]
-included_files = ["public/**"]
-timeout = 26
+# Konfigurasi spesifik untuk setiap fungsi
+[[functions]]
+  path = "netlify/functions/generate-brochure.js"
+  node_bundler = "esbuild"
+  timeout = 25
+  included_files = ["public/**"]
 
-[functions."generate-brochure"]
-included_files = ["public/**"]
-timeout = 26
+[[functions]]  
+  path = "netlify/functions/cache-jadwal-data.js"
+  node_bundler = "esbuild"
+  timeout = 25
+  included_files = ["public/**"]
 
-[functions."cache-jadwal-data"]
-schedule = "*/10 * * * *"
+[[functions]]
+  path = "netlify/functions/generate-story.js" 
+  node_bundler = "esbuild"
+  timeout = 25
+  included_files = ["public/**"]
+  external_node_modules = ["@sparticuz/chromium"]
+
+# Scheduled function
+[functions.cache-jadwal-data]
+  schedule = "*/10 * * * *"

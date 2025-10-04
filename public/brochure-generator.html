@@ -57,41 +57,84 @@ document.addEventListener('DOMContentLoaded', () => {
     const generateButton = document.getElementById('generate-button');
     const buttonText = document.getElementById('button-text');
     const statusContainer = document.getElementById('status-container');
+    const previewContent = document.getElementById('preview-content');
 
     const addStatus = (message, isError = false) => {
         const p = document.createElement('p');
         p.textContent = message;
-        p.className = isError ? 'text-red-600' : 'text-green-600';
+        p.className = isError ? 'text-red-600 font-semibold' : 'text-green-600';
+        p.style.fontSize = '14px';
         statusContainer.appendChild(p);
+        
+        // Auto-remove setelah 8 detik
+        setTimeout(() => {
+            if (p.parentElement) p.remove();
+        }, 8000);
+    };
+
+    const clearStatus = () => {
+        statusContainer.innerHTML = '';
     };
 
     const generateBrochure = async () => {
         generateButton.disabled = true;
         buttonText.textContent = 'Memproses...';
-        statusContainer.innerHTML = '';
-        addStatus('Menghubungi server...');
+        clearStatus();
+        
+        addStatus('🔄 Memulai proses generate...');
 
         try {
+            addStatus('📡 Menghubungi server...');
+            
             const response = await fetch('/.netlify/functions/generate-brochure');
-            addStatus('Menerima respons dari server...');
             
             if (!response.ok) {
-                throw new Error(`Server merespons dengan status: ${response.status}`);
+                const errorText = await response.text();
+                console.error('Server error:', response.status, errorText);
+                throw new Error(`Server error: ${response.status} - ${response.statusText}`);
             }
 
+            addStatus('✅ Berhasil menerima respons dari server');
+            
             const htmlContent = await response.text();
-            addStatus('Berhasil membuat HTML, membuka tab baru...');
-
+            
+            // Update preview
+            previewContent.innerHTML = htmlContent;
+            addStatus('👀 Preview berhasil diperbarui');
+            
+            // Buka di tab baru untuk print
+            addStatus('🖨️ Membuka tab baru untuk printing...');
             const newTab = window.open();
-            newTab.document.open();
             newTab.document.write(htmlContent);
             newTab.document.close();
             
-            addStatus('Selesai! Silakan simpan sebagai PDF dari tab baru.');
+            addStatus('🎉 Selesai! Gunakan Ctrl+P di tab baru untuk save sebagai PDF');
 
         } catch (error) {
-            console.error("Gagal men-generate brosur:", error);
-            addStatus(`Terjadi kesalahan: ${error.message}`, true);
+            console.error("Gagal generate brosur:", error);
+            
+            let errorMessage = error.message;
+            if (errorMessage.includes('Failed to fetch')) {
+                errorMessage = 'Tidak dapat terhubung ke server. Periksa koneksi internet.';
+            } else if (errorMessage.includes('502')) {
+                errorMessage = 'Server sedang sibuk. Coba lagi dalam beberapa saat.';
+            }
+            
+            addStatus(`❌ Error: ${errorMessage}`, true);
+            
+            // Tampilkan error di preview
+            previewContent.innerHTML = `
+                <div class="flex items-center justify-center h-full bg-red-50 p-4">
+                    <div class="text-center text-red-700">
+                        <div class="text-4xl mb-2">⚠️</div>
+                        <h3 class="font-bold text-lg mb-2">Terjadi Kesalahan</h3>
+                        <p class="text-sm">${errorMessage}</p>
+                        <button onclick="window.location.reload()" class="mt-4 bg-red-600 text-white px-4 py-2 rounded text-sm">
+                            Coba Lagi
+                        </button>
+                    </div>
+                </div>
+            `;
         } finally {
             generateButton.disabled = false;
             buttonText.textContent = 'Generate Pratinjau Brosur';
@@ -99,6 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     generateButton.addEventListener('click', generateBrochure);
+    
+    // Test koneksi saat load
+    addStatus('🔍 Sistem siap, klik tombol untuk generate');
 });
 </script>
 </body>

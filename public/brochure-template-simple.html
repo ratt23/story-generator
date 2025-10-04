@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Jadwal Dokter</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 0;
+            padding: 20px;
+        }
+        .specialization-group {
+            margin-bottom: 20px;
+            break-inside: avoid;
+        }
+        .specialization-title {
+            font-weight: bold;
+            color: #1e3a8a;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #3b82f6;
+        }
+        .doctor-card {
+            background: #f8fafc;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 4px solid #3b82f6;
+        }
+        .doctor-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .schedule-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 5px;
+            font-size: 12px;
+        }
+        @media print {
+            body { margin: 0; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Jadwal Poliklinik Dokter Spesialis</h1>
+    <p>Siloam Hospitals Ambon (Update: {{GENERATED_DATE}})</p>
+    
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+        <div>{{COLUMN_1_HTML}}</div>
+        <div>{{COLUMN_2_HTML}}</div>
+        <div>{{COLUMN_3_HTML}}</div>
+    </div>
+</body>
+</html>

@@ -1,254 +1,244 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generator Brosur Jadwal Dokter</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Poppins', sans-serif; }
-        .preview-container {
-            transform-origin: top left;
-            transform: scale(0.3);
-            width: 333%;
-            height: 333%;
-        }
-        .preview-wrapper {
-            width: 350px;
-            height: 250px;
-            overflow: hidden;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            background: #f8fafc;
-        }
-    </style>
-</head>
-<body class="bg-slate-100 min-h-screen flex flex-col">
-    <nav class="bg-white shadow-md w-full flex-shrink-0">
-        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <div class="flex h-16 items-center justify-between">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <span class="font-bold text-xl text-slate-800">Kumpulan Tools</span>
-                    </div>
-                </div>
-                <div class="hidden md:block">
-                    <div class="ml-10 flex items-baseline space-x-4">
-                        <a href="index.html" class="text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-md px-3 py-2 text-sm font-medium">Design Story Cuti Dokter</a>
-                        <a href="brochure-generator.html" class="bg-blue-600 text-white rounded-md px-3 py-2 text-sm font-medium" aria-current="page">Brochure Jadwal Dokter</a>
-                        <a href="#" class="text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-md px-3 py-2 text-sm font-medium">Public Holiday Operational</a>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </nav>
+const fs = require('fs').promises;
+const path = require('path');
+const { getStore } = require('@netlify/blobs');
 
-    <main class="flex-grow">
-        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <!-- Panel Kontrol -->
-                <div class="bg-white p-8 rounded-xl shadow-lg">
-                    <h1 class="text-3xl font-bold text-slate-800 mb-4">Generator Brosur Jadwal Dokter</h1>
-                    <p class="text-slate-600 mb-6">
-                        Tekan tombol di bawah ini untuk menghasilkan pratinjau brosur jadwal dokter terbaru dalam format HTML.
-                        Data akan diambil langsung dari Google Sheets.
-                    </p>
-                    <p class="text-sm text-slate-500 mb-6">
-                        Setelah pratinjau muncul di tab baru, gunakan fitur "Print" (Ctrl+P atau Cmd+P) di browser Anda dan pilih "Save as PDF" untuk membuat file PDF final.
-                    </p>
+const CACHE_KEY = 'jadwal-dokter-cache';
 
-                    <button id="generate-button" class="w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-all duration-300 ease-in-out transform hover:scale-105 mb-4">
-                        <span id="button-text">Generate Pratinjau Brosur</span>
-                    </button>
-                    
-                    <div id="status-container" class="text-left space-y-2">
-                        <!-- Status messages will appear here -->
-                    </div>
-
-                    <div class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <h3 class="font-semibold text-yellow-800 mb-2">Petunjuk Cetak:</h3>
-                        <ul class="text-sm text-yellow-700 list-disc list-inside space-y-1">
-                            <li>Setelah preview terbuka, tekan <kbd class="px-2 py-1 bg-gray-200 rounded">Ctrl+P</kbd> (Windows) atau <kbd class="px-2 py-1 bg-gray-200 rounded">Cmd+P</kbd> (Mac)</li>
-                            <li>Pilih printer "Save as PDF"</li>
-                            <li>Settings: Landscape, Margin -> None, Scale -> 100%</li>
-                            <li>Brosur dirancang untuk dicetak 2 halaman (trifold)</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Panel Preview -->
-                <div class="bg-white p-8 rounded-xl shadow-lg">
-                    <h2 class="text-2xl font-bold text-slate-800 mb-4">Pratinjau Brosur</h2>
-                    <p class="text-slate-600 mb-4">
-                        Preview akan muncul di sini setelah brosur di-generate. Skala preview: 30% dari ukuran asli.
-                    </p>
-                    
-                    <div class="preview-wrapper mb-4">
-                        <div id="preview-content" class="preview-container">
-                            <!-- Preview akan dimuat di sini -->
-                            <div class="flex items-center justify-center h-full text-slate-500">
-                                <div class="text-center">
-                                    <div class="text-4xl mb-2">📄</div>
-                                    <p>Preview akan muncul di sini</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="text-center text-sm text-slate-500">
-                        <p>Halaman 1 (Dalam) & Halaman 2 (Luar) - Format Trifold</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </main>
-
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-    const generateButton = document.getElementById('generate-button');
-    const buttonText = document.getElementById('button-text');
-    const statusContainer = document.getElementById('status-container');
-    const previewContent = document.getElementById('preview-content');
-
-    const addStatus = (message, isError = false) => {
-        const p = document.createElement('p');
-        p.textContent = message;
-        p.className = isError ? 'text-red-600' : 'text-green-600';
-        statusContainer.appendChild(p);
-        
-        // Auto-remove status messages after 10 seconds
-        setTimeout(() => {
-            if (p.parentElement) {
-                p.remove();
-            }
-        }, 10000);
-    };
-
-    const clearStatus = () => {
-        statusContainer.innerHTML = '';
-    };
-
-    const updatePreview = (htmlContent) => {
-        previewContent.innerHTML = htmlContent;
-        
-        // Adjust iframe content for preview
-        const iframes = previewContent.querySelectorAll('iframe');
-        iframes.forEach(iframe => {
-            iframe.style.width = '297mm';
-            iframe.style.height = '210mm';
+// Fungsi fetchData yang lebih robust
+function fetchData(url) {
+    return new Promise((resolve, reject) => {
+        const https = require('https');
+        const req = https.get(url, (res) => {
+            let data = '';
+            
+            res.on('data', (chunk) => {
+                data += chunk;
+            });
+            
+            res.on('end', () => {
+                try {
+                    const parsed = JSON.parse(data);
+                    resolve(parsed);
+                } catch (e) {
+                    reject(new Error('Failed to parse JSON response: ' + e.message));
+                }
+            });
         });
-    };
-
-    const generateBrochure = async () => {
-        generateButton.disabled = true;
-        buttonText.textContent = 'Memproses...';
-        clearStatus();
-        addStatus('Menghubungi server...');
-
-        try {
-            const response = await fetch('/.netlify/functions/generate-brochure');
-            addStatus('Menerima respons dari server...');
-            
-            if (!response.ok) {
-                throw new Error(`Server merespons dengan status: ${response.status}`);
-            }
-
-            const htmlContent = await response.text();
-            addStatus('Berhasil membuat HTML, memperbarui preview...');
-
-            // Update preview
-            updatePreview(htmlContent);
-            addStatus('Preview berhasil diperbarui!');
-
-            // Also open in new tab for printing
-            addStatus('Membuka tab baru untuk printing...');
-            const newTab = window.open();
-            newTab.document.open();
-            newTab.document.write(htmlContent);
-            newTab.document.close();
-            
-            addStatus('Selesai! Silakan simpan sebagai PDF dari tab baru.');
-
-        } catch (error) {
-            console.error("Gagal men-generate brosur:", error);
-            addStatus(`Terjadi kesalahan: ${error.message}`, true);
-            
-            // Show error in preview
-            previewContent.innerHTML = `
-                <div class="flex items-center justify-center h-full bg-red-50">
-                    <div class="text-center text-red-600">
-                        <div class="text-4xl mb-2">❌</div>
-                        <p class="font-semibold">Error</p>
-                        <p class="text-sm">${error.message}</p>
-                    </div>
-                </div>
-            `;
-        } finally {
-            generateButton.disabled = false;
-            buttonText.textContent = 'Generate Pratinjau Brosur';
-        }
-    };
-
-    generateButton.addEventListener('click', generateBrochure);
-});
-
-/**
- * Optimasi data untuk memastikan tidak lebih dari 2 halaman
- */
-function optimizeDataForTwoPages(data) {
-    const maxDoctorsPerPage = 25; // Estimasi maksimal dokter per halaman
-    
-    // Jika data terlalu banyak, potong atau optimasi
-    if (data.length > maxDoctorsPerPage * 2) {
-        console.warn(`Data terlalu banyak (${data.length} dokter), melakukan optimasi...`);
         
-        // Prioritaskan spesialisasi dengan jadwal paling lengkap
-        return data
-            .map(spec => ({
-                ...spec,
-                priority: spec.doctors.reduce((acc, doc) => {
-                    const scheduleCount = Object.values(doc.schedule || {}).filter(time => 
-                        time && time.trim() !== '' && time.trim() !== '-'
-                    ).length;
-                    return acc + scheduleCount;
-                }, 0)
-            }))
-            .sort((a, b) => b.priority - a.priority)
-            .slice(0, maxDoctorsPerPage * 2)
-            .map(({ priority, ...spec }) => spec); // Hapus property priority
-    }
-    
-    return data;
+        req.on('error', (err) => {
+            reject(new Error('Request failed: ' + err.message));
+        });
+        
+        req.setTimeout(10000, () => {
+            req.destroy();
+            reject(new Error('Request timeout'));
+        });
+    });
 }
 
-// Dalam handler utama, tambahkan optimasi data:
+// Fallback data untuk testing
+const fallbackData = [
+    {
+        title: "Penyakit Dalam",
+        doctors: [
+            {
+                name: "Dr. John Doe, Sp.PD",
+                schedule: {
+                    Senin: "08:00 - 12:00",
+                    Selasa: "13:00 - 17:00",
+                    Rabu: "08:00 - 12:00"
+                }
+            }
+        ]
+    },
+    {
+        title: "Anak",
+        doctors: [
+            {
+                name: "Dr. Jane Smith, Sp.A",
+                schedule: {
+                    Kamis: "08:00 - 12:00",
+                    Jumat: "13:00 - 17:00"
+                }
+            }
+        ]
+    }
+];
+
+/**
+ * Mengambil data jadwal - dengan fallback jika ada masalah
+ */
+async function getJadwalData() {
+    try {
+        console.log('Mencoba mengambil data dari cache...');
+        const jadwalStore = getStore('jadwal-dokter');
+        const rawData = await jadwalStore.get(CACHE_KEY);
+        
+        if (rawData) {
+            const parsedData = JSON.parse(rawData);
+            console.log('Data berhasil diambil dari cache');
+            return Object.values(parsedData).map(spec => ({
+                title: spec.title,
+                doctors: spec.doctors.map(doc => ({ 
+                    name: doc.name, 
+                    schedule: doc.schedule 
+                })),
+            }));
+        }
+        
+        throw new Error('Cache kosong');
+    } catch (error) {
+        console.log('Menggunakan fallback data:', error.message);
+        return fallbackData;
+    }
+}
+
+/**
+ * Menghasilkan HTML untuk daftar dokter
+ */
+function generateHtmlForDoctors(data) {
+    if (!data || data.length === 0) {
+        return '<div class="specialization-group"><p class="text-gray-500">Tidak ada data jadwal</p></div>';
+    }
+    
+    let html = '';
+    
+    data.forEach(spec => {
+        html += `<div class="specialization-group">
+            <h3 class="specialization-title">${spec.title}</h3>`;
+            
+        spec.doctors.forEach(doc => {
+            html += `<div class="doctor-card">
+                <p class="doctor-name">${doc.name}</p>
+                <div class="schedule-grid">`;
+                
+            // Filter hanya hari yang memiliki jadwal
+            const scheduleEntries = Object.entries(doc.schedule || {}).filter(([_, time]) => 
+                time && time.trim() !== '' && time.trim() !== '-'
+            );
+            
+            if (scheduleEntries.length === 0) {
+                html += `<div class="schedule-day">Jadwal tidak tersedia</div>`;
+            } else {
+                scheduleEntries.forEach(([day, time]) => {
+                    html += `<div class="schedule-day"><strong>${day.slice(0, 3)}:</strong> ${time}</div>`;
+                });
+            }
+            
+            html += `</div></div>`;
+        });
+        
+        html += `</div>`;
+    });
+    
+    return html;
+}
+
+/**
+ * Mengisi template dengan data
+ */
+async function fillTemplate(templateHtml, data) {
+    // Distribusi data ke 3 kolom
+    const columns = [[], [], []];
+    data.forEach((spec, index) => {
+        columns[index % 3].push(spec);
+    });
+    
+    const generatedDate = new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long', 
+        year: 'numeric'
+    });
+    
+    return templateHtml
+        .replace(/{{COLUMN_1_HTML}}/g, generateHtmlForDoctors(columns[0]))
+        .replace(/{{COLUMN_2_HTML}}/g, generateHtmlForDoctors(columns[1]))
+        .replace(/{{COLUMN_3_HTML}}/g, generateHtmlForDoctors(columns[2]))
+        .replace(/{{GENERATED_DATE}}/g, generatedDate)
+        .replace(/{{COLUMN_1_OUTSIDE}}/g, generateHtmlForDoctors(columns[0]))
+        .replace(/{{COLUMN_2_OUTSIDE}}/g, generateHtmlForDoctors(columns[1]))
+        .replace(/{{LOGO_SILOAM_PUTIH}}/g, 'https://via.placeholder.com/150x50/FFFFFF/004082?text=SILOAM');
+}
+
+// Handler utama
 exports.handler = async (event, context) => {
     console.log('=== FUNGSI GENERATE-BROCHURE DIMULAI ===');
     
     try {
-        let allData = await getJadwalDataFromCache();
+        // Ambil data
+        const allData = await getJadwalData();
+        console.log('Data berhasil diambil:', allData.length, 'spesialisasi');
         
-        if (!allData || allData.length === 0) {
-            throw new Error('Tidak ada data jadwal yang ditemukan.');
+        // Baca template files dengan error handling
+        let insideTemplate, outsideTemplate;
+        
+        try {
+            const insideTemplatePath = path.join(process.cwd(), 'public', 'brochure-template-inside.html');
+            const outsideTemplatePath = path.join(process.cwd(), 'public', 'brochure-template-outside.html');
+            
+            console.log('Membaca template dari:', insideTemplatePath);
+            
+            [insideTemplate, outsideTemplate] = await Promise.all([
+                fs.readFile(insideTemplatePath, 'utf8'),
+                fs.readFile(outsideTemplatePath, 'utf8')
+            ]);
+        } catch (templateError) {
+            console.error('Error membaca template:', templateError);
+            // Fallback template sederhana
+            insideTemplate = `
+                <!DOCTYPE html>
+                <html>
+                <head><meta charset="UTF-8"><title>Brosur</title></head>
+                <body>
+                    <h1>Jadwal Dokter</h1>
+                    {{COLUMN_1_HTML}}
+                    {{COLUMN_2_HTML}} 
+                    {{COLUMN_3_HTML}}
+                    <p>Update: {{GENERATED_DATE}}</p>
+                </body>
+                </html>
+            `;
+            outsideTemplate = insideTemplate;
         }
+
+        // Isi template
+        const insideHtml = await fillTemplate(insideTemplate, allData);
+        const outsideHtml = await fillTemplate(outsideTemplate, allData);
+
+        // Gabungkan halaman
+        const finalHtml = insideHtml + '<div style="page-break-after: always;"></div>' + outsideHtml;
+
+        console.log('=== FUNGSI GENERATE-BROCHURE BERHASIL ===');
         
-        console.log(`Data berhasil diambil: ${allData.length} spesialisasi`);
+        return {
+            statusCode: 200,
+            headers: { 
+                'Content-Type': 'text/html; charset=utf-8',
+                'Cache-Control': 'no-cache'
+            },
+            body: finalHtml,
+        };
         
-        // Optimasi data untuk 2 halaman
-        allData = optimizeDataForTwoPages(allData);
-        console.log(`Data setelah optimasi: ${allData.length} spesialisasi`);
-        
-        // Pisahkan data untuk halaman dalam dan luar
-        const outsideSpecializations = ["Urologi", "Kulit & Kelamin"];
-        const outsidePageData = allData.filter(spec => outsideSpecializations.includes(spec.title));
-        const insidePageData = allData.filter(spec => !outsideSpecializations.includes(spec.title));
-        
-        // ... kode selanjutnya tetap sama
     } catch (error) {
-        // ... error handling
+        console.error('!!! ERROR CRITICAL:', error);
+        
+        // Return error page yang sederhana
+        const errorHtml = `
+            <!DOCTYPE html>
+            <html>
+            <head><meta charset="UTF-8"><title>Error</title></head>
+            <body>
+                <h1>Terjadi Kesalahan</h1>
+                <p>${error.message}</p>
+                <p>Silakan coba lagi atau hubungi administrator.</p>
+            </body>
+            </html>
+        `;
+        
+        return {
+            statusCode: 500,
+            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+            body: errorHtml
+        };
     }
 };
-</script>
-</body>
-</html>
