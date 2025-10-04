@@ -61,29 +61,85 @@
                 </div>
             </div>
         </div>
+        <!-- PANEL COVER YANG DIPERBAIKI -->
         <div class="panel" style="
-            background-image: url('{{COVER_BACKGROUND_SRC}}');
+            background-image: url('public/asset/brochure/2.png');
             background-size: cover;
             background-position: center;
             padding: 0;
-            position: relative;">
-            <div style="background-color: rgba(25, 38, 112, 0.4); width:100%; height:100%; display: flex; flex-direction: column; justify-content: space-between; text-align: center; padding: 15px; box-sizing: border-box;">
-                <div>
-                    <img src="{{LOGO_SILOAM_WARNA}}" alt="Logo Siloam" style="height: 40px; margin: 0 auto 15px;">
-                    <h1 class="montserrat" style="font-weight: 800; font-size: 20px; line-height: 1.2; color: #ffffff; text-shadow: 1px 1px 3px rgba(0,0,0,0.6);">Jadwal Poliklinik<br>Dokter Spesialis</h1>
-                    <p style="font-size: 14px; color: #ffffff; text-shadow: 1px 1px 3px rgba(0,0,0,0.6); margin-top: 5px;">Siloam Hospitals Ambon</p>
-                </div>
-                <div style="flex-grow: 1; display: flex; align-items: center; justify-content: center; padding: 15px 0;">
-                    <img src="{{COVER_IMAGE_SRC}}" alt="Cover Image" style="
-                        max-height: 100%; 
-                        max-width: 100%; 
-                        object-fit: contain; 
-                        border-radius: 12px; 
-                        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-                        background-color: transparent !important; /* <-- PENAMBAHAN DI SINI */
-                        ">
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;">
+            
+            <!-- Overlay untuk meningkatkan keterbacaan teks -->
+            <div style="
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background: rgba(255, 255, 255, 0.85);
+                z-index: 1;">
+            </div>
+            
+            <div style="
+                position: relative;
+                z-index: 2;
+                text-align: center;
+                width: 100%;
+                padding: 20px;">
+                
+                <!-- Logo Siloam dan Subjudul -->
+                <div style="margin-bottom: 30px;">
+                    <img src="asset/logo/logo.png" alt="Logo Siloam" style="height: 50px; margin: 0 auto 15px;">
+                    <!-- Subjudul di bawah logo -->
+                    <h2 class="montserrat" style="
+                        font-weight: 700;
+                        font-size: 18px;
+                        color: #192670;
+                        margin-bottom: 5px;
+                        line-height: 1.3;">
+                        Jadwal Poliklinik Dokter Spesialis
+                    </h2>
+                    <!-- Nama Rumah Sakit -->
+                    <p style="
+                        font-size: 14px; 
+                        color: #192670;
+                        margin-bottom: 25px;
+                        font-weight: 500;">
+                        Siloam Hospitals Ambon
+                    </p>
                 </div>
                 
+                <!-- Garis Pembatas -->
+                <div style="
+                    width: 80px;
+                    height: 3px;
+                    background: #192670;
+                    margin: 15px auto 20px auto;">
+                </div>
+                
+                <!-- Tahun -->
+                <p style="
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: #192670;
+                    margin-bottom: 20px;">
+                    2025
+                </p>
+                
+                <!-- Gambar Utama -->
+                <div style="
+                    margin: 20px auto;
+                    max-width: 85%;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    box-shadow: 0 8px 20px rgba(0,0,0,0.15);">
+                    <img src="asset/brochure/1.png" alt="Cover Image" style="
+                        width: 100%;
+                        height: auto;
+                        display: block;">
                 </div>
             </div>
         </div>
