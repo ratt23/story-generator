@@ -1,5 +1,8 @@
 const fs = require('fs').promises;
 const path = require('path');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
+const { PDFDocument } = require('pdf-lib'); // Dependensi baru
 const { getStore } = require('@netlify/blobs');
 const https = require('https');
 
@@ -47,13 +50,9 @@ function fetchData(url, redirectCount = 0) {
 async function getJadwalDataFromCache() {
     try {
         const jadwalStore = getStore('jadwal-dokter');
-        if (!jadwalStore) {
-            return await getJadwalDataDirect();
-        }
+        if (!jadwalStore) { return await getJadwalDataDirect(); }
         const rawData = await jadwalStore.get(CACHE_KEY);
-        if (!rawData) {
-            return await getJadwalDataDirect();
-        }
+        if (!rawData) { return await getJadwalDataDirect(); }
         const parsedData = JSON.parse(rawData);
         return Object.values(parsedData).map(spec => ({
             title: spec.title,
@@ -107,23 +106,41 @@ function generateHtmlForDoctors(data) {
 }
 
 /**
+ * Fungsi canggih untuk auto-scaling konten di dalam setiap panel.
+ */
+async function autoScalePage(page) {
+    await page.evaluate(() => {
+        const panels = document.querySelectorAll('.panel');
+        for (const panel of panels) {
+            const wrapper = panel.querySelector('.content-wrapper');
+            if (!wrapper) continue;
+
+            const panelHeight = panel.clientHeight;
+            const contentHeight = wrapper.scrollHeight;
+
+            if (contentHeight > panelHeight) {
+                const scale = panelHeight / contentHeight;
+                wrapper.style.transformOrigin = 'top left';
+                wrapper.style.transform = `scale(${scale})`;
+            }
+        }
+    });
+}
+
+/**
  * Handler utama Netlify Function.
  */
 exports.handler = async (event, context) => {
+    let browser = null;
     try {
         const allData = await getJadwalDataFromCache();
-        if (!allData || allData.length === 0) {
-            throw new Error('Tidak ada data jadwal yang ditemukan.');
-        }
+        if (!allData || allData.length === 0) throw new Error('Tidak ada data jadwal.');
 
-        // Logika pembagian data cerdas berdasarkan jumlah dokter untuk 4 kolom jadwal
         const totalDoctors = allData.reduce((sum, spec) => sum + spec.doctors.length, 0);
         const targetDoctorsPerColumn = totalDoctors / 4;
-        
         const columns = [[], [], [], []];
         let currentColumn = 0;
         let currentColumnDoctorCount = 0;
-
         allData.forEach(spec => {
             if (currentColumnDoctorCount >= targetDoctorsPerColumn && currentColumn < 3) {
                 currentColumn++;
@@ -132,58 +149,74 @@ exports.handler = async (event, context) => {
             columns[currentColumn].push(spec);
             currentColumnDoctorCount += spec.doctors.length;
         });
-
         const [outsideColumn1Data, insideColumn1Data, insideColumn2Data, insideColumn3Data] = columns;
-        
-        // Baca file template
-        const insideTemplatePath = path.resolve(process.cwd(), 'public', 'brochure-template-inside.html');
-        const outsideTemplatePath = path.resolve(process.cwd(), 'public', 'brochure-template-outside.html');
+
         const [insideTemplate, outsideTemplate] = await Promise.all([
-            fs.readFile(insideTemplatePath, 'utf8'),
-            fs.readFile(outsideTemplatePath, 'utf8')
+            fs.readFile(path.resolve(process.cwd(), 'public', 'brochure-template-inside.html'), 'utf8'),
+            fs.readFile(path.resolve(process.cwd(), 'public', 'brochure-template-outside.html'), 'utf8')
         ]);
 
-        const generatedDate = new Date().toLocaleDateString('id-ID', {
-            day: 'numeric', month: 'long', year: 'numeric'
-        });
+        const generatedDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
-        // Mengisi 3 kolom di halaman dalam
         const insideHtml = insideTemplate
             .replace('{{COLUMN_1_HTML}}', generateHtmlForDoctors(insideColumn1Data))
             .replace('{{COLUMN_2_HTML}}', generateHtmlForDoctors(insideColumn2Data))
             .replace('{{COLUMN_3_HTML}}', generateHtmlForDoctors(insideColumn3Data))
             .replace('{{GENERATED_DATE}}', generatedDate);
 
-        // Siapkan logo untuk cover depan
-        const logoPath = path.resolve(process.cwd(), 'public', 'asset', 'logo', 'logo.png');
         let logoUrl = '';
         try {
-            const logoBuffer = await fs.readFile(logoPath);
+            const logoBuffer = await fs.readFile(path.resolve(process.cwd(), 'public', 'asset', 'logo', 'logo.png'));
             logoUrl = `data:image/png;base64,${logoBuffer.toString('base64')}`;
-        } catch (error) {
-            console.log('Logo utama (berwarna) tidak ditemukan, akan kosong.');
-        }
+        } catch (error) { console.log('Logo tidak ditemukan.'); }
 
-        // Mengisi halaman luar
         const outsideHtml = outsideTemplate
             .replace('{{COLUMN_1_OUTSIDE}}', generateHtmlForDoctors(outsideColumn1Data))
-            .replace('{{COLUMN_2_OUTSIDE}}', '') // Kolom tengah belakang dikosongkan
+            .replace('{{COLUMN_2_OUTSIDE}}', '')
             .replace('{{LOGO_SILOAM_WARNA}}', logoUrl);
 
-        // Gabungkan kedua halaman untuk hasil akhir
-        const finalHtml = `${insideHtml}<div style="page-break-after: always;"></div>${outsideHtml}`;
+        browser = await puppeteer.launch({
+            args: chromium.args,
+            executablePath: await chromium.executablePath(),
+            headless: true,
+        });
+        const page = await browser.newPage();
+        const pdfOptions = { width: '297mm', height: '210mm', printBackground: true };
+
+        await page.setContent(insideHtml, { waitUntil: 'networkidle0' });
+        await autoScalePage(page);
+        const insidePdfBuffer = await page.pdf(pdfOptions);
+
+        await page.setContent(outsideHtml, { waitUntil: 'networkidle0' });
+        await autoScalePage(page);
+        const outsidePdfBuffer = await page.pdf(pdfOptions);
         
+        const finalPdfDoc = await PDFDocument.create();
+        const insideDoc = await PDFDocument.load(insidePdfBuffer);
+        const outsideDoc = await PDFDocument.load(outsidePdfBuffer);
+        
+        const [insidePage] = await finalPdfDoc.copyPages(insideDoc, [0]);
+        const [outsidePage] = await finalPdfDoc.copyPages(outsideDoc, [0]);
+        
+        finalPdfDoc.addPage(insidePage);
+        finalPdfDoc.addPage(outsidePage);
+
+        const finalPdfBytes = await finalPdfDoc.save();
+
         return {
             statusCode: 200,
-            headers: { 'Content-Type': 'text/html', 'Cache-Control': 'no-cache, no-store, must-revalidate' },
-            body: finalHtml,
+            headers: { 
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': 'attachment; filename="brosur-jadwal-dokter.pdf"'
+            },
+            body: Buffer.from(finalPdfBytes).toString('base64'),
+            isBase64Encoded: true,
         };
+
     } catch (error) {
-        console.error("ERROR DALAM HANDLER generate-brochure:", error);
-        return {
-            statusCode: 500,
-            headers: { 'Content-Type': 'text/html' },
-            body: `<html><body><h1>Terjadi Kesalahan Server</h1><p>${error.message}</p></body></html>`,
-        };
+        console.error("ERROR FINAL:", error);
+        return { statusCode: 500, body: `Gagal membuat brosur: ${error.message}` };
+    } finally {
+        if (browser) await browser.close();
     }
 };
