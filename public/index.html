@@ -26,6 +26,16 @@
         #doctor-checkbox-list::-webkit-scrollbar-thumb:hover { background: #555; }
         #story-preview img { object-fit: cover; }
         #story-preview .flex .items-center img.rounded-full { object-position: center 10%; }
+        .nav-logo {
+            height: 50px;
+            width: auto;
+            object-fit: contain;
+        }
+        .logo-fallback {
+            font-weight: bold;
+            font-size: 1.25rem;
+            color: #1e293b;
+        }
     </style>
 </head>
 <body class="bg-slate-100 h-screen flex flex-col">
@@ -35,7 +45,11 @@
             <div class="flex h-16 items-center justify-between">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <span class="font-bold text-xl text-slate-800">Kumpulan Tools</span>
+                        <!-- Ganti teks dengan gambar logo -->
+                        <div id="logo-container">
+                            <img src="asset/logo/graphicat.png" alt="Kumpulan Tools" class="nav-logo" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
+                            <span id="logo-fallback" class="logo-fallback" style="display: none;">Kumpulan Tools</span>
+                        </div>
                     </div>
                 </div>
                 <div class="hidden md:block">
@@ -342,5 +356,3 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
-
-
