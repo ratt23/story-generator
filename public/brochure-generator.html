@@ -10,17 +10,21 @@
         body { font-family: 'Poppins', sans-serif; }
         .preview-container {
             width: 100%;
-            height: 75vh; /* Area preview diperbesar agar lebih nyaman */
+            height: 75vh;
             border: 2px solid #e2e8f0;
             border-radius: 12px;
-            background: #f8fafc; /* Warna background diubah agar konten lebih terlihat */
+            background: #f8fafc;
             overflow: auto;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-            padding: 1rem; /* Menambahkan padding */
+            padding: 1rem;
         }
         .preview-content {
-            /* Properti scaling (transform) dan sizing (width, height) telah dihapus */
-            /* Konten akan tampil 100% dan container akan menyediakan scrollbar */
+            /* --- PERBAIKAN DI SINI --- */
+            /* Diberikan lebar tetap sesuai ukuran A4 Landscape */
+            width: 297mm;
+            /* Diletakkan di tengah jika area preview lebih lebar */
+            margin: 0 auto;
+
             background: white;
             box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
         }
