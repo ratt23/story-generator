@@ -1,16 +1,17 @@
 {
-  "name": "Graphicat-tools",
+  "name": "siloam-tools",
   "version": "1.0.0",
-  "description": "Generator tools by Graphicat by rattputt",
+  "description": "Generator tools for Siloam Hospitals Ambon",
   "main": "index.js",
   "scripts": {
     "start": "netlify dev"
   },
   "dependencies": {
-    "@sparticuz/chromium": "^123.0.1",
+    "@sparticuz/chromium": "119.0.2",
     "pdf-lib": "^1.17.1",
-    "puppeteer-core": "^22.9.0"
+    "puppeteer-core": "^21.5.0"
   },
-  "author": "Graphicat by rattputt",
+  "author": "",
   "license": "ISC"
 }
+
