@@ -46,6 +46,16 @@
             background-image: radial-gradient(circle, #192670 1.2px, transparent 1.2px);
             background-size: 15px 15px;
         }
+        
+        /* Container gambar yang memenuhi penuh */
+        .full-width-image-container {
+            margin: 20px 0 0 0;
+            width: 100%;
+            position: relative;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% + 40px); /* Kompensasi padding container parent */
+        }
     </style>
 </head>
 <body>
@@ -129,15 +139,14 @@
                     2025
                 </p>
                 
-                <!-- Gambar Utama tanpa border/shadow -->
-                <div style="
-                    margin: 20px auto;
-                    max-width: 85%;">
+                <!-- Gambar Utama diperbesar sampai ujung kanan -->
+                <div class="full-width-image-container">
                     <img src="{{COVER_IMAGE_SRC}}" alt="Cover Image" style="
                         width: 100%;
                         height: auto;
                         display: block;
-                        border-radius: 8px;">
+                        object-fit: cover;
+                        object-position: center;">
                 </div>
             </div>
         </div>
