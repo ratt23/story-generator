@@ -15,7 +15,8 @@ included_files = ["public/**"]
 timeout = 26
 
 [functions."generate-brochure"]
-included_files = ["public/**"]
+external_node_modules = ["@sparticuz/chromium"]
+included_files = ["public/**", "node_modules/@sparticuz/chromium/bin/**"]
 timeout = 26
 
 [functions."cache-jadwal-data"]
