@@ -2,7 +2,6 @@ const fs = require('fs').promises;
 const path = require('path');
 const puppeteer = require('puppeteer-core');
 const chromium = require('@sparticuz/chromium');
-const { PDFDocument } = require('pdf-lib'); // Dependensi baru
 const { getStore } = require('@netlify/blobs');
 const https = require('https');
 
@@ -106,7 +105,7 @@ function generateHtmlForDoctors(data) {
 }
 
 /**
- * Fungsi canggih untuk auto-scaling konten di dalam setiap panel.
+ * Fungsi canggih untuk auto-scaling konten di dalam setiap panel menggunakan Puppeteer.
  */
 async function autoScalePage(page) {
     await page.evaluate(() => {
@@ -136,6 +135,7 @@ exports.handler = async (event, context) => {
         const allData = await getJadwalDataFromCache();
         if (!allData || allData.length === 0) throw new Error('Tidak ada data jadwal.');
 
+        // Logika pembagian data cerdas untuk layout awal yang seimbang
         const totalDoctors = allData.reduce((sum, spec) => sum + spec.doctors.length, 0);
         const targetDoctorsPerColumn = totalDoctors / 4;
         const columns = [[], [], [], []];
@@ -174,34 +174,30 @@ exports.handler = async (event, context) => {
             .replace('{{COLUMN_1_OUTSIDE}}', generateHtmlForDoctors(outsideColumn1Data))
             .replace('{{COLUMN_2_OUTSIDE}}', '')
             .replace('{{LOGO_SILOAM_WARNA}}', logoUrl);
+            
+        // Gabungkan HTML menjadi satu dokumen dengan pemisah halaman
+        const finalHtml = `${insideHtml}<div style="page-break-after: always;"></div>${outsideHtml}`;
 
         browser = await puppeteer.launch({
             args: chromium.args,
             executablePath: await chromium.executablePath(),
             headless: true,
         });
+
         const page = await browser.newPage();
-        const pdfOptions = { width: '297mm', height: '210mm', printBackground: true };
+        
+        // Muat semua HTML sekaligus
+        await page.setContent(finalHtml, { waitUntil: 'networkidle0' });
 
-        await page.setContent(insideHtml, { waitUntil: 'networkidle0' });
+        // Jalankan auto-scaling pada semua panel di kedua halaman
         await autoScalePage(page);
-        const insidePdfBuffer = await page.pdf(pdfOptions);
 
-        await page.setContent(outsideHtml, { waitUntil: 'networkidle0' });
-        await autoScalePage(page);
-        const outsidePdfBuffer = await page.pdf(pdfOptions);
-        
-        const finalPdfDoc = await PDFDocument.create();
-        const insideDoc = await PDFDocument.load(insidePdfBuffer);
-        const outsideDoc = await PDFDocument.load(outsidePdfBuffer);
-        
-        const [insidePage] = await finalPdfDoc.copyPages(insideDoc, [0]);
-        const [outsidePage] = await finalPdfDoc.copyPages(outsideDoc, [0]);
-        
-        finalPdfDoc.addPage(insidePage);
-        finalPdfDoc.addPage(outsidePage);
-
-        const finalPdfBytes = await finalPdfDoc.save();
+        // Cetak PDF satu kali, menghasilkan file 2 halaman
+        const finalPdfBytes = await page.pdf({
+            width: '297mm',
+            height: '210mm',
+            printBackground: true
+        });
 
         return {
             statusCode: 200,
