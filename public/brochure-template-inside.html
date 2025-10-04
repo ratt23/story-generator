@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <title>Jadwal Dokter Trifold Brochure - Halaman Dalam</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn/tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
     <style>
-        /* GAYA BARU YANG LEBIH RINGKAS */
         @page { size: A4 landscape; margin: 0; }
         body {
             font-family: 'Poppins', sans-serif;
@@ -14,30 +13,32 @@
             margin: 0; padding: 0;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
-            font-size: 10px; /* Ukuran font dasar diperkecil */
+            font-size: 10px;
         }
-        .trifold-container { display: flex; width: 100%; height: 100%; }
-        .panel {
-            padding: 15px; /* Padding panel diperkecil */
-            border-right: 1px solid #e2e8f0;
+        /* PERUBAHAN UTAMA: MENGGUNAKAN CSS MULTI-COLUMN */
+        .multi-column-container {
+            height: 100%;
+            padding: 15px;
             box-sizing: border-box;
-            overflow: hidden;
+            column-count: 3; /* Secara otomatis membuat 3 kolom */
+            column-gap: 30px; /* Jarak antar kolom */
+            column-fill: auto; /* Memastikan konten mengalir secara seimbang */
         }
         .specialization-group {
-            margin-bottom: 12px; /* Jarak antar grup diperkecil */
-            break-inside: avoid;
+            margin-bottom: 12px;
+            break-inside: avoid; /* Mencegah grup terpotong antar kolom */
         }
         .specialization-title {
             font-family: 'Montserrat', sans-serif;
             font-weight: 800;
-            font-size: 14px; /* Ukuran judul spesialisasi diperkecil */
+            font-size: 14px;
             color: #1e3a8a;
             margin-bottom: 8px;
             padding-bottom: 4px;
             border-bottom: 2px solid #3b82f6;
         }
         .doctor-card {
-            padding: 8px; /* Padding kartu dokter diperkecil */
+            padding: 8px;
             margin-bottom: 8px;
             border-radius: 6px;
             border-left: 3px solid #3b82f6;
@@ -47,14 +48,13 @@
             font-weight: 600;
             color: #1e293b;
             margin-bottom: 4px;
-            font-size: 11px; /* Ukuran nama dokter diperkecil */
+            font-size: 11px;
         }
         .schedule-grid {
-            /* Mengubah grid menjadi flexbox agar lebih rapat */
             display: flex;
             flex-wrap: wrap;
-            gap: 2px 8px; /* Jarak vertikal dan horizontal */
-            font-size: 10px; /* Ukuran jadwal diperkecil */
+            gap: 2px 8px;
+            font-size: 10px;
         }
         .schedule-day { color: #475569; }
         .schedule-day strong { color: #1e293b; }
@@ -62,18 +62,11 @@
     </style>
 </head>
 <body>
-    <div class="trifold-container">
-        <div class="panel" style="width: 33.33%">
-            <h1 class="montserrat font-extrabold text-xl text-blue-900 mb-1">Jadwal Poliklinik Dokter Spesialis</h1>
-            <p class="text-xs text-gray-600 mb-4">Siloam Hospitals Ambon (Update: {{GENERATED_DATE}})</p>
-            {{COLUMN_1_HTML}}
-        </div>
-        <div class="panel" style="width: 33.33%">
-            {{COLUMN_2_HTML}}
-        </div>
-        <div class="panel" style="width: 33.33%">
-            {{COLUMN_3_HTML}}
-        </div>
+    <div class="multi-column-container">
+        <h1 class="montserrat font-extrabold text-xl text-blue-900 mb-1">Jadwal Poliklinik Dokter Spesialis</h1>
+        <p class="text-xs text-gray-600 mb-4">Siloam Hospitals Ambon (Update: {{GENERATED_DATE}})</p>
+        
+        {{ALL_INSIDE_HTML}}
     </div>
 </body>
 </html>
