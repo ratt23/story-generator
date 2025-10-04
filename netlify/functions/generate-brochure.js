@@ -125,8 +125,6 @@ exports.handler = async (event, context) => {
         let currentColumnDoctorCount = 0;
 
         allData.forEach(spec => {
-            // Pindah ke kolom berikutnya jika kolom saat ini sudah mencapai target
-            // dan belum berada di kolom terakhir.
             if (currentColumnDoctorCount >= targetDoctorsPerColumn && currentColumn < 3) {
                 currentColumn++;
                 currentColumnDoctorCount = 0;
