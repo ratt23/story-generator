@@ -1,77 +1,110 @@
-// netlify/functions/generate-brochure.js
-
-const chromium = require('@sparticuz/chromium');
-const puppeteer = require('puppeteer-core');
 const fs = require('fs').promises;
 const path = require('path');
 const https = require('https');
-const { PDFDocument } = require('pdf-lib'); // Pustaka penggabung PDF
 
-// --- KONFIGURASI & ASET BASE64 ---
-const GOOGLE_SCRIPT_JADWAL_URL = '...';
-const LOGO_SILOAM_PUTIH_B64 = 'data:image/png;base64,...';
-// ... (aset base64 lainnya)
+// --- URL & KONFIGURASI ---
+const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
 
-// --- FUNGSI HELPER (fetchData, getGroupedDoctorData, dll) ---
-// ...
-
-// Fungsi baru untuk membuat halaman PDF dari template
-async function createPdfPage(browser, templateName, data) {
-    const templatePath = path.resolve(process.cwd(), `public/${templateName}`);
-    let htmlContent = await fs.readFile(templatePath, 'utf8');
-    for (const key in data) {
-        htmlContent = htmlContent.replace(new RegExp(`{{${key}}}`, 'g'), data[key]);
-    }
-    const page = await browser.newPage();
-    await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-    const pdfBuffer = await page.pdf({ format: 'A4', landscape: true, printBackground: true });
-    await page.close();
-    return pdfBuffer;
+// --- FUNGSI HELPER ---
+async function fetchData(url) {
+    return new Promise((resolve, reject) => {
+        const req = https.get(url, (res) => {
+            if (res.statusCode < 200 || res.statusCode >= 300) {
+                return reject(new Error(`HTTP ${res.statusCode} untuk ${url}`));
+            }
+            let body = '';
+            res.on('data', (chunk) => { body += chunk; });
+            res.on('end', () => {
+                try { resolve(JSON.parse(body)); } 
+                catch (e) { reject(new Error(`Gagal parsing JSON: ${e.message}`)); }
+            });
+        });
+        req.on('error', (err) => reject(err));
+    });
 }
 
-// --- HANDLER UTAMA ---
-exports.handler = async () => {
-    let browser = null;
-    try {
-        // 1. Ambil & proses data
-        const allData = await getGroupedDoctorData();
-        // ... (logika pemisahan data untuk halaman dalam dan luar)
+async function getJadwalData() {
+    const rawData = await fetchData(GOOGLE_SCRIPT_JADWAL_URL);
+    return Object.values(rawData).map(spec => ({
+        title: spec.title,
+        doctors: spec.doctors.map(doc => ({ name: doc.name, schedule: doc.schedule })),
+    }));
+}
 
-        // 2. Siapkan data untuk di-inject
-        const insidePageData = { /*...*/ };
-        const outsidePageData = { /*...*/ };
-
-        // 3. Jalankan Puppeteer
-        browser = await puppeteer.launch({
-            args: chromium.args,
-            executablePath: await chromium.executablePath(),
-            headless: true,
+function generateHtmlForDoctors(data) {
+    let html = '';
+    data.forEach(spec => {
+        html += `<div class="specialization-group">
+            <h3 class="specialization-title">${spec.title}</h3>`;
+        spec.doctors.forEach(doc => {
+            html += `<div class="doctor-card">
+                <p class="doctor-name">${doc.name}</p>
+                <div class="schedule-grid">`;
+            Object.entries(doc.schedule).forEach(([day, time]) => {
+                if(time) {
+                    html += `<div class="schedule-day"><strong>${day.slice(0, 3)}:</strong> ${time}</div>`;
+                }
+            });
+            html += `</div></div>`;
         });
+        html += `</div>`;
+    });
+    return html;
+}
 
-        // 4. Buat kedua PDF secara terpisah
-        const insidePdfBuffer = await createPdfPage(browser, 'brochure-template-inside.html', insidePageData);
-        const outsidePdfBuffer = await createPdfPage(browser, 'brochure-template-outside.html', outsidePageData);
+async function fillTemplate(templateHtml, data) {
+    const columns = [[], [], []];
+    data.forEach((spec, i) => columns[i % 3].push(spec));
 
-        // 5. Gabungkan PDF
-        const finalPdfDoc = await PDFDocument.create();
-        const insidePage = await PDFDocument.load(insidePdfBuffer);
-        const outsidePage = await PDFDocument.load(outsidePdfBuffer);
-        const [copiedInsidePage] = await finalPdfDoc.copyPages(insidePage, [0]);
-        const [copiedOutsidePage] = await finalPdfDoc.copyPages(outsidePage, [0]);
-        finalPdfDoc.addPage(copiedInsidePage);
-        finalPdfDoc.addPage(copiedOutsidePage);
-        const finalPdfBytes = await finalPdfDoc.save();
+    return templateHtml
+      .replace('{{COLUMN_1_HTML}}', generateHtmlForDoctors(columns[0]))
+      .replace('{{COLUMN_2_HTML}}', generateHtmlForDoctors(columns[1]))
+      .replace('{{COLUMN_3_HTML}}', generateHtmlForDoctors(columns[2]));
+}
+
+
+exports.handler = async () => {
+    try {
+        console.log("--- FUNGSI GENERATE-BROCHURE (LOGIKA HTML) DIMULAI ---");
         
-        // 6. Kembalikan hasil ke pengguna
+        const allData = await getJadwalData();
+        
+        const outsideSpecializations = ["Urologi", "Kulit & Kelamin"];
+        const outsidePageData = allData.filter(spec => outsideSpecializations.includes(spec.title));
+        const insidePageData = allData.filter(spec => !outsideSpecializations.includes(spec.title));
+
+        const insideTemplatePath = path.resolve(process.cwd(), 'public', 'brochure-template-inside.html');
+        const outsideTemplatePath = path.resolve(process.cwd(), 'public', 'brochure-template-outside.html');
+
+        const [insideTemplate, outsideTemplate] = await Promise.all([
+            fs.readFile(insideTemplatePath, 'utf8'),
+            fs.readFile(outsideTemplatePath, 'utf8')
+        ]);
+
+        const insideHtml = await fillTemplate(insideTemplate, insidePageData);
+        const outsideHtml = await fillTemplate(outsideTemplate, outsidePageData);
+
+        // Gabungkan kedua HTML menjadi satu dengan pemisah halaman
+        const finalHtml = `
+            ${insideHtml}
+            <div style="page-break-after: always;"></div>
+            ${outsideHtml}
+        `;
+
+        console.log("--- FUNGSI SELESAI SUKSES, MENGEMBALIKAN HTML ---");
+
         return {
             statusCode: 200,
-            headers: { 'Content-Type': 'application/pdf' },
-            body: Buffer.from(finalPdfBytes).toString('base64'),
-            isBase64Encoded: true,
+            headers: { 'Content-Type': 'text/html' },
+            body: finalHtml,
         };
     } catch (error) {
-        // ... (Error handling)
-    } finally {
-        if (browser) await browser.close();
+        console.error("!!! ERROR DALAM HANDLER:", error);
+        return {
+            statusCode: 500,
+            body: `<html><body><h1>Error</h1><p>${error.message}</p></body></html>`,
+            headers: { 'Content-Type': 'text/html' },
+        };
     }
 };
+
