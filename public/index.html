@@ -40,8 +40,8 @@
                 </div>
                 <div class="hidden md:block">
                     <div class="ml-10 flex items-baseline space-x-4">
-                        <a href="#" class="bg-blue-600 text-white rounded-md px-3 py-2 text-sm font-medium" aria-current="page">Design Story Cuti Dokter</a>
-                        <a href="#" class="text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-md px-3 py-2 text-sm font-medium">Brochure Cuti Dokter</a>
+                        <a href="index.html" class="bg-blue-600 text-white rounded-md px-3 py-2 text-sm font-medium" aria-current="page">Design Story Cuti Dokter</a>
+                        <a href="brochure-generator.html" class="text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-md px-3 py-2 text-sm font-medium">Brochure Jadwal Dokter</a>
                         <a href="#" class="text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-md px-3 py-2 text-sm font-medium">Public Holiday Operational</a>
                     </div>
                 </div>
@@ -131,15 +131,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!doctorName) return '';
     return doctorName
         .toLowerCase()
-        // hapus prefix dr./drg.
         .replace(/\b(dr|drg)\b\.?\s*/g, '')
-        // hapus gelar spesialis umum: Sp.xxx, M.xxx, Subsp.xxx
         .replace(/\bsp\.[a-z]+\b/gi, '')
         .replace(/\bm\.[a-z]+\b/gi, '')
         .replace(/\bsubsp\.[a-z]+\b/gi, '')
-        // hapus tanda baca
         .replace(/[.,()]/g, '')
-        // rapikan spasi
         .trim()
         .replace(/\s+/g, '-');
 }
@@ -346,3 +342,5 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 </body>
 </html>
+
+
