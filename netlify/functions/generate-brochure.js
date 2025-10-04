@@ -26,8 +26,7 @@ function fetchData(url, redirectCount = 0) {
             res.on('data', (chunk) => { body += chunk; });
             res.on('end', () => {
                 try {
-                    const parsedData = JSON.parse(body);
-                    resolve(parsedData);
+                    resolve(JSON.parse(body));
                 } catch (e) {
                     reject(new Error('Gagal mem-parsing respons JSON.'));
                 }
@@ -47,19 +46,15 @@ function fetchData(url, redirectCount = 0) {
 async function getJadwalDataFromCache() {
     try {
         const jadwalStore = getStore('jadwal-dokter');
-        if (!jadwalStore) {
-            return await getJadwalDataDirect();
-        }
         const rawData = await jadwalStore.get(CACHE_KEY);
         if (!rawData) {
+            console.log('Cache not found, fetching directly from Google Sheets.');
             return await getJadwalDataDirect();
         }
         const parsedData = JSON.parse(rawData);
-        return Object.values(parsedData).map(spec => ({
-            title: spec.title,
-            doctors: spec.doctors.map(doc => ({ name: doc.name, schedule: doc.schedule })),
-        }));
+        return Object.values(parsedData);
     } catch (error) {
+        console.warn('Failed to get data from cache, fetching directly.', error);
         return await getJadwalDataDirect();
     }
 }
@@ -72,10 +67,7 @@ async function getJadwalDataDirect() {
     if (!jadwalData || Object.keys(jadwalData).length === 0) {
         throw new Error('Data dari Google Sheets kosong atau tidak valid.');
     }
-    return Object.values(jadwalData).map(spec => ({
-        title: spec.title,
-        doctors: spec.doctors.map(doc => ({ name: doc.name, schedule: doc.schedule })),
-    }));
+    return Object.values(jadwalData);
 }
 
 /**
@@ -85,6 +77,7 @@ function generateHtmlForDoctors(data) {
     if (!data || data.length === 0) return '';
     let html = '';
     data.forEach(spec => {
+        if (!spec.doctors || spec.doctors.length === 0) return;
         html += `<div class="specialization-group">
             <h3 class="specialization-title">${spec.title}</h3>`;
         spec.doctors.forEach(doc => {
@@ -116,24 +109,22 @@ exports.handler = async (event, context) => {
             throw new Error('Tidak ada data jadwal yang ditemukan.');
         }
 
-        // Logika pembagian data cerdas berdasarkan jumlah dokter untuk 4 kolom jadwal
-        const totalDoctors = allData.reduce((sum, spec) => sum + spec.doctors.length, 0);
-        const targetDoctorsPerColumn = totalDoctors / 4;
-        
-        const columns = [[], [], [], []];
-        let currentColumn = 0;
-        let currentColumnDoctorCount = 0;
+        // --- LOGIKA DISTRIBUSI BARU ---
+        const totalDoctors = allData.reduce((sum, spec) => sum + (spec.doctors ? spec.doctors.length : 0), 0);
+        const targetOutsideCount = Math.ceil(totalDoctors / 4.5); // Alokasikan porsi sedikit lebih kecil untuk halaman luar
+
+        let outsideData = [];
+        let insideData = [];
+        let currentOutsideCount = 0;
 
         allData.forEach(spec => {
-            if (currentColumnDoctorCount >= targetDoctorsPerColumn && currentColumn < 3) {
-                currentColumn++;
-                currentColumnDoctorCount = 0;
+            if (currentOutsideCount < targetOutsideCount) {
+                outsideData.push(spec);
+                currentOutsideCount += spec.doctors ? spec.doctors.length : 0;
+            } else {
+                insideData.push(spec);
             }
-            columns[currentColumn].push(spec);
-            currentColumnDoctorCount += spec.doctors.length;
         });
-
-        const [outsideColumn1Data, insideColumn1Data, insideColumn2Data, insideColumn3Data] = columns;
         
         // Baca file template
         const insideTemplatePath = path.resolve(process.cwd(), 'public', 'brochure-template-inside.html');
@@ -147,11 +138,10 @@ exports.handler = async (event, context) => {
             day: 'numeric', month: 'long', year: 'numeric'
         });
 
-        // Mengisi 3 kolom di halaman dalam
+        // Proses HTML untuk halaman dalam (semua data sisanya)
+        const allInsideHtml = generateHtmlForDoctors(insideData);
         const insideHtml = insideTemplate
-            .replace('{{COLUMN_1_HTML}}', generateHtmlForDoctors(insideColumn1Data))
-            .replace('{{COLUMN_2_HTML}}', generateHtmlForDoctors(insideColumn2Data))
-            .replace('{{COLUMN_3_HTML}}', generateHtmlForDoctors(insideColumn3Data))
+            .replace('{{ALL_DOCTORS_HTML}}', allInsideHtml)
             .replace('{{GENERATED_DATE}}', generatedDate);
 
         // Siapkan logo untuk cover depan
@@ -164,9 +154,10 @@ exports.handler = async (event, context) => {
             console.log('Logo utama (berwarna) tidak ditemukan, akan kosong.');
         }
 
-        // Mengisi halaman luar
+        // Proses HTML untuk halaman luar
+        const outsideColumn1Html = generateHtmlForDoctors(outsideData);
         const outsideHtml = outsideTemplate
-            .replace('{{COLUMN_1_OUTSIDE}}', generateHtmlForDoctors(outsideColumn1Data))
+            .replace('{{COLUMN_1_OUTSIDE}}', outsideColumn1Html)
             .replace('{{COLUMN_2_OUTSIDE}}', '') // Kolom tengah belakang dikosongkan
             .replace('{{LOGO_SILOAM_WARNA}}', logoUrl);
 
