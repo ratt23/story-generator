@@ -244,15 +244,41 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDoctorPreview(); 
     }
 
-    function generateAndDownload() {
-        const params = new URLSearchParams();
-        params.append('doctors', getSelectedDoctorIds().join(','));
-        params.append('theme', backgroundSelect.value);
-        if (document.getElementById('logo-url').value) {
-            params.append('logo', document.getElementById('logo-url').value);
-        }
-        window.open(`/.netlify/functions/generate-story?${params.toString()}`, '_blank');
+   function generateAndDownload() {
+    const selectedIds = getSelectedDoctorIds();
+    if (selectedIds.length === 0) {
+        alert('Pilih minimal satu dokter terlebih dahulu!');
+        return;
+        console.log('generateAndDownload called');
+        console.log('Selected doctors:', getSelectedDoctorIds());
+        console.log('Current theme:', backgroundSelect.value);
     }
+
+    const params = new URLSearchParams();
+    params.append('doctors', selectedIds.join(','));
+    params.append('theme', backgroundSelect.value);
+    
+    const logoUrl = document.getElementById('logo-url').value;
+    if (logoUrl) {
+        params.append('logo', logoUrl);
+    }
+
+    // Tambahkan timestamp untuk avoid cache
+    params.append('t', new Date().getTime());
+    
+    // Gunakan window.location untuk memastikan tidak tab baru yang salah
+    const generateUrl = `/.netlify/functions/generate-story?${params.toString()}`;
+    console.log('Generating story with URL:', generateUrl);
+    
+    // Buat iframe untuk download
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.src = generateUrl;
+    document.body.appendChild(iframe);
+    
+    // Alternatif: buka tab baru
+    // window.open(generateUrl, '_blank');
+}
     
     async function fetchData(url) {
         try {
@@ -349,7 +375,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('logo-url').addEventListener('input', (e) => {
         storyLogo.src = e.target.value || 'asset/logo/logo.png';
     });
-    downloadButton.addEventListener('click', generateAndDownload);
+    downloadButton.addEventListener('click', function(e) {
+    e.preventDefault();
+    generateAndDownload();
+});
     window.addEventListener('resize', resizePreview);
     
     initialize();
