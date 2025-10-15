@@ -44,8 +44,11 @@ function fetchData(url, redirectCount = 0) {
 function createDoctorSlug(doctorName) {
     if (!doctorName) return '';
     return doctorName.toLowerCase()
-        .replace(/(dr\.\s*|sp\.[a-z]+\s*|\s*,\s*m\.ked\s*|\s*,\s*)\b/g, '')
-        .replace(/[^\w\s-]/g, '')
+        .replace(/\b(dr|drg)\b\.?\s*/g, '')
+        .replace(/\bsp\.[a-z]+\b/gi, '')
+        .replace(/\bm\.[a-z]+\b/gi, '')
+        .replace(/\bsubsp\.[a-z]+\b/gi, '')
+        .replace(/[.,()]/g, '')
         .trim()
         .replace(/\s+/g, '-');
 }
@@ -59,25 +62,40 @@ async function fileExists(filePath) {
     }
 }
 
-async function imageToBase64(filePath) {
-    if (!filePath) return 'https://placehold.co/200x200/e2e8f0/475569?text=NotFound';
-    if (filePath.startsWith('http')) return filePath;
+// PERBAIKAN: Fungsi untuk mendapatkan URL gambar yang benar
+async function getImageUrl(doctorName, imageFromSheet = null) {
+    // Coba dari image_webp di sheet terlebih dahulu
+    if (imageFromSheet) {
+        const imageName = path.basename(imageFromSheet);
+        const localPath = path.join(LOCAL_WEBP_IMAGE_DIR, imageName);
+        if (await fileExists(localPath)) {
+            // Convert ke base64 untuk local file
+            try {
+                const imageBuffer = await fs.readFile(localPath);
+                const mimeType = 'image/webp';
+                return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
+            } catch (error) {
+                console.warn(`Gagal membaca file lokal: ${localPath}`, error);
+            }
+        }
+    }
 
-    const absolutePath = path.resolve(process.cwd(), filePath);
-    if (!(await fileExists(absolutePath))) {
-        console.warn(`File gambar tidak ditemukan di path: ${absolutePath}`);
-        return 'https://placehold.co/200x200/e2e8f0/475569?text=NotFound';
-    }
+    // Fallback: coba berdasarkan slug nama dokter
+    const doctorSlug = createDoctorSlug(doctorName);
+    const slugPath = path.join(LOCAL_WEBP_IMAGE_DIR, `${doctorSlug}.webp`);
     
-    try {
-        const imageBuffer = await fs.readFile(absolutePath);
-        const extension = path.extname(filePath).toLowerCase().slice(1);
-        const mimeType = `image/${extension === 'jpg' ? 'jpeg' : extension}`;
-        return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
-    } catch (error) {
-        console.error(`Gagal membaca file gambar: ${filePath}.`, error);
-        return 'https://placehold.co/200x200/e2e8f0/475569?text=Error';
+    if (await fileExists(slugPath)) {
+        try {
+            const imageBuffer = await fs.readFile(slugPath);
+            const mimeType = 'image/webp';
+            return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
+        } catch (error) {
+            console.warn(`Gagal membaca file slug: ${slugPath}`, error);
+        }
     }
+
+    // Fallback terakhir: placeholder
+    return 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
 }
 
 function normalizeName(name) {
@@ -110,41 +128,18 @@ async function getCombinedDoctorData() {
         if (!jadwalData || !cutiData) throw new Error("Gagal mengambil data dari Google Sheets.");
 
         const doctorMap = new Map();
-        // --- LOGIKA PENCARIAN GAMBAR HIBRIDA DIMULAI DI SINI ---
+        
+        // Build doctor map from jadwal data
         for (const key in jadwalData) {
             if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
                 for (const doc of jadwalData[key].doctors) {
                     if (doc && doc.name) {
-                        let imagePath = '';
-
-                        // Prioritas 1: Coba cari file dari kolom 'image_webp'
-                        const imageNameFromSheet = doc.image_webp ? path.basename(doc.image_webp) : '';
-                        if (imageNameFromSheet) {
-                            const potentialPath = path.join(LOCAL_WEBP_IMAGE_DIR, imageNameFromSheet);
-                            if (await fileExists(potentialPath)) {
-                                imagePath = potentialPath;
-                                console.log(`SUCCESS (image_webp): Ditemukan untuk ${doc.name} di ${imagePath}`);
-                            } else {
-                                console.warn(`WARN (image_webp): File di sheet tidak ditemukan: ${potentialPath}`);
-                            }
-                        }
-
-                        // Prioritas 2: Jika tidak berhasil, coba cari berdasarkan slug nama dokter
-                        if (!imagePath) {
-                            const doctorSlug = createDoctorSlug(doc.name);
-                            const slugPath = path.join(LOCAL_WEBP_IMAGE_DIR, `${doctorSlug}.webp`);
-                            if (await fileExists(slugPath)) {
-                                imagePath = slugPath;
-                                console.log(`SUCCESS (slug): Ditemukan untuk ${doc.name} di ${imagePath}`);
-                            } else {
-                                console.warn(`WARN (slug): File slug tidak ditemukan untuk ${doc.name}: ${slugPath}`);
-                            }
-                        }
+                        const imageUrl = await getImageUrl(doc.name, doc.image_webp);
                         
                         doctorMap.set(normalizeName(doc.name), {
                             nama: doc.name,
                             spesialis: jadwalData[key].title || 'Spesialis tidak diketahui',
-                            fotourl: imagePath // Path yang berhasil ditemukan atau string kosong
+                            fotourl: imageUrl
                         });
                     }
                 }
@@ -159,14 +154,16 @@ async function getCombinedDoctorData() {
             .map((cuti, index) => {
                 const endDate = parseDate(cuti.TanggalSelesaiCuti);
                 if (!endDate || endDate < today) return null;
+                
                 const doctorDetails = doctorMap.get(normalizeName(cuti.NamaDokter));
+                
                 return {
                     id: `doc-${index}`,
                     nama: cuti.NamaDokter,
                     cutiMulai: cuti.TanggalMulaiCuti,
                     cutiSelesai: cuti.TanggalSelesaiCuti,
                     spesialis: doctorDetails ? doctorDetails.spesialis : 'Spesialis tidak ditemukan',
-                    fotourl: doctorDetails?.fotourl || ''
+                    fotourl: doctorDetails ? doctorDetails.fotourl : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'
                 };
             })
             .filter(Boolean);
@@ -202,17 +199,45 @@ function generateDoctorHTML(doctors, theme) {
 
     let styles;
     if (numDoctors > 4) { // 5+ dokter
-        styles = { container: "w-full flex flex-col items-center justify-center flex-grow space-y-4 px-8", item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-2xl p-4 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-2xl p-4 shadow-lg", photo: "w-32 h-32 rounded-full object-cover border-4 flex-shrink-0", textContainer: "ml-4 text-left", name: "text-3xl font-bold", specialty: "text-xl", date: "text-xl mt-2" };
+        styles = { 
+            container: "w-full flex flex-col items-center justify-center flex-grow space-y-4 px-8", 
+            item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-2xl p-4 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-2xl p-4 shadow-lg", 
+            photo: "w-32 h-32 rounded-full object-cover border-4 flex-shrink-0", 
+            textContainer: "ml-4 text-left", 
+            name: "text-3xl font-bold", 
+            specialty: "text-xl", 
+            date: "text-xl mt-2" 
+        };
     } else if (numDoctors > 2) { // 3-4 dokter
-        styles = { container: "w-full flex flex-col items-center justify-center flex-grow space-y-6 px-10", item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-3xl p-6 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-3xl p-6 shadow-lg", photo: "w-40 h-40 rounded-full object-cover border-8 flex-shrink-0", textContainer: "ml-6 text-left", name: "text-4xl font-bold", specialty: "text-2xl", date: "text-2xl mt-3" };
+        styles = { 
+            container: "w-full flex flex-col items-center justify-center flex-grow space-y-6 px-10", 
+            item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-3xl p-6 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-3xl p-6 shadow-lg", 
+            photo: "w-40 h-40 rounded-full object-cover border-8 flex-shrink-0", 
+            textContainer: "ml-6 text-left", 
+            name: "text-4xl font-bold", 
+            specialty: "text-2xl", 
+            date: "text-2xl mt-3" 
+        };
     } else { // 1-2 dokter
-        styles = { container: "w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12", item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-3xl p-8 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-3xl p-8 shadow-lg", photo: "w-48 h-48 rounded-full object-cover border-8 flex-shrink-0", textContainer: "ml-8 text-left", name: "text-5xl font-bold", specialty: "text-3xl", date: "text-3xl mt-4" };
+        styles = { 
+            container: "w-full flex flex-col items-center justify-center flex-grow space-y-8 px-12", 
+            item: isLightTheme ? "flex items-center w-full bg-slate-100 rounded-3xl p-8 shadow-lg border border-slate-200" : "flex items-center w-full bg-white/20 rounded-3xl p-8 shadow-lg", 
+            photo: "w-48 h-48 rounded-full object-cover border-8 flex-shrink-0", 
+            textContainer: "ml-8 text-left", 
+            name: "text-5xl font-bold", 
+            specialty: "text-3xl", 
+            date: "text-3xl mt-4" 
+        };
     }
 
     if (isLightTheme) {
-        styles.photo += " border-white shadow-md"; styles.name += " text-slate-800"; styles.specialty += " text-slate-600"; styles.date += " text-slate-600";
+        styles.photo += " border-white shadow-md"; 
+        styles.name += " text-slate-800"; 
+        styles.specialty += " text-slate-600"; 
+        styles.date += " text-slate-600";
     } else {
-        styles.photo += " border-white"; styles.specialty += " opacity-90";
+        styles.photo += " border-white"; 
+        styles.specialty += " opacity-90";
     }
 
     const doctorsHTML = doctors.map(doctor => {
@@ -234,10 +259,50 @@ function generateDoctorHTML(doctors, theme) {
     return `<div class="${styles.container}">${doctorsHTML}</div>`;
 }
 
+// PERBAIKAN: Fungsi untuk mendapatkan logo
+async function getLogoUrl(logoParam) {
+    if (logoParam) {
+        // Jika logo dari parameter, coba sebagai path lokal terlebih dahulu
+        try {
+            const logoPath = path.resolve(process.cwd(), logoParam);
+            if (await fileExists(logoPath)) {
+                const imageBuffer = await fs.readFile(logoPath);
+                const mimeType = 'image/png';
+                return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
+            }
+        } catch (error) {
+            console.warn(`Gagal membaca logo dari path: ${logoParam}`, error);
+        }
+        // Jika bukan path lokal, gunakan sebagai URL
+        return logoParam;
+    }
+    
+    // Default logo
+    const defaultLogoPath = path.resolve(process.cwd(), 'public/asset/logo/logo.png');
+    if (await fileExists(defaultLogoPath)) {
+        try {
+            const imageBuffer = await fs.readFile(defaultLogoPath);
+            const mimeType = 'image/png';
+            return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
+        } catch (error) {
+            console.warn('Gagal membaca logo default', error);
+        }
+    }
+    
+    return 'https://placehold.co/200x100/e2e8f0/475569?text=Logo+Not+Found';
+}
+
 exports.handler = async (event) => {
     console.log('Function generate-story dipanggil');
     const { doctors, theme, logo } = event.queryStringParameters;
-    if (!doctors) return { statusCode: 400, body: JSON.stringify({ error: 'Parameter doctors diperlukan' }) };
+    
+    if (!doctors) {
+        return { 
+            statusCode: 400, 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ error: 'Parameter doctors diperlukan' }) 
+        };
+    }
 
     const doctorIds = doctors.split(',');
     const selectedTheme = theme || 'gradient-blue';
@@ -245,49 +310,86 @@ exports.handler = async (event) => {
 
     try {
         const validThemes = ['gradient-blue', 'gradient-purple', 'gradient-orange', 'solid-white', 'solid-white-dots'];
-        if (!validThemes.includes(selectedTheme)) return { statusCode: 400, body: JSON.stringify({ error: 'Tema tidak valid' }) };
+        if (!validThemes.includes(selectedTheme)) {
+            return { 
+                statusCode: 400, 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ error: 'Tema tidak valid' }) 
+            };
+        }
 
         const allDoctorData = await getCombinedDoctorData();
         const selectedDoctors = doctorIds.map(id => allDoctorData.find(d => d.id === id)).filter(Boolean);
 
-        if (selectedDoctors.length === 0) return { statusCode: 404, body: JSON.stringify({ error: 'Tidak ada dokter yang ditemukan dengan ID tersebut' }) };
+        if (selectedDoctors.length === 0) {
+            return { 
+                statusCode: 404, 
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ error: 'Tidak ada dokter yang ditemukan dengan ID tersebut' }) 
+            };
+        }
 
         console.log(`Memproses ${selectedDoctors.length} dokter:`, selectedDoctors.map(d => d.nama));
 
-        const doctorsWithProcessedImages = await Promise.all(
-            selectedDoctors.map(async (doctor) => ({ ...doctor, fotourl: await imageToBase64(doctor.fotourl) }))
-        );
+        // Process logo
+        const logoUrl = await getLogoUrl(logo);
 
-        const doctorListContainerHTML = generateDoctorHTML(doctorsWithProcessedImages, selectedTheme);
-        const processedLogo = await imageToBase64(logo || 'public/asset/logo/logo.png');
+        const doctorListContainerHTML = generateDoctorHTML(selectedDoctors, selectedTheme);
 
+        // Baca template
         const templatePath = path.resolve(process.cwd(), 'public/story-template.html');
         let htmlContent = await fs.readFile(templatePath, 'utf8');
+        
+        // Replace placeholder dengan data aktual
         htmlContent = htmlContent
             .replace('{{THEME_CLASS}}', `theme-${selectedTheme}`)
-            .replace('{{LOGO_SRC}}', processedLogo)
+            .replace('{{LOGO_SRC}}', logoUrl)
             .replace('{{DOCTOR_LIST_HTML}}', doctorListContainerHTML);
 
-        const browserOptions = { args: chromium.args, defaultViewport: { width: 1080, height: 1920 }, executablePath: await chromium.executablePath(), headless: true };
+        // Setup browser untuk screenshot
+        const browserOptions = {
+            args: chromium.args,
+            defaultViewport: { width: 1080, height: 1920 },
+            executablePath: await chromium.executablePath(),
+            headless: true
+        };
+
         browser = await puppeteer.launch(browserOptions);
         const page = await browser.newPage();
         await page.setViewport({ width: 1080, height: 1920 });
+        
+        // Set content dan tunggu gambar load
         await page.setContent(htmlContent, { waitUntil: 'networkidle0', timeout: 30000 });
         
+        // Tunggu semua gambar selesai load
         await page.evaluate(async () => {
-            await Promise.all(Array.from(document.images).map(img => {
+            const images = Array.from(document.images);
+            await Promise.all(images.map(img => {
                 if (img.complete) return;
-                return new Promise(resolve => { img.onload = img.onerror = resolve; });
+                return new Promise((resolve, reject) => {
+                    img.onload = resolve;
+                    img.onerror = resolve; // Jangan reject jika gambar error
+                });
             }));
         });
-        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Tunggu tambahan untuk memastikan render selesai
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-        const imageBuffer = await page.screenshot({ type: 'png', fullPage: false });
+        // Ambil screenshot
+        const imageBuffer = await page.screenshot({ 
+            type: 'png', 
+            fullPage: false 
+        });
+        
         console.log('Screenshot berhasil dibuat');
 
         return {
             statusCode: 200,
-            headers: { 'Content-Type': 'image/png', 'Cache-Control': 'public, max-age=300' },
+            headers: { 
+                'Content-Type': 'image/png', 
+                'Cache-Control': 'public, max-age=300' 
+            },
             body: imageBuffer.toString('base64'),
             isBase64Encoded: true,
         };
@@ -296,12 +398,20 @@ exports.handler = async (event) => {
         return {
             statusCode: 500,
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ error: 'Gagal membuat gambar story', message: error.message, details: process.env.NODE_ENV === 'development' ? error.stack : undefined })
+            body: JSON.stringify({ 
+                error: 'Gagal membuat gambar story', 
+                message: error.message, 
+                details: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+            })
         };
     } finally {
         if (browser) {
-            try { await browser.close(); console.log('Browser closed'); } 
-            catch (closeError) { console.error('Error closing browser:', closeError); }
+            try { 
+                await browser.close(); 
+                console.log('Browser closed'); 
+            } catch (closeError) { 
+                console.error('Error closing browser:', closeError); 
+            }
         }
     }
 };
