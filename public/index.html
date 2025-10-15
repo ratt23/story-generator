@@ -142,18 +142,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const storyLogo = document.getElementById('story-logo');
     let allCutiData = [];
 
-  function createDoctorSlug(doctorName) {
-    if (!doctorName) return '';
-    return doctorName
-        .toLowerCase()
-        .replace(/\b(dr|drg)\b\.?\s*/g, '')
-        .replace(/\bsp\.[a-z]+\b/gi, '')
-        .replace(/\bm\.[a-z]+\b/gi, '')
-        .replace(/\bsubsp\.[a-z]+\b/gi, '')
-        .replace(/[.,()]/g, '')
-        .trim()
-        .replace(/\s+/g, '-');
-}
+    function createDoctorSlug(doctorName) {
+        if (!doctorName) return '';
+        return doctorName
+            .toLowerCase()
+            .replace(/\b(dr|drg)\b\.?\s*/g, '')
+            .replace(/\bsp\.[a-z]+\b/gi, '')
+            .replace(/\bm\.[a-z]+\b/gi, '')
+            .replace(/\bsubsp\.[a-z]+\b/gi, '')
+            .replace(/[.,()]/g, '')
+            .trim()
+            .replace(/\s+/g, '-');
+    }
 
     function resizePreview() {
         const previewContainer = document.getElementById('preview-container');
@@ -244,41 +244,51 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDoctorPreview(); 
     }
 
-   function generateAndDownload() {
-    const selectedIds = getSelectedDoctorIds();
-    if (selectedIds.length === 0) {
-        alert('Pilih minimal satu dokter terlebih dahulu!');
-        return;
-        console.log('generateAndDownload called');
-        console.log('Selected doctors:', getSelectedDoctorIds());
-        console.log('Current theme:', backgroundSelect.value);
-    }
+    // PERBAIKAN UTAMA: Fungsi generateAndDownload yang sudah diperbaiki
+    function generateAndDownload() {
+        const selectedIds = getSelectedDoctorIds();
+        if (selectedIds.length === 0) {
+            alert('Pilih minimal satu dokter terlebih dahulu!');
+            return;
+        }
 
-    const params = new URLSearchParams();
-    params.append('doctors', selectedIds.join(','));
-    params.append('theme', backgroundSelect.value);
-    
-    const logoUrl = document.getElementById('logo-url').value;
-    if (logoUrl) {
-        params.append('logo', logoUrl);
-    }
+        const params = new URLSearchParams();
+        params.append('doctors', selectedIds.join(','));
+        params.append('theme', backgroundSelect.value);
+        
+        const logoUrl = document.getElementById('logo-url').value;
+        if (logoUrl) {
+            params.append('logo', logoUrl);
+        }
 
-    // Tambahkan timestamp untuk avoid cache
-    params.append('t', new Date().getTime());
-    
-    // Gunakan window.location untuk memastikan tidak tab baru yang salah
-    const generateUrl = `/.netlify/functions/generate-story?${params.toString()}`;
-    console.log('Generating story with URL:', generateUrl);
-    
-    // Buat iframe untuk download
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.src = generateUrl;
-    document.body.appendChild(iframe);
-    
-    // Alternatif: buka tab baru
-    // window.open(generateUrl, '_blank');
-}
+        // Tambahkan timestamp untuk menghindari cache
+        params.append('t', new Date().getTime());
+        
+        const generateUrl = `/.netlify/functions/generate-story?${params.toString()}`;
+        console.log('Generating story with URL:', generateUrl);
+        
+        // SOLUSI: Gunakan pendekatan yang lebih reliable untuk membuka tab baru
+        // Coba metode pertama: window.open dengan penanganan popup blocker
+        const newWindow = window.open(generateUrl, '_blank');
+        
+        // Jika window.open diblokir (popup blocker), coba metode alternatif
+        if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+            // Metode alternatif: buat link dan trigger click
+            const link = document.createElement('a');
+            link.href = generateUrl;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Tampilkan pesan informasi
+            setTimeout(() => {
+                alert('Jika tab baru tidak terbuka, periksa popup blocker browser Anda dan izinkan popup untuk situs ini.');
+            }, 500);
+        }
+    }
     
     async function fetchData(url) {
         try {
@@ -375,10 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('logo-url').addEventListener('input', (e) => {
         storyLogo.src = e.target.value || 'asset/logo/logo.png';
     });
-    downloadButton.addEventListener('click', function(e) {
-    e.preventDefault();
-    generateAndDownload();
-});
+    downloadButton.addEventListener('click', generateAndDownload);
     window.addEventListener('resize', resizePreview);
     
     initialize();
