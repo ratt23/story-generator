@@ -45,7 +45,6 @@
             <div class="flex h-16 items-center justify-between">
                 <div class="flex items-center">
                     <div class="flex-shrink-0">
-                        <!-- Ganti teks dengan gambar logo -->
                         <div id="logo-container">
                             <img src="asset/logo/graphicat.png" alt="Kumpulan Tools" class="nav-logo" onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
                             <span id="logo-fallback" class="logo-fallback" style="display: none;">Kumpulan Tools</span>
@@ -73,7 +72,7 @@
             
             <div id="loading-state" class="text-center py-8">
                 <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-                <p class="mt-4 text-slate-600">Memuat data dari Google Sheets...</p>
+                <p class="mt-4 text-slate-600">Memuat data dari Database...</p>
             </div>
 
             <div id="controls" class="hidden space-y-6">
@@ -130,9 +129,13 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
-    const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
-    const LOCAL_WEBP_IMAGE_PATH = 'asset/webp/';
+    // ===================================
+    // ===       PERUBAHAN DI SINI       ===
+    // ===================================
+    const GOOGLE_SCRIPT_JADWAL_URL = 'https://dashboarddev.netlify.app/.netlify/functions/getDoctors';
+    const GOOGLE_SCRIPT_CUTI_URL = 'https://dashboarddev.netlify.app/.netlify/functions/getLeaveData';
+    // ===================================
+    
     const controls = document.getElementById('controls');
     const loadingState = document.getElementById('loading-state');
     const doctorCheckboxList = document.getElementById('doctor-checkbox-list');
@@ -244,7 +247,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateDoctorPreview(); 
     }
 
-    // PERBAIKAN UTAMA: Fungsi generateAndDownload yang sudah diperbaiki
     function generateAndDownload() {
         const selectedIds = getSelectedDoctorIds();
         if (selectedIds.length === 0) {
@@ -260,20 +262,15 @@ document.addEventListener('DOMContentLoaded', () => {
         if (logoUrl) {
             params.append('logo', logoUrl);
         }
-
-        // Tambahkan timestamp untuk menghindari cache
         params.append('t', new Date().getTime());
         
+        // Panggil function dari RELATIF path, bukan URL hardcoded
         const generateUrl = `/.netlify/functions/generate-story?${params.toString()}`;
         console.log('Generating story with URL:', generateUrl);
         
-        // SOLUSI: Gunakan pendekatan yang lebih reliable untuk membuka tab baru
-        // Coba metode pertama: window.open dengan penanganan popup blocker
         const newWindow = window.open(generateUrl, '_blank');
         
-        // Jika window.open diblokir (popup blocker), coba metode alternatif
         if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-            // Metode alternatif: buat link dan trigger click
             const link = document.createElement('a');
             link.href = generateUrl;
             link.target = '_blank';
@@ -283,7 +280,6 @@ document.addEventListener('DOMContentLoaded', () => {
             link.click();
             document.body.removeChild(link);
             
-            // Tampilkan pesan informasi
             setTimeout(() => {
                 alert('Jika tab baru tidak terbuka, periksa popup blocker browser Anda dan izinkan popup untuk situs ini.');
             }, 500);
@@ -292,7 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function fetchData(url) {
         try {
-            const response = await fetch(`${url}?t=${new Date().getTime()}`);
+            const response = await fetch(`${url}${url.includes('?') ? '&' : '?'}t=${new Date().getTime()}`);
             if (!response.ok) throw new Error(`Network error`);
             return await response.json();
         } catch (error) {
@@ -318,13 +314,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!jadwalData || !cutiData) return;
 
         const allDoctors = new Map();
+        // API Jadwal (getDoctors) memiliki format: { "anak": { title: "...", doctors: [...] } }
         for (const key in jadwalData) {
             if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
                 jadwalData[key].doctors.forEach(doc => {
                     if (!doc || !doc.name) return;
 
                     const doctorKey = createDoctorSlug(doc.name);
-                    const imageUrl = doctorKey ? `${LOCAL_WEBP_IMAGE_PATH}${doctorKey}.webp` : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+                    
+                    // ===================================
+                    // ===     PERBAIKAN FOTO DI SINI    ===
+                    // ===================================
+                    const imageUrl = doc.image_url || 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+                    // ===================================
 
                     if (!allDoctors.has(doctorKey)) {
                          allDoctors.set(doctorKey, {
@@ -340,8 +342,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
+        // API Cuti (getLeaveData) memiliki format: [ { NamaDokter: "...", ... } ]
         allCutiData = cutiData.map((cuti, index) => {
-            const endDateParts = cuti.TanggalSelesaiCuti.split('-');
+            const endDateParts = cuti.TanggalSelesaiCuti.split('-'); // Format dd-MM-yyyy
             if (endDateParts.length !== 3) return null;
             const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
             if (endDate < today) return null;

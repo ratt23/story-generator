@@ -1,5 +1,3 @@
-// netlify/functions/generate-story.js
-
 const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
 const fs = require('fs').promises;
@@ -7,9 +5,8 @@ const path = require('path');
 const https = require('https');
 
 // --- URL & KONFIGURASI ---
-const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
-const GOOGLE_SCRIPT_CUTI_URL = 'https://script.google.com/macros/s/AKfycbxEp7OwCT0M9Zak1XYeSu4rjkQTjoD-qgh8INEW5btIVVNv15i1DnzI3RUwmLoqG9TtSQ/exec';
-const LOCAL_WEBP_IMAGE_DIR = 'public/asset/webp/';
+const GOOGLE_SCRIPT_JADWAL_URL = 'https://dashboarddev.netlify.app/.netlify/functions/getDoctors';
+const GOOGLE_SCRIPT_CUTI_URL = 'https://dashboarddev.netlify.app/.netlify/functions/getLeaveData';
 const CACHE_DURATION_MS = 5 * 60 * 1000;
 
 // --- MEKANISME CACHING ---
@@ -19,8 +16,12 @@ let lastCacheTime = 0;
 // --- FUNGSI HELPER ---
 function fetchData(url, redirectCount = 0) {
     if (redirectCount > 5) return Promise.reject(new Error('Terlalu banyak redirect.'));
+    
+    const urlWithCacheBust = new URL(url);
+    urlWithCacheBust.searchParams.append('t', new Date().getTime());
+
     return new Promise((resolve, reject) => {
-        const req = https.get(url, (res) => {
+        const req = https.get(urlWithCacheBust.href, (res) => {
             if (res.statusCode === 301 || res.statusCode === 302) {
                 const redirectUrl = new URL(res.headers.location, url).href;
                 return resolve(fetchData(redirectUrl, redirectCount + 1));
@@ -41,16 +42,8 @@ function fetchData(url, redirectCount = 0) {
     });
 }
 
-function createDoctorSlug(doctorName) {
-    if (!doctorName) return '';
-    return doctorName.toLowerCase()
-        .replace(/\b(dr|drg)\b\.?\s*/g, '')
-        .replace(/\bsp\.[a-z]+\b/gi, '')
-        .replace(/\bm\.[a-z]+\b/gi, '')
-        .replace(/\bsubsp\.[a-z]+\b/gi, '')
-        .replace(/[.,()]/g, '')
-        .trim()
-        .replace(/\s+/g, '-');
+function normalizeName(name) {
+    return name.toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
 async function fileExists(filePath) {
@@ -62,49 +55,9 @@ async function fileExists(filePath) {
     }
 }
 
-// PERBAIKAN: Fungsi untuk mendapatkan URL gambar yang benar
-async function getImageUrl(doctorName, imageFromSheet = null) {
-    // Coba dari image_webp di sheet terlebih dahulu
-    if (imageFromSheet) {
-        const imageName = path.basename(imageFromSheet);
-        const localPath = path.join(LOCAL_WEBP_IMAGE_DIR, imageName);
-        if (await fileExists(localPath)) {
-            // Convert ke base64 untuk local file
-            try {
-                const imageBuffer = await fs.readFile(localPath);
-                const mimeType = 'image/webp';
-                return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
-            } catch (error) {
-                console.warn(`Gagal membaca file lokal: ${localPath}`, error);
-            }
-        }
-    }
-
-    // Fallback: coba berdasarkan slug nama dokter
-    const doctorSlug = createDoctorSlug(doctorName);
-    const slugPath = path.join(LOCAL_WEBP_IMAGE_DIR, `${doctorSlug}.webp`);
-    
-    if (await fileExists(slugPath)) {
-        try {
-            const imageBuffer = await fs.readFile(slugPath);
-            const mimeType = 'image/webp';
-            return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
-        } catch (error) {
-            console.warn(`Gagal membaca file slug: ${slugPath}`, error);
-        }
-    }
-
-    // Fallback terakhir: placeholder
-    return 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
-}
-
-function normalizeName(name) {
-    return name.toLowerCase().trim().replace(/\s+/g, ' ');
-}
-
 function parseDate(dateStr) {
     if (!dateStr) return null;
-    const parts = dateStr.split('-');
+    const parts = dateStr.split('-'); // Format dd-MM-yyyy
     if (parts.length !== 3) return null;
     const [day, month, year] = parts.map(p => parseInt(p, 10));
     if (isNaN(day) || isNaN(month) || isNaN(year)) return null;
@@ -118,28 +71,29 @@ async function getCombinedDoctorData() {
         return cachedData;
     }
 
-    console.log('Mengambil data terbaru dari Google Sheets...');
+    console.log('Mengambil data terbaru dari API Netlify...');
     
     try {
         const [jadwalData, cutiData] = await Promise.all([
             fetchData(GOOGLE_SCRIPT_JADWAL_URL),
             fetchData(GOOGLE_SCRIPT_CUTI_URL)
         ]);
-        if (!jadwalData || !cutiData) throw new Error("Gagal mengambil data dari Google Sheets.");
+        if (!jadwalData || !cutiData) throw new Error("Gagal mengambil data dari API.");
 
         const doctorMap = new Map();
         
-        // Build doctor map from jadwal data
+        // Build doctor map dari API getDoctors
         for (const key in jadwalData) {
             if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
                 for (const doc of jadwalData[key].doctors) {
                     if (doc && doc.name) {
-                        const imageUrl = await getImageUrl(doc.name, doc.image_webp);
+                        // Langsung gunakan image_url dari API
+                        const imageUrl = doc.image_url || 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
                         
                         doctorMap.set(normalizeName(doc.name), {
                             nama: doc.name,
                             spesialis: jadwalData[key].title || 'Spesialis tidak diketahui',
-                            fotourl: imageUrl
+                            fotourl: imageUrl // Simpan URL Cloudinary
                         });
                     }
                 }
@@ -149,8 +103,8 @@ async function getCombinedDoctorData() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
+        // Gabungkan dengan data cuti
         const combinedData = cutiData
-            .filter(cuti => cuti && cuti.NamaDokter && cuti.TanggalSelesaiCuti)
             .map((cuti, index) => {
                 const endDate = parseDate(cuti.TanggalSelesaiCuti);
                 if (!endDate || endDate < today) return null;
@@ -162,11 +116,11 @@ async function getCombinedDoctorData() {
                     nama: cuti.NamaDokter,
                     cutiMulai: cuti.TanggalMulaiCuti,
                     cutiSelesai: cuti.TanggalSelesaiCuti,
-                    spesialis: doctorDetails ? doctorDetails.spesialis : 'Spesialis tidak ditemukan',
+                    spesialis: doctorDetails ? doctorDetails.spesialis : 'N/A',
                     fotourl: doctorDetails ? doctorDetails.fotourl : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'
                 };
             })
-            .filter(Boolean);
+            .filter(Boolean); // Hapus entri null (cuti yang sudah lewat)
 
         cachedData = combinedData;
         lastCacheTime = now;
@@ -259,12 +213,16 @@ function generateDoctorHTML(doctors, theme) {
     return `<div class="${styles.container}">${doctorsHTML}</div>`;
 }
 
-// PERBAIKAN: Fungsi untuk mendapatkan logo
 async function getLogoUrl(logoParam) {
+    // Jika logoParam adalah URL (dimulai dengan http), gunakan langsung
+    if (logoParam && logoParam.startsWith('http')) {
+        return logoParam;
+    }
+    
+    // Jika logoParam ada tapi bukan http, anggap itu path lokal
     if (logoParam) {
-        // Jika logo dari parameter, coba sebagai path lokal terlebih dahulu
         try {
-            const logoPath = path.resolve(process.cwd(), logoParam);
+            const logoPath = path.resolve(process.cwd(), logoParam); // 'public/asset/logo/logo.png'
             if (await fileExists(logoPath)) {
                 const imageBuffer = await fs.readFile(logoPath);
                 const mimeType = 'image/png';
@@ -273,20 +231,18 @@ async function getLogoUrl(logoParam) {
         } catch (error) {
             console.warn(`Gagal membaca logo dari path: ${logoParam}`, error);
         }
-        // Jika bukan path lokal, gunakan sebagai URL
-        return logoParam;
     }
     
     // Default logo
     const defaultLogoPath = path.resolve(process.cwd(), 'public/asset/logo/logo.png');
-    if (await fileExists(defaultLogoPath)) {
-        try {
+    try {
+        if (await fileExists(defaultLogoPath)) {
             const imageBuffer = await fs.readFile(defaultLogoPath);
             const mimeType = 'image/png';
             return `data:${mimeType};base64,${imageBuffer.toString('base64')}`;
-        } catch (error) {
-            console.warn('Gagal membaca logo default', error);
         }
+    } catch (error) {
+        console.warn('Gagal membaca logo default', error);
     }
     
     return 'https://placehold.co/200x100/e2e8f0/475569?text=Logo+Not+Found';
@@ -331,22 +287,17 @@ exports.handler = async (event) => {
 
         console.log(`Memproses ${selectedDoctors.length} dokter:`, selectedDoctors.map(d => d.nama));
 
-        // Process logo
         const logoUrl = await getLogoUrl(logo);
-
         const doctorListContainerHTML = generateDoctorHTML(selectedDoctors, selectedTheme);
 
-        // Baca template
         const templatePath = path.resolve(process.cwd(), 'public/story-template.html');
         let htmlContent = await fs.readFile(templatePath, 'utf8');
         
-        // Replace placeholder dengan data aktual
         htmlContent = htmlContent
             .replace('{{THEME_CLASS}}', `theme-${selectedTheme}`)
             .replace('{{LOGO_SRC}}', logoUrl)
             .replace('{{DOCTOR_LIST_HTML}}', doctorListContainerHTML);
 
-        // Setup browser untuk screenshot
         const browserOptions = {
             args: chromium.args,
             defaultViewport: { width: 1080, height: 1920 },
@@ -358,25 +309,21 @@ exports.handler = async (event) => {
         const page = await browser.newPage();
         await page.setViewport({ width: 1080, height: 1920 });
         
-        // Set content dan tunggu gambar load
         await page.setContent(htmlContent, { waitUntil: 'networkidle0', timeout: 30000 });
         
-        // Tunggu semua gambar selesai load
         await page.evaluate(async () => {
             const images = Array.from(document.images);
             await Promise.all(images.map(img => {
                 if (img.complete) return;
                 return new Promise((resolve, reject) => {
                     img.onload = resolve;
-                    img.onerror = resolve; // Jangan reject jika gambar error
+                    img.onerror = resolve; 
                 });
             }));
         });
         
-        // Tunggu tambahan untuk memastikan render selesai
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Ambil screenshot
         const imageBuffer = await page.screenshot({ 
             type: 'png', 
             fullPage: false 
@@ -388,7 +335,7 @@ exports.handler = async (event) => {
             statusCode: 200,
             headers: { 
                 'Content-Type': 'image/png', 
-                'Cache-Control': 'public, max-age=300' 
+                'Cache-Control': 'no-cache, no-store, must-revalidate' // Jangan cache gambar
             },
             body: imageBuffer.toString('base64'),
             isBase64Encoded: true,

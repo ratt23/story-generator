@@ -1,9 +1,8 @@
 const path = require('path');
-const { getStore } = require('@netlify/blobs');
 const https = require('https');
 
-const CACHE_KEY = 'jadwal-dokter-cache';
-const GOOGLE_SCRIPT_JADWAL_URL = 'https://script.google.com/macros/s/AKfycbw6Fz5vI992Xya34JAkwMRY4oD1opCoBiWTQpPoTNSe9F_b5IdbI-ydtNix2AOj0IgyDg/exec';
+// Ganti URL Google Sheets dengan URL API Netlify
+const GOOGLE_SCRIPT_JADWAL_URL = 'https://dashboarddev.netlify.app/.netlify/functions/getDoctors';
 
 async function processImage(pathOrUrl, host) {
     if (!pathOrUrl) return '';
@@ -76,8 +75,7 @@ async function processLogo(host) {
             continue;
         }
     }
-
-    return '/asset/logo/logo.png';
+    return '/asset/logo/logo.png'; // Fallback
 }
 
 function fetchData(url, redirectCount = 0) {
@@ -85,8 +83,12 @@ function fetchData(url, redirectCount = 0) {
         return Promise.reject(new Error('Terlalu banyak pengalihan.'));
     }
     
+    // Tambahkan cache-busting
+    const urlWithCacheBust = new URL(url);
+    urlWithCacheBust.searchParams.append('t', new Date().getTime());
+
     return new Promise((resolve, reject) => {
-        const req = https.get(url, (res) => {
+        const req = https.get(urlWithCacheBust.href, (res) => {
             if ([301, 302, 307].includes(res.statusCode)) {
                 return resolve(fetchData(new URL(res.headers.location, url).href, redirectCount + 1));
             }
@@ -114,33 +116,21 @@ function fetchData(url, redirectCount = 0) {
     });
 }
 
-async function getJadwalDataFromCache() {
-    try {
-        const jadwalStore = getStore('jadwal-dokter');
-        if (!jadwalStore) return await getJadwalDataDirect();
-        
-        const rawData = await jadwalStore.get(CACHE_KEY);
-        if (!rawData) return await getJadwalDataDirect();
-        
-        return Object.values(JSON.parse(rawData)).map(spec => ({
-            title: spec.title,
-            doctors: spec.doctors.map(doc => ({ name: doc.name, schedule: doc.schedule })),
-        }));
-    } catch (error) {
-        return await getJadwalDataDirect();
-    }
-}
 
-async function getJadwalDataDirect() {
+async function getJadwalData() {
     const jadwalData = await fetchData(GOOGLE_SCRIPT_JADWAL_URL);
     
     if (!jadwalData || Object.keys(jadwalData).length === 0) {
-        throw new Error('Data dari Google Sheets kosong.');
+        throw new Error('Data dari API kosong.');
     }
     
+    // Format data dari API getDoctors sudah { "anak": { title: "..." } }
     return Object.values(jadwalData).map(spec => ({
         title: spec.title,
-        doctors: spec.doctors.map(doc => ({ name: doc.name, schedule: doc.schedule })),
+        doctors: spec.doctors.map(doc => ({ 
+            name: doc.name, 
+            schedule: doc.schedule // schedule bisa jadi objek atau string
+        })),
     }));
 }
 
@@ -149,18 +139,40 @@ function generateHtmlForDoctors(data) {
         return '<div class="specialization-group"><p>Tidak ada jadwal dokter</p></div>';
     }
     
+    const daysOrder = ['senin', 'selasa', 'rabu', 'kamis', 'jumat', 'sabtu', 'minggu'];
     let html = '';
+    
     data.forEach(spec => {
         html += `<div class="specialization-group"><h3 class="specialization-title">${spec.title}</h3>`;
         spec.doctors.forEach(doc => {
             html += `<div class="doctor-card"><p class="doctor-name">${doc.name}</p><div class="schedule-grid">`;
-            const scheduleEntries = Object.entries(doc.schedule || {}).filter(([_, time]) => time && time.trim() !== '' && time.trim() !== '-');
+            
+            // --- Logika baru untuk menangani format jadwal string atau objek ---
+            const scheduleEntries = [];
+            const schedule = doc.schedule || {};
+
+            for (const day of daysOrder) { 
+                const scheduleData = schedule[day];
+                let scheduleTime = null;
+
+                if (typeof scheduleData === 'string') {
+                    scheduleTime = scheduleData; // Format baru
+                } else if (typeof scheduleData === 'object' && scheduleData !== null && scheduleData.jam) {
+                    scheduleTime = scheduleData.jam; // Format lama
+                }
+                
+                if (scheduleTime && scheduleTime.trim() !== '' && scheduleTime.trim() !== '-') {
+                    scheduleEntries.push([day, scheduleTime]);
+                }
+            }
+            // --- Akhir logika baru ---
             
             if (scheduleEntries.length === 0) {
                 html += `<div class="schedule-day">Jadwal tidak tersedia</div>`;
             } else {
                 scheduleEntries.forEach(([day, time]) => {
-                    html += `<div class="schedule-day"><strong>${day}:</strong> ${time}</div>`;
+                    const dayFormatted = day.charAt(0).toUpperCase() + day.slice(1);
+                    html += `<div class="schedule-day"><strong>${dayFormatted}:</strong> ${time}</div>`;
                 });
             }
             html += `</div></div>`;
@@ -181,8 +193,8 @@ exports.handler = async (event) => {
             throw new Error("Header 'host' tidak ditemukan");
         }
 
-        // Ambil data jadwal
-        const allData = await getJadwalDataFromCache();
+        // Ambil data jadwal dari API (bukan cache)
+        const allData = await getJadwalData();
         if (!allData || allData.length === 0) {
             throw new Error('Tidak ada data jadwal yang ditemukan.');
         }
@@ -206,8 +218,8 @@ exports.handler = async (event) => {
         const [outsideColumn1Data, insideColumn1Data, insideColumn2Data, insideColumn3Data] = columns;
         
         // Baca template files
-        const insideTemplatePath = path.resolve(__dirname, '..', '..', 'public', 'brochure-template-inside.html');
-        const outsideTemplatePath = path.resolve(__dirname, '..', '..', 'public', 'brochure-template-outside.html');
+        const insideTemplatePath = path.resolve(process.cwd(), 'public', 'brochure-template-inside.html');
+        const outsideTemplatePath = path.resolve(process.cwd(), 'public', 'brochure-template-outside.html');
         
         const [insideTemplate, outsideTemplate] = await Promise.all([
             require('fs').promises.readFile(insideTemplatePath, 'utf8'),
@@ -249,7 +261,7 @@ exports.handler = async (event) => {
             .replace('{{COVER_BACKGROUND_SRC}}', finalBgImageUrl)
             .replace('{{LOGO_SILOAM_WARNA}}', logoUrl)
             .replace('{{GAMBAR_3_SRC}}', image3Url)
-            .replace('{{GAMBAR_4_SRC}}', image4Url);
+            .replace('{{GAMBAR_4_SRC}}', image4Url); // Pastikan 4.png ada di template luar jika digunakan
 
         const finalHtml = `${insideHtml}<div style="page-break-after: always;"></div>${outsideHtml}`;
         
