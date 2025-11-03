@@ -53,12 +53,29 @@
             background-size: 35px 35px;
             color: #1e293b; /* Warna teks gelap agar kontras */
         }
+
+        /* Style khusus untuk footer baru (UPDATED) */
+        .footer-hashtag {
+            font-family: 'Montserrat', sans-serif; /* Menggunakan Montserrat */
+            font-weight: 700;
+            font-size: 1.75rem; /* Ukuran 28px */
+        }
+        #story-preview.theme-solid-white .footer-hashtag,
+        #story-preview.theme-solid-white-dots .footer-hashtag {
+             color: #192670;
+        }
+        #story-preview.theme-gradient-blue .footer-hashtag,
+        #story-preview.theme-gradient-purple .footer-hashtag,
+        #story-preview.theme-gradient-orange .footer-hashtag {
+            color: #ffffff;
+        }
+
     </style>
 </head>
 <body>
     <div id="story-preview" class="{{THEME_CLASS}}">
-        <div class="flex-shrink-0 flex justify-center items-center relative z-10">
-            <img id="story-logo" src="{{LOGO_SRC}}" class="h-28" alt="Logo">
+        <div class="flex-shrink-0 flex justify-start items-center relative z-10">
+            <img id="story-logo" src="{{LOGO_SRC}}" class="h-24" alt="Logo">
         </div>
 
         <div class="flex-grow flex flex-col justify-start items-center text-center pt-20 relative z-10">
@@ -69,8 +86,9 @@
             {{DOCTOR_LIST_HTML}}
         </div>
 
-        <div class="flex-shrink-0 text-center relative z-10">
-            <p class="text-3xl font-semibold">Siloam Hospitals Ambon</p>
+        <div class="flex-shrink-0 flex justify-between items-center relative z-10">
+            <span class="footer-hashtag">#BersamaSiloam</span>
+            <img src="{{SILOAM_LOGO_SRC}}" class="h-20" alt="Siloam Logo">
         </div>
     </div>
 </body>

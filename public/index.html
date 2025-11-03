@@ -36,6 +36,15 @@
             font-size: 1.25rem;
             color: #1e293b;
         }
+        
+        /* === STYLE FOOTER PREVIEW (UPDATED) === */
+        .footer-hashtag {
+            font-family: 'Montserrat', sans-serif; /* Menggunakan Montserrat */
+            font-weight: 700;
+            font-size: 1.00rem; /* Dikecilkan lagi (28px) */
+            color: white; /* Default color */
+            transition: color 0.3s;
+        }
     </style>
 </head>
 <body class="bg-slate-100 h-screen flex flex-col">
@@ -109,8 +118,8 @@
         <div class="flex-grow bg-slate-100 flex items-center justify-center py-10 md:p-4">
             <div id="preview-container" class="w-full h-full flex items-center justify-center">
                 <div id="story-preview" class="flex flex-col p-16 shadow-2xl">
-                    <div class="flex-shrink-0 flex justify-center items-center relative z-10">
-                        <img id="story-logo" src="asset/logo/logo.png" class="h-28" alt="Logo">
+                    <div class="flex-shrink-0 flex justify-start items-center relative z-10">
+                        <img id="story-logo" src="asset/logo/logo.png" class="h-24" alt="Logo">
                     </div>
                     <div class="flex-grow flex flex-col justify-start items-center text-center pt-20 relative z-10">
                         <div class="mb-12">
@@ -119,8 +128,9 @@
                         </div>
                         <div id="story-doctors-list" class="w-full flex flex-col items-center justify-center flex-grow space-y-6 px-12 relative z-10"></div>
                     </div>
-                    <div class="flex-shrink-0 text-center relative z-10">
-                        <p class="text-3xl font-semibold">Siloam Hospitals Ambon</p>
+                    <div class="flex-shrink-0 flex justify-between items-center relative z-10">
+                        <span class="footer-hashtag" id="story-footer-hashtag">#BersamaSiloam</span>
+                        <img src="asset/logo/logo2.png" class="h-20" alt="Siloam Logo" onerror="this.src='Gagal memuat logo2.png'">
                     </div>
                 </div>
             </div>
@@ -129,12 +139,8 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-    // ===================================
-    // ===       PERUBAHAN DI SINI       ===
-    // ===================================
     const GOOGLE_SCRIPT_JADWAL_URL = 'https://dashboarddev.netlify.app/.netlify/functions/getDoctors';
     const GOOGLE_SCRIPT_CUTI_URL = 'https://dashboarddev.netlify.app/.netlify/functions/getLeaveData';
-    // ===================================
     
     const controls = document.getElementById('controls');
     const loadingState = document.getElementById('loading-state');
@@ -217,10 +223,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function updateBackgroundPreview(theme) {
         const storyPreview = document.getElementById('story-preview');
+        const storyFooterHashtag = document.getElementById('story-footer-hashtag'); 
+
         storyPreview.style.backgroundImage = 'none';
         storyPreview.style.backgroundSize = 'auto';
         storyPreview.style.background = '';
         storyPreview.style.color = 'white';
+        if (storyFooterHashtag) storyFooterHashtag.style.color = 'white'; 
+
         switch(theme) {
             case 'gradient-purple': 
                 storyPreview.style.background = 'linear-gradient(160deg, #5a189a, #c1121f, #f77f00)'; 
@@ -233,12 +243,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 storyPreview.style.backgroundImage = `radial-gradient(circle, #E5E7EB 1px, transparent 1.5px), radial-gradient(circle at 0% 0%, rgba(229, 231, 235, 0.5) 0%, transparent 40%), radial-gradient(circle at 100% 100%, rgba(229, 231, 235, 0.5) 0%, transparent 40%)`;
                 storyPreview.style.backgroundSize = '20px 20px, 120% 120%, 120% 120%';
                 storyPreview.style.color = '#1e2b3b';
+                if (storyFooterHashtag) storyFooterHashtag.style.color = '#192670'; 
                 break;
             case 'solid-white-dots':
                 storyPreview.style.background = '#ffffff';
                 storyPreview.style.backgroundImage = 'radial-gradient(circle, #D1D5DB 1px, transparent 1.5px)';
                 storyPreview.style.backgroundSize = '35px 35px';
                 storyPreview.style.color = '#1e2b3b';
+                if (storyFooterHashtag) storyFooterHashtag.style.color = '#192670'; 
                 break;
             default: 
                 storyPreview.style.background = 'linear-gradient(160deg, #192670, #4c9b32)'; 
@@ -264,7 +276,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         params.append('t', new Date().getTime());
         
-        // Panggil function dari RELATIF path, bukan URL hardcoded
         const generateUrl = `/.netlify/functions/generate-story?${params.toString()}`;
         console.log('Generating story with URL:', generateUrl);
         
@@ -314,20 +325,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!jadwalData || !cutiData) return;
 
         const allDoctors = new Map();
-        // API Jadwal (getDoctors) memiliki format: { "anak": { title: "...", doctors: [...] } }
         for (const key in jadwalData) {
             if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
                 jadwalData[key].doctors.forEach(doc => {
                     if (!doc || !doc.name) return;
-
                     const doctorKey = createDoctorSlug(doc.name);
-                    
-                    // ===================================
-                    // ===     PERBAIKAN FOTO DI SINI    ===
-                    // ===================================
                     const imageUrl = doc.image_url || 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
-                    // ===================================
-
                     if (!allDoctors.has(doctorKey)) {
                          allDoctors.set(doctorKey, {
                             nama: doc.name,
@@ -342,7 +345,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         
-        // API Cuti (getLeaveData) memiliki format: [ { NamaDokter: "...", ... } ]
         allCutiData = cutiData.map((cuti, index) => {
             const endDateParts = cuti.TanggalSelesaiCuti.split('-'); // Format dd-MM-yyyy
             if (endDateParts.length !== 3) return null;
