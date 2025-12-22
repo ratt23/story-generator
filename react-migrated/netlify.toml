@@ -1,0 +1,41 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+  functions = "netlify/functions"
+
+[dev]
+  command = "npm run dev"
+  targetPort = 5173
+  framework = "#custom"
+
+[functions]
+  node_bundler = "esbuild"
+
+[functions.environment]
+  NETLIFY_BLOBS_SITE_ID = "e44d61f4-24fa-4611-bb94-0ea4c4ea83fd"
+
+[functions."generate-story"]
+  external_node_modules = ["@sparticuz/chromium"]
+  included_files = ["public/**"]
+  timeout = 26
+
+[functions."generate-brochure"]
+  included_files = ["public/**"]
+  timeout = 26
+
+[functions."process-tarif"]
+  external_node_modules = ["@sparticuz/chromium", "exceljs"]
+  included_files = ["public/**"]
+  timeout = 60
+
+[[redirects]]
+  from = "/.netlify/functions/getDoctors"
+  to = "https://dashboarddev.netlify.app/.netlify/functions/getDoctors"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/.netlify/functions/getLeaveData"
+  to = "https://dashboarddev.netlify.app/.netlify/functions/getLeaveData"
+  status = 200
+  force = true

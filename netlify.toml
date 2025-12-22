@@ -1,5 +1,6 @@
 [build]
-publish = "public"
+command = "cd react-migrated && npm install && npm run build"
+publish = "react-migrated/dist"
 functions = "netlify/functions"
 
 [functions]

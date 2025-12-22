@@ -85,6 +85,22 @@
             /* Default color */
             transition: color 0.3s;
         }
+
+        @media (orientation: landscape) and (max-height: 600px) {
+            nav {
+                display: none !important;
+                /* Hide Top Nav in tight landscape */
+            }
+
+            #preview-container {
+                height: 100vh !important;
+                /* Full height */
+            }
+
+            .landscape-hide {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 
@@ -456,11 +472,15 @@
                 let containerWidth = previewContainer.getBoundingClientRect().width;
                 let containerHeight = previewContainer.getBoundingClientRect().height;
 
-                // Fallback for Safari/Mobile if zero
                 if (!containerWidth || containerWidth === 0) containerWidth = window.innerWidth;
-                if (!containerHeight || containerHeight === 0) containerHeight = window.innerHeight - 80; // Minus header
 
-                const padding = 20;
+                // Adjustment for Landcape Mobile: Full height
+                const isLandscapeMobile = window.matchMedia("(orientation: landscape) and (max-height: 600px)").matches;
+                if (!containerHeight || containerHeight === 0) {
+                    containerHeight = isLandscapeMobile ? window.innerHeight : window.innerHeight - 80;
+                }
+
+                const padding = isLandscapeMobile ? 10 : 20; // Tighter padding on landscape
 
                 if (containerWidth <= 0 || containerHeight <= 0) return;
 
