@@ -1,0 +1,22 @@
+{
+  "name": "siloam-tools",
+  "version": "1.0.0",
+  "description": "Generator tools for Siloam Hospitals Ambon",
+  "main": "index.js",
+  "scripts": {
+    "start": "netlify dev"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^6.4.0",
+    "@sparticuz/chromium": "^119.0.2",
+    "exceljs": "^4.4.0",
+    "pdf-lib": "^1.17.1",
+    "puppeteer": "^24.27.0",
+    "puppeteer-core": "^21.11.0"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

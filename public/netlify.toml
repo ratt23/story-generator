@@ -1,0 +1,27 @@
+[build]
+publish = "public"
+functions = "netlify/functions"
+
+# === Default Function Settings ===
+[functions]
+node_bundler = "esbuild"
+included_files = ["public/**"]
+external_node_modules = ["typescript", "@sparticuz/chromium"]
+timeout = 26
+
+# === Environment Variables ===
+[functions.environment]
+NETLIFY_BLOBS_SITE_ID = "your-site-id"
+
+# === Fungsi Spesifik ===
+[functions."generate-story"]
+external_node_modules = ["@sparticuz/chromium", "typescript"]
+included_files = ["public/**"]
+timeout = 26
+
+[functions."generate-brochure"]
+included_files = ["public/**"]
+timeout = 26
+
+[functions."cache-jadwal-data"]
+schedule = "*/10 * * * *"

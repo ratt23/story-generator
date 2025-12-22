@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Design Story Cuti Dokter - Kumpulan Tools</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Montserrat:wght@700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        #story-preview {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(160deg, #192670, #4c9b32);
+            color: white;
+            width: 1080px;
+            height: 1920px;
+            transform-origin: top left;
+            position: absolute;
+            top: 0;
+            left: 0;
+            /* overflow: hidden; Removed to ensure visibility */
+            box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            transition: background 0.3s, color 0.3s;
+            z-index: 10;
+        }
+
+        .montserrat {
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        #doctor-checkbox-list::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #doctor-checkbox-list::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        #doctor-checkbox-list::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+
+        #doctor-checkbox-list::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        #story-preview img {
+            object-fit: cover;
+        }
+
+        #story-preview .flex .items-center img.rounded-full {
+            object-position: center 10%;
+        }
+
+        .nav-logo {
+            height: 50px;
+            width: auto;
+            object-fit: contain;
+        }
+
+        .logo-fallback {
+            font-weight: bold;
+            font-size: 1.25rem;
+            color: #1e293b;
+        }
+
+        /* === STYLE FOOTER PREVIEW (UPDATED) === */
+        .footer-hashtag {
+            font-family: 'Montserrat', sans-serif;
+            /* Menggunakan Montserrat */
+            font-weight: 700;
+            font-size: 1.00rem;
+            /* Dikecilkan lagi (28px) */
+            color: white;
+            /* Default color */
+            transition: color 0.3s;
+        }
+    </style>
+</head>
+
+<body class="bg-slate-100 min-h-screen md:h-screen flex flex-col md:overflow-hidden">
+
+    <nav class="bg-white shadow-md w-full flex-shrink-0 sticky top-0 z-50">
+        <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+            <div class="flex h-16 items-center justify-between">
+                <div class="flex items-center">
+                    <!-- Mobile Menu Button -->
+                    <div class="mr-2 flex md:hidden">
+                        <button type="button" id="mobile-menu-btn"
+                            class="bg-white inline-flex items-center justify-center p-2 rounded-md text-slate-400 hover:text-slate-500 hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+                            aria-expanded="false">
+                            <span class="sr-only">Open main menu</span>
+                            <!-- Icon menu -->
+                            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                stroke="currentColor" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="flex-shrink-0">
+                        <div id="logo-container">
+                            <img src="asset/logo/graphicat.png" alt="Kumpulan Tools" class="nav-logo"
+                                onerror="this.style.display='none'; document.getElementById('logo-fallback').style.display='block';">
+                            <span id="logo-fallback" class="logo-fallback" style="display: none;">Kumpulan Tools</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-4">
+                        <a href="index.html" class="bg-blue-600 text-white rounded-md px-3 py-2 text-sm font-medium"
+                            aria-current="page">Design Story Cuti Dokter</a>
+                        <a href="brochure-generator.html"
+                            class="text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-md px-3 py-2 text-sm font-medium">Brochure
+                            Jadwal Dokter</a>
+                        <a href="tarif-app.html"
+                            class="text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-md px-3 py-2 text-sm font-medium">Tarif
+                            App</a>
+                        <a href="#"
+                            class="text-slate-500 hover:bg-slate-100 hover:text-slate-900 rounded-md px-3 py-2 text-sm font-medium">Public
+                            Holiday Operational</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Backdrop -->
+    <div id="mobile-backdrop"
+        class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden md:hidden glass-effect transition-opacity duration-300 opacity-0">
+    </div>
+
+    <main class="flex-grow flex flex-col md:flex-row md:overflow-hidden relative">
+        <!-- Sidebar / Controls Panel -->
+        <div id="sidebar-panel"
+            class="fixed inset-x-0 bottom-0 top-20 z-50 bg-white p-6 shadow-2xl rounded-t-2xl transform translate-y-full transition-transform duration-300 overflow-y-auto md:translate-y-0 md:static md:w-1/3 lg:w-1/4 md:shadow-lg md:rounded-none md:top-auto md:bottom-auto md:inset-auto md:h-full md:overflow-y-auto flex-shrink-0 border-b md:border-b-0 md:border-r border-slate-200">
+
+            <!-- Mobile Handle / Close Bar -->
+            <div class="md:hidden flex justify-center mb-4 cursor-pointer" id="mobile-drawer-handle">
+                <div class="w-12 h-1.5 bg-slate-300 rounded-full"></div>
+            </div>
+
+            <!-- Mobile Close Button -->
+            <button id="close-sidebar-btn"
+                class="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 md:hidden">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-slate-800">Desain Story Cuti</h1>
+                <p class="text-slate-500">Gunakan panel ini untuk membuat gambar jadwal cuti.</p>
+            </div>
+
+            <div id="loading-state" class="text-center py-8">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                <p class="mt-4 text-slate-600">Memuat data dari Database...</p>
+            </div>
+
+            <div id="controls" class="hidden space-y-6">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Pilih Dokter Cuti</label>
+                    <input type="text" id="doctor-search" placeholder="Cari nama dokter..."
+                        class="w-full p-2 mb-2 border border-slate-300 rounded text-sm focus:ring-blue-500 focus:border-blue-500">
+                    <div id="doctor-checkbox-list"
+                        class="w-full p-3 border border-slate-300 rounded-lg max-h-60 overflow-y-auto space-y-2"></div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Pesan Tambahan (Opsional)</label>
+                    <textarea id="custom-message" rows="2"
+                        placeholder="Contoh: Selama cuti, pelayanan dialihkan ke dr. Budi"
+                        class="w-full p-3 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Format Output</label>
+                    <div class="flex space-x-4">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="format" value="story" checked class="form-radio text-blue-600">
+                            <span class="ml-2 text-slate-700">Story (9:16)</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="format" value="square" class="form-radio text-blue-600">
+                            <span class="ml-2 text-slate-700">Square (1:1)</span>
+                        </label>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Ukuran Nama</label>
+                        <input type="range" id="font-size-range" min="0.8" max="1.5" step="0.1" value="1"
+                            class="w-full accent-blue-600">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Ukuran Tanggal</label>
+                        <input type="range" id="date-font-size-range" min="0.8" max="1.5" step="0.1" value="1"
+                            class="w-full accent-blue-600">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Ukuran Header</label>
+                        <input type="range" id="header-font-size-range" min="0.8" max="1.5" step="0.1" value="1"
+                            class="w-full accent-blue-600">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Perataan Teks</label>
+
+                        <select id="text-align-select" class="w-full p-2 border border-slate-300 rounded text-sm">
+                            <option value="center" selected>Tengah</option>
+                            <option value="left">Kiri</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Posisi Vertikal</label>
+                        <input type="range" id="vertical-pos-range" min="-100" max="100" value="0"
+                            class="w-full accent-blue-600">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Jarak Antar Item</label>
+                        <input type="range" id="spacing-range" min="0" max="60" value="24"
+                            class="w-full accent-blue-600">
+                    </div>
+                </div>
+                <label for="background-select" class="block text-sm font-medium text-slate-700 mb-1">Pilih Tema
+                    Background</label>
+                <select id="background-select"
+                    class="w-full p-3 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+                    <option value="gradient-blue">Deep Blue Custom</option>
+                    <option value="solid-white">Solid White</option>
+                    <option value="solid-white-dots">White Polka Dots</option>
+                    <option value="siloam-white-dots" selected>Siloam Blue (White Dots)</option>
+                    <option value="abstract-mesh">Abstract Mesh</option>
+                    <option value="modern-geometric">Modern Geometric</option>
+                </select>
+            </div>
+
+            <!-- Logo & Footer Controls -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-slate-700 mb-2">Logo & Footer</label>
+                <input type="text" id="logo-url" placeholder="URL Logo RS (Opsional)"
+                    class="w-full p-2 border border-slate-300 rounded text-sm mb-2">
+                <div class="flex items-center">
+                    <input type="checkbox" id="show-footer-checkbox"
+                        class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" checked>
+                    <label for="show-footer-checkbox" class="ml-2 text-sm text-slate-700">Tampilkan Logo
+                        Bawah</label>
+                </div>
+            </div>
+
+            <!-- Custom Header Inputs -->
+            <div class="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="header-top-input" class="block text-sm font-medium text-slate-700 mb-1">Judul
+                        Atas</label>
+                    <input type="text" id="header-top-input" value="PEMBERITAHUAN"
+                        class="w-full p-3 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <div class="mt-2 flex items-center">
+                        <label for="header-top-size-input" class="text-xs text-slate-500 mr-2 w-16">Size (px)</label>
+                        <input type="number" id="header-top-size-input" value="48"
+                            class="w-full p-2 border border-slate-300 rounded text-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+                <div>
+                    <label for="header-main-input" class="block text-sm font-medium text-slate-700 mb-1">Judul
+                        Utama</label>
+                    <input type="text" id="header-main-input" value="DOKTER CUTI"
+                        class="w-full p-3 border border-slate-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <div class="mt-2 flex items-center">
+                        <label for="header-main-size-input" class="text-xs text-slate-500 mr-2 w-16">Size (px)</label>
+                        <input type="number" id="header-main-size-input" value="128"
+                            class="w-full p-2 border border-slate-300 rounded text-sm focus:ring-blue-500 focus:border-blue-500">
+                    </div>
+                </div>
+            </div>
+            <div class="pt-4">
+                <button id="download-button"
+                    class="relative w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 disabled:bg-slate-400 disabled:cursor-not-allowed transition-colors">
+                    <span id="button-text">Pilih Dokter Dahulu</span>
+                    <div id="download-spinner" class="absolute inset-0 flex items-center justify-center hidden">
+                        <svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none"
+                            viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4">
+                            </circle>
+                            <path class="opacity-75" fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                            </path>
+                        </svg>
+                    </div>
+                </button>
+            </div>
+        </div>
+        <div id="error-state" class="hidden text-center py-8 bg-red-50 border-l-4 border-red-400 p-4">
+            <p class="font-bold text-red-800">Gagal Memuat Data</p>
+            <p class="text-sm text-red-600">Coba muat ulang halaman atau periksa koneksi internet.</p>
+        </div>
+        </div>
+
+        <div
+            class="flex-grow bg-slate-100 flex items-center justify-center py-2 md:p-4 min-h-[600px] md:min-h-0 relative">
+
+            <!-- Mobile FAB (Floating Action Button) -->
+            <!-- Mobile FAB (Hidden/Removed in favor of Header Menu) -->
+            <button id="mobile-fab"
+                class="hidden fixed bottom-6 right-6 z-40 bg-blue-600 text-white p-4 rounded-full shadow-lg md:hidden hover:bg-blue-700 transition-all duration-300 flex items-center justify-center transform hover:scale-105 active:scale-95">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                </svg>
+                <span class="ml-2 font-semibold">Tampilkan Menu</span>
+            </button>
+            <div id="preview-container"
+                class="w-full h-full relative bg-slate-200 overflow-hidden cursor-grab active:cursor-grabbing">
+                <!-- Zoom Controls -->
+                <div class="absolute bottom-6 left-6 z-50 flex flex-col space-y-2">
+                    <button id="zoom-in-btn"
+                        class="bg-white p-2 rounded-full shadow-lg hover:bg-gray-100 text-slate-700 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </button>
+                    <button id="zoom-out-btn"
+                        class="bg-white p-2 rounded-full shadow-lg hover:bg-gray-100 text-slate-700 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
+                        </svg>
+                    </button>
+                    <button id="zoom-fit-btn"
+                        class="bg-white p-2 rounded-full shadow-lg hover:bg-gray-100 text-slate-700 transition"
+                        title="Fit to Screen">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4h5v2H5v4H4V4zm20 0h-5v2h4v4h2V4zM4 20h5v-2H5v-4H4v6zm20 0h-5v-2h4v-4h2v6z" />
+                        </svg>
+                    </button>
+                </div>
+                <div id="story-preview"
+                    class="flex flex-col p-16 shadow-2xl absolute top-0 left-0 origin-top-left transition-none">
+                    <div class="flex-shrink-0 flex justify-start items-center relative z-10">
+                        <img id="story-logo" src="asset/logo/logo.png" class="h-24" alt="Logo">
+                    </div>
+                    <div id="story-content-container"
+                        class="flex-grow flex flex-col justify-start items-center text-center pt-20 relative z-10 w-full">
+                        <div class="mb-8 w-full px-12">
+                            <p class="text-5xl tracking-widest montserrat">PEMBERITAHUAN</p>
+                            <h2 class="text-9xl font-extrabold mt-2 montserrat">DOKTER CUTI</h2>
+                        </div>
+                        <div id="story-doctors-list"
+                            class="w-full flex flex-col items-center justify-center flex-grow space-y-6 px-12 relative z-10 transition-all duration-300">
+                        </div>
+                        <div id="custom-message-preview"
+                            class="w-full text-center text-3xl font-semibold mt-8 px-12 hidden"></div>
+                    </div>
+                    <div class="flex-shrink-0 flex justify-between items-center relative z-10">
+                        <span class="footer-hashtag" id="story-footer-hashtag">#BersamaSiloam</span>
+                        <img src="asset/logo/logo2.png" class="h-20" alt="Siloam Logo"
+                            onerror="this.src='Gagal memuat logo2.png'">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const GOOGLE_SCRIPT_JADWAL_URL = 'https://dashboarddev.netlify.app/.netlify/functions/getDoctors';
+            const GOOGLE_SCRIPT_CUTI_URL = 'https://dashboarddev.netlify.app/.netlify/functions/getLeaveData';
+
+            const controls = document.getElementById('controls');
+            const loadingState = document.getElementById('loading-state');
+            const doctorCheckboxList = document.getElementById('doctor-checkbox-list');
+            const downloadButton = document.getElementById('download-button');
+            const buttonText = document.getElementById('button-text');
+            const backgroundSelect = document.getElementById('background-select');
+            const storyLogo = document.getElementById('story-logo');
+            const doctorSearchInput = document.getElementById('doctor-search');
+            const customMessageInput = document.getElementById('custom-message');
+            const customMessagePreview = document.getElementById('custom-message-preview');
+            const formatRadios = document.querySelectorAll('input[name="format"]');
+            const fontSizeRange = document.getElementById('font-size-range');
+            const dateFontSizeRange = document.getElementById('date-font-size-range');
+            const headerFontSizeRange = document.getElementById('header-font-size-range');
+            const textAlignSelect = document.getElementById('text-align-select');
+            const verticalPosRange = document.getElementById('vertical-pos-range');
+            const spacingRange = document.getElementById('spacing-range');
+            const downloadSpinner = document.getElementById('download-spinner');
+            const showFooterCheckbox = document.getElementById('show-footer-checkbox');
+            const headerTopInput = document.getElementById('header-top-input');
+            const headerMainInput = document.getElementById('header-main-input');
+            const headerTopSizeInput = document.getElementById('header-top-size-input');
+            const headerMainSizeInput = document.getElementById('header-main-size-input');
+            const storyFooter = document.querySelector('.flex-shrink-0.flex.justify-between.items-center.relative.z-10');
+
+
+            let allCutiData = [];
+
+            function createDoctorSlug(doctorName) {
+                if (!doctorName) return '';
+                return doctorName
+                    .toLowerCase()
+                    .replace(/\b(dr|drg)\b\.?\s*/g, '')
+                    .replace(/\bsp\.[a-z]+\b/gi, '')
+                    .replace(/\bm\.[a-z]+\b/gi, '')
+                    .replace(/\bsubsp\.[a-z]+\b/gi, '')
+                    .replace(/[.,()]/g, '')
+                    .trim()
+                    .replace(/\s+/g, '-');
+            }
+
+            // === PAN & ZOOM LOGIC ===
+            const previewContainer = document.getElementById('preview-container');
+            const storyPreview = document.getElementById('story-preview');
+
+            let pzState = {
+                scale: 0.2, // Initial logical scale
+                panning: false,
+                pointX: 0,
+                pointY: 0,
+                startX: 0,
+                startY: 0
+            };
+
+            function setTransform() {
+                storyPreview.style.transform = `translate(${pzState.pointX}px, ${pzState.pointY}px) scale(${pzState.scale})`;
+            }
+
+            function fitToScreen() {
+                if (!previewContainer || !storyPreview) return;
+
+                const isSquare = document.querySelector('input[name="format"]:checked').value === 'square';
+                const targetWidth = 1080;
+                const targetHeight = isSquare ? 1080 : 1920;
+
+                storyPreview.style.width = `${targetWidth}px`;
+                storyPreview.style.height = `${targetHeight}px`;
+
+                // Calculate Fit Scale
+                let containerWidth = previewContainer.getBoundingClientRect().width;
+                let containerHeight = previewContainer.getBoundingClientRect().height;
+
+                // Fallback for Safari/Mobile if zero
+                if (!containerWidth || containerWidth === 0) containerWidth = window.innerWidth;
+                if (!containerHeight || containerHeight === 0) containerHeight = window.innerHeight - 80; // Minus header
+
+                const padding = 20;
+
+                if (containerWidth <= 0 || containerHeight <= 0) return;
+
+                const scaleX = (containerWidth - padding) / targetWidth;
+                const scaleY = (containerHeight - padding) / targetHeight;
+                // Use slightly smaller scale (95%) of the fit to avoid touching edges
+                const scale = Math.min(scaleX, scaleY) * 0.95;
+
+                pzState.scale = scale;
+
+                // Center it
+                pzState.pointX = (containerWidth - (targetWidth * scale)) / 2;
+                pzState.pointY = (containerHeight - (targetHeight * scale)) / 2;
+
+                setTransform();
+
+                // Adjust Padding logic (Visual only)
+                if (isSquare) {
+                    storyPreview.style.padding = '48px';
+                    document.querySelector('#story-content-container').classList.remove('pt-20');
+                    document.querySelector('#story-content-container').classList.add('pt-10');
+                } else {
+                    storyPreview.style.padding = '64px';
+                    document.querySelector('#story-content-container').classList.remove('pt-10');
+                    document.querySelector('#story-content-container').classList.add('pt-20');
+                }
+            }
+
+            // Alias for compatibility with existing code calling resizePreview
+            const resizePreview = fitToScreen;
+
+            // Zoom Functions
+            function zoomPoint(factor, x, y) {
+                const newScale = pzState.scale * factor;
+                if (newScale < 0.05 || newScale > 5) return; // Limits
+
+                const xs = (x - pzState.pointX) / pzState.scale;
+                const ys = (y - pzState.pointY) / pzState.scale;
+
+                pzState.pointX = x - xs * newScale;
+                pzState.pointY = y - ys * newScale;
+                pzState.scale = newScale;
+
+                setTransform();
+            }
+
+            // Mouse Events
+            previewContainer.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                pzState.startX = e.clientX - pzState.pointX;
+                pzState.startY = e.clientY - pzState.pointY;
+                pzState.panning = true;
+                previewContainer.classList.add('cursor-grabbing');
+                previewContainer.classList.remove('cursor-grab');
+            });
+
+            window.addEventListener('mouseup', (e) => {
+                pzState.panning = false;
+                previewContainer.classList.add('cursor-grab');
+                previewContainer.classList.remove('cursor-grabbing');
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!pzState.panning) return;
+                e.preventDefault();
+                pzState.pointX = e.clientX - pzState.startX;
+                pzState.pointY = e.clientY - pzState.startY;
+                setTransform();
+            });
+
+            // Wheel Zoom
+            previewContainer.addEventListener('wheel', (e) => {
+                e.preventDefault();
+                const xs = (e.clientX - previewContainer.getBoundingClientRect().left);
+                const ys = (e.clientY - previewContainer.getBoundingClientRect().top);
+                const delta = e.deltaY ? -e.deltaY : e.wheelDeltaY;
+                (delta > 0) ? zoomPoint(1.1, e.clientX, e.clientY) : zoomPoint(1 / 1.1, e.clientX, e.clientY);
+            }, { passive: false });
+
+            // Button Controls
+            document.getElementById('zoom-in-btn').addEventListener('click', () => {
+                const rect = previewContainer.getBoundingClientRect();
+                zoomPoint(1.2, rect.width / 2 + rect.left, rect.height / 2 + rect.top);
+            });
+
+            document.getElementById('zoom-out-btn').addEventListener('click', () => {
+                const rect = previewContainer.getBoundingClientRect();
+                zoomPoint(1 / 1.2, rect.width / 2 + rect.left, rect.height / 2 + rect.top);
+            });
+
+            document.getElementById('zoom-fit-btn').addEventListener('click', fitToScreen);
+            window.addEventListener('resize', fitToScreen);
+
+            // Touch Events (Basic Drag)
+            // Ideally should implement Pinch-to-Zoom here too, but for now Drag is priority for "Workspace" feel
+            previewContainer.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    pzState.startX = e.touches[0].clientX - pzState.pointX;
+                    pzState.startY = e.touches[0].clientY - pzState.pointY;
+                    pzState.panning = true;
+                }
+            });
+            previewContainer.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 1 && pzState.panning) {
+                    e.preventDefault(); // Prevent scroll
+                    pzState.pointX = e.touches[0].clientX - pzState.startX;
+                    pzState.pointY = e.touches[0].clientY - pzState.startY;
+                    setTransform();
+                }
+            });
+            previewContainer.addEventListener('touchend', () => {
+                pzState.panning = false;
+            });
+
+            function getSelectedDoctorIds() {
+                return Array.from(document.querySelectorAll('#doctor-checkbox-list input:checked')).map(cb => cb.value);
+            }
+
+            function filterDoctors(query) {
+                const items = document.querySelectorAll('#doctor-checkbox-list > div');
+                query = query.toLowerCase();
+                items.forEach(item => {
+                    const label = item.querySelector('label').textContent.toLowerCase();
+                    item.style.display = label.includes(query) ? 'flex' : 'none';
+                });
+            }
+
+            function updateDoctorPreview() {
+                const doctorsListContainer = document.getElementById('story-doctors-list');
+                const selectedIds = getSelectedDoctorIds();
+
+                // Update Custom Message
+                const message = customMessageInput.value.trim();
+                if (message) {
+                    customMessagePreview.textContent = message;
+                    customMessagePreview.classList.remove('hidden');
+                } else {
+                    customMessagePreview.classList.add('hidden');
+                }
+
+                // Apply Typography & Position Settings
+                const fontSizeScale = parseFloat(fontSizeRange.value);
+                const dateFontSizeScale = parseFloat(dateFontSizeRange.value);
+                const headerFontSizeScale = parseFloat(headerFontSizeRange.value);
+                const alignment = textAlignSelect.value;
+                const verticalPos = parseInt(verticalPosRange.value) || 0;
+
+                // Update Header Size
+                const headerContainer = document.querySelector('#story-content-container .mb-8');
+                if (headerContainer) {
+                    // Update Header Text Content
+                    const headerTopElement = headerContainer.querySelector('p.text-5xl');
+                    const headerMainElement = headerContainer.querySelector('h2.text-9xl');
+
+                    if (headerTopElement) {
+                        headerTopElement.textContent = headerTopInput.value || 'PEMBERITAHUAN';
+                        // Apply specific font size * global header scale
+                        const topBaseSize = parseInt(headerTopSizeInput.value) || 48;
+                        headerTopElement.style.fontSize = `${topBaseSize * headerFontSizeScale}px`;
+                        // Override Tailwind classes if needed, or just let inline style take precedence (it does)
+                    }
+                    if (headerMainElement) {
+                        headerMainElement.textContent = headerMainInput.value || 'DOKTER CUTI';
+                        const mainBaseSize = parseInt(headerMainSizeInput.value) || 128;
+                        headerMainElement.style.fontSize = `${mainBaseSize * headerFontSizeScale}px`;
+                    }
+
+                    // We remove the container scale transform since we are scaling individual fonts now, OR we keep it to scale margins/padding too?
+                    // The user wanted "size point", which usually implies font size.
+                    // If we keep container scale, it multiplies everything.
+                    // Let's decide: The previous code scaled the container. 
+                    // To handle both, I will Apply the container scale ONLY to valid properties or just rely on font size scaling?
+                    // If 'header-font-size-range' is intended as a global zoom for the header section, keep it.
+                    // The previous code was: headerContainer.style.transform = `scale(${headerFontSizeScale})`;
+                    // If I do that + font size, it double scales if I multiply above. 
+                    // I will REMOVE the container transform scale and only use it as a multiplier for the font sizes above.
+                    headerContainer.style.transform = 'none';
+                }
+                const spacingVal = parseInt(spacingRange.value) || 24;
+
+                doctorsListContainer.style.textAlign = alignment;
+
+                // Apply Vertical Position (using transform translate)
+                doctorsListContainer.style.transform = `translateY(${verticalPos}px)`;
+
+                // Apply Spacing
+                doctorsListContainer.className = `w-full flex flex-col items-center justify-center flex-grow px-12 relative z-10 transition-all duration-300`;
+                doctorsListContainer.style.gap = `${spacingVal}px`;
+
+                const showFooter = showFooterCheckbox.checked;
+                if (storyFooter) {
+                    storyFooter.style.display = showFooter ? 'flex' : 'none';
+                }
+
+                if (selectedIds.length === 0) {
+                    doctorsListContainer.innerHTML = `<div class="text-center text-4xl opacity-75 flex flex-col justify-center items-center h-full"><p>Pilih dokter dari panel kiri untuk melihat preview.</p></div>`;
+                    return;
+                }
+
+                const selectedDoctors = selectedIds.map(id => allCutiData.find(d => d.id === id)).filter(Boolean);
+                const isSquare = document.querySelector('input[name="format"]:checked').value === 'square';
+
+                // Strict Adaptive Layout Logic
+                const count = selectedDoctors.length;
+                let scaleFactor = 1;
+
+                if (isSquare) {
+                    // FEED FORMAT (Max 4 optimal)
+                    if (count > 4) {
+                        scaleFactor = 1 - ((count - 4) * 0.10); // Reduce by 10% for each extra doctor
+                    }
+                } else {
+                    // STORY FORMAT (Max 6 optimal)
+                    if (count > 6) {
+                        scaleFactor = 1 - ((count - 6) * 0.05); // Reduce by 5% for each extra doctor
+                    }
+                }
+                // Min scale limit
+                if (scaleFactor < 0.5) scaleFactor = 0.5;
+
+                // Apply font scaling combined with adaptive scaling
+                const finalScale = fontSizeScale * scaleFactor;
+                doctorsListContainer.style.fontSize = `${fontSizeScale * 100}%`;
+
+                let doctorHTML = '';
+                selectedDoctors.forEach(doctor => {
+                    const leaveDatesText = (doctor.cutiMulai === doctor.cutiSelesai)
+                        ? formatFullDate(doctor.cutiMulai)
+                        : `${formatFullDate(doctor.cutiMulai)} - ${formatFullDate(doctor.cutiSelesai)}`;
+
+                    let pVal = 'p-4';
+                    let imgSize = 'w-24 h-24';
+
+                    if (scaleFactor < 0.9) {
+                        pVal = 'p-3';
+                        imgSize = 'w-20 h-20';
+                    }
+                    if (scaleFactor < 0.75) {
+                        pVal = 'p-2';
+                        imgSize = 'w-16 h-16';
+                    }
+
+                    let cardClass = '';
+                    let dateColorClass = 'text-slate-600'; // default for light themes
+
+                    if (backgroundSelect.value === 'siloam-white-dots') {
+                        // Siloam Blue Card: #003B73 (Siloam Blue), White Text, Yellow Date #FBAF17
+                        cardClass = `bg-[#003B73] text-white shadow-lg ${pVal}`;
+                        dateColorClass = 'text-[#FBAF17]'; // Yellow
+                    } else if (['solid-white', 'solid-white-dots'].includes(backgroundSelect.value)) {
+                        cardClass = `bg-slate-100 text-slate-800 border border-slate-200 ${pVal}`;
+                    } else {
+                        cardClass = `bg-white/20 text-white ${pVal}`;
+                        dateColorClass = 'text-white';
+                    }
+
+                    let nameColor = (backgroundSelect.value === 'siloam-white-dots' || !['solid-white', 'solid-white-dots'].includes(backgroundSelect.value)) ? 'text-white' : 'text-slate-800';
+                    let specColor = (backgroundSelect.value === 'siloam-white-dots' || !['solid-white', 'solid-white-dots'].includes(backgroundSelect.value)) ? 'text-white/90' : 'text-slate-600';
+
+                    // Base Sizes
+                    const baseNameSize = 1.5; // rem (text-2xl)
+                    const baseSpecSize = 1.125; // rem (text-lg)
+
+                    const alignClass = alignment === 'center' ? 'text-center' : 'text-left';
+
+                    doctorHTML += `
+                <div class="flex items-center w-full rounded-2xl shadow-md ${cardClass}" style="transform: scale(${scaleFactor}); transform-origin: center;">
+                    <img src="${doctor.fotourl}" class="${imgSize} rounded-full object-cover border-4 border-white flex-shrink-0" alt="Foto ${doctor.nama}" onerror="this.src='https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'">
+                    <div class="ml-4 ${alignClass} flex-grow">
+                        <h3 class="font-bold leading-tight ${nameColor}" style="font-size: ${baseNameSize * fontSizeScale}rem">${doctor.nama}</h3>
+                        <p class="opacity-90 ${specColor}" style="font-size: ${baseSpecSize * fontSizeScale}rem">${doctor.spesialis}</p>
+                        <p class="mt-1" style="font-size: ${baseSpecSize * dateFontSizeScale}rem"><strong class="font-semibold ${dateColorClass}">${leaveDatesText}</strong></p>
+                    </div>
+                </div>`;
+                });
+                doctorsListContainer.innerHTML = doctorHTML;
+            }
+
+            function updateUiState() {
+                const selectedIds = getSelectedDoctorIds();
+                if (selectedIds.length > 0) {
+                    downloadButton.disabled = false;
+                    buttonText.textContent = `Generate & Download (${selectedIds.length} Dokter)`;
+                } else {
+                    downloadButton.disabled = true;
+                    buttonText.textContent = 'Pilih Dokter Dahulu';
+                }
+                updateDoctorPreview();
+            }
+
+            function updateBackgroundPreview(theme) {
+                const storyPreview = document.getElementById('story-preview');
+                const storyFooterHashtag = document.getElementById('story-footer-hashtag');
+
+                storyPreview.style.backgroundImage = 'none';
+                storyPreview.style.backgroundSize = 'auto';
+                storyPreview.style.background = '';
+                storyPreview.style.color = 'white';
+                if (storyFooterHashtag) storyFooterHashtag.style.color = 'white';
+
+                switch (theme) {
+                    case 'gradient-blue':
+                        storyPreview.style.background = 'linear-gradient(160deg, #192670, #4c9b32)';
+                        storyPreview.style.color = 'white';
+                        if (storyFooterHashtag) storyFooterHashtag.style.color = 'white';
+                        break;
+                    case 'solid-white':
+                        storyPreview.style.background = '#ffffff';
+                        storyPreview.style.backgroundImage = `radial-gradient(circle, #E5E7EB 1px, transparent 1.5px), radial-gradient(circle at 0% 0%, rgba(229, 231, 235, 0.5) 0%, transparent 40%), radial-gradient(circle at 100% 100%, rgba(229, 231, 235, 0.5) 0%, transparent 40%)`;
+                        storyPreview.style.backgroundSize = '20px 20px, 120% 120%, 120% 120%';
+                        storyPreview.style.color = '#1e2b3b';
+                        if (storyFooterHashtag) storyFooterHashtag.style.color = '#192670';
+                        break;
+                    case 'solid-white-dots':
+                        storyPreview.style.background = '#ffffff';
+                        storyPreview.style.backgroundImage = 'radial-gradient(circle, #D1D5DB 1px, transparent 1.5px)';
+                        storyPreview.style.backgroundSize = '35px 35px';
+                        storyPreview.style.color = '#1e2b3b';
+                        if (storyFooterHashtag) storyFooterHashtag.style.color = '#192670';
+                        break;
+                    case 'siloam-white-dots':
+                        storyPreview.style.background = '#ffffff';
+                        storyPreview.style.backgroundImage = 'radial-gradient(#d1d5db 1px, transparent 1px)';
+                        storyPreview.style.backgroundSize = '20px 20px';
+                        storyPreview.style.color = '#1e2b3b'; // Text on bg should be dark, only cards are blue with white text
+                        if (storyFooterHashtag) storyFooterHashtag.style.color = '#192670';
+                        break;
+                    case 'abstract-mesh':
+                        storyPreview.style.background = 'linear-gradient(160deg, #003B73, #192670)';
+                        storyPreview.style.backgroundImage = 'url("https://www.transparenttextures.com/patterns/abstract-mesh.png")';
+                        storyPreview.style.backgroundSize = 'auto';
+                        storyPreview.style.color = 'white';
+                        if (storyFooterHashtag) storyFooterHashtag.style.color = 'white';
+                        break;
+                    case 'modern-geometric':
+                        storyPreview.style.background = 'linear-gradient(160deg, #003B73, #192670)';
+                        storyPreview.style.backgroundImage = 'url("https://www.transparenttextures.com/patterns/modern-geometric.png")';
+                        storyPreview.style.backgroundSize = 'auto';
+                        storyPreview.style.color = 'white';
+                        if (storyFooterHashtag) storyFooterHashtag.style.color = 'white';
+                        break;
+                    default:
+                        // Fallback to default gradient-blue if an unknown theme is selected
+                        storyPreview.style.background = 'linear-gradient(160deg, #192670, #4c9b32)';
+                        storyPreview.style.color = 'white';
+                        if (storyFooterHashtag) storyFooterHashtag.style.color = 'white';
+                        break;
+                }
+                updateDoctorPreview();
+            }
+
+            async function generateAndDownload() {
+                const selectedIds = getSelectedDoctorIds();
+                if (selectedIds.length === 0) {
+                    alert('Pilih minimal satu dokter terlebih dahulu!');
+                    return;
+                }
+
+                // Set Loading State
+                buttonText.classList.add('invisible');
+                downloadSpinner.classList.remove('hidden');
+                downloadButton.disabled = true;
+
+                const params = new URLSearchParams();
+                params.append('doctors', selectedIds.join(','));
+                params.append('theme', backgroundSelect.value);
+                params.append('format', document.querySelector('input[name="format"]:checked').value);
+                params.append('customMessage', customMessageInput.value);
+                params.append('fontSize', fontSizeRange.value);
+                params.append('dateFontSize', dateFontSizeRange.value);
+                params.append('headerFontSize', headerFontSizeRange.value);
+                params.append('headerTop', headerTopInput.value);
+                params.append('headerMain', headerMainInput.value);
+                params.append('headerTopSize', headerTopSizeInput.value);
+                params.append('headerMainSize', headerMainSizeInput.value);
+                params.append('textAlign', textAlignSelect.value);
+                params.append('verticalPos', verticalPosRange.value);
+                params.append('spacing', spacingRange.value);
+
+                const showFooter = showFooterCheckbox.checked;
+                params.append('showFooter', showFooter); // Pass boolean as string
+
+                const logoUrl = document.getElementById('logo-url').value;
+                if (logoUrl) {
+                    params.append('logo', logoUrl);
+                }
+                params.append('t', new Date().getTime());
+
+                const generateUrl = `/.netlify/functions/generate-story?${params.toString()}`;
+                console.log('Generating request to:', generateUrl);
+
+                try {
+                    const response = await fetch(generateUrl);
+                    if (!response.ok) throw new Error('Generation failed');
+
+                    const blob = await response.blob();
+                    const downloadUrl = URL.createObjectURL(blob);
+
+                    const link = document.createElement('a');
+                    link.href = downloadUrl;
+                    link.download = `story-cuti-${new Date().getTime()}.png`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(downloadUrl);
+
+                } catch (error) {
+                    console.error('Download error:', error);
+                    alert('Gagal membuat gambar. Silakan coba lagi.');
+                } finally {
+                    // Reset Loading State
+                    buttonText.classList.remove('invisible');
+                    downloadSpinner.classList.add('hidden');
+                    downloadButton.disabled = false;
+                }
+            }
+
+            async function fetchData(url) {
+                try {
+                    const response = await fetch(`${url}${url.includes('?') ? '&' : '?'}t=${new Date().getTime()}`);
+                    if (!response.ok) throw new Error(`Network error`);
+                    return await response.json();
+                } catch (error) {
+                    console.error('Fetch error:', error);
+                    document.getElementById('loading-state').style.display = 'none';
+                    document.getElementById('error-state').style.display = 'block';
+                    return null;
+                }
+            }
+
+            function formatFullDate(dateStr) {
+                if (!dateStr) return '';
+                const [day, month, year] = dateStr.split('-');
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'];
+                return `${parseInt(day, 10)} ${months[parseInt(month, 10) - 1]} ${year}`;
+            }
+
+            async function initialize() {
+                const [jadwalData, cutiData] = await Promise.all([
+                    fetchData(GOOGLE_SCRIPT_JADWAL_URL),
+                    fetchData(GOOGLE_SCRIPT_CUTI_URL)
+                ]);
+                if (!jadwalData || !cutiData) return;
+
+                const allDoctors = new Map();
+                for (const key in jadwalData) {
+                    if (jadwalData[key] && Array.isArray(jadwalData[key].doctors)) {
+                        jadwalData[key].doctors.forEach(doc => {
+                            if (!doc || !doc.name) return;
+                            const doctorKey = createDoctorSlug(doc.name);
+                            const imageUrl = doc.image_url || 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo';
+                            if (!allDoctors.has(doctorKey)) {
+                                allDoctors.set(doctorKey, {
+                                    nama: doc.name,
+                                    spesialis: jadwalData[key].title,
+                                    fotourl: imageUrl
+                                });
+                            }
+                        });
+                    }
+                }
+
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                allCutiData = cutiData.map((cuti, index) => {
+                    const endDateParts = cuti.TanggalSelesaiCuti.split('-'); // Format dd-MM-yyyy
+                    if (endDateParts.length !== 3) return null;
+                    const endDate = new Date(endDateParts[2], endDateParts[1] - 1, endDateParts[0]);
+                    if (endDate < today) return null;
+
+                    const doctorKey = createDoctorSlug(cuti.NamaDokter);
+                    const details = allDoctors.get(doctorKey);
+
+                    return {
+                        id: `doc-${index}`,
+                        nama: details ? details.nama : cuti.NamaDokter,
+                        cutiMulai: cuti.TanggalMulaiCuti,
+                        cutiSelesai: cuti.TanggalSelesaiCuti,
+                        spesialis: details ? details.spesialis : 'N/A',
+                        fotourl: details ? details.fotourl : 'https://placehold.co/200x200/e2e8f0/475569?text=No+Photo'
+                    };
+                }).filter(Boolean);
+
+                // SORTING LOGIC: Name ASC, then Date ASC
+                allCutiData.sort((a, b) => {
+                    // 1. Sort by Name
+                    const nameA = a.nama.toLowerCase();
+                    const nameB = b.nama.toLowerCase();
+                    if (nameA < nameB) return -1;
+                    if (nameA > nameB) return 1;
+
+                    // 2. Sort by Date (cutiMulai: dd-mm-yyyy)
+                    // Convert to yyyy-mm-dd for string comparison
+                    const dateA = a.cutiMulai.split('-').reverse().join('-');
+                    const dateB = b.cutiMulai.split('-').reverse().join('-');
+                    if (dateA < dateB) return -1;
+                    if (dateA > dateB) return 1;
+
+                    return 0;
+                });
+
+                if (allCutiData.length > 0) {
+                    doctorCheckboxList.innerHTML = '';
+                    allCutiData.forEach(doc => {
+                        const div = document.createElement('div');
+                        div.className = 'flex items-center';
+                        div.innerHTML = `
+                    <input id="${doc.id}" type="checkbox" value="${doc.id}" class="h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500 cursor-pointer">
+                    <label for="${doc.id}" class="ml-3 block text-sm font-medium text-slate-700 cursor-pointer">${doc.nama} (Cuti s/d ${formatFullDate(doc.cutiSelesai)})</label>
+                `;
+                        doctorCheckboxList.appendChild(div);
+                    });
+                } else {
+                    doctorCheckboxList.innerHTML = '<p class="text-sm text-slate-500">Tidak ada jadwal cuti dokter.</p>';
+                }
+
+                loadingState.style.display = 'none';
+                controls.style.display = 'block';
+                updateDoctorPreview();
+
+                // Delay resize to ensure layout is stable
+                setTimeout(() => {
+                    updateBackgroundPreview(backgroundSelect.value);
+                    resizePreview();
+                }, 100);
+            }
+
+            doctorCheckboxList.addEventListener('change', updateUiState);
+            backgroundSelect.addEventListener('change', (e) => updateBackgroundPreview(e.target.value));
+            document.getElementById('logo-url').addEventListener('input', (e) => {
+                storyLogo.src = e.target.value || 'asset/logo/logo.png';
+            });
+
+            // New Event Listeners
+            doctorSearchInput.addEventListener('input', (e) => filterDoctors(e.target.value));
+            customMessageInput.addEventListener('input', updateDoctorPreview);
+            headerTopInput.addEventListener('input', updateDoctorPreview);
+            headerMainInput.addEventListener('input', updateDoctorPreview);
+            headerTopSizeInput.addEventListener('input', updateDoctorPreview);
+            headerMainSizeInput.addEventListener('input', updateDoctorPreview);
+            formatRadios.forEach(radio => radio.addEventListener('change', () => {
+                resizePreview();
+                updateDoctorPreview();
+            }));
+            fontSizeRange.addEventListener('input', updateDoctorPreview);
+            dateFontSizeRange.addEventListener('input', updateDoctorPreview);
+            headerFontSizeRange.addEventListener('input', updateDoctorPreview);
+            textAlignSelect.addEventListener('change', updateDoctorPreview);
+            verticalPosRange.addEventListener('input', updateDoctorPreview);
+            spacingRange.addEventListener('input', updateDoctorPreview);
+            showFooterCheckbox.addEventListener('change', updateDoctorPreview);
+
+            downloadButton.addEventListener('click', generateAndDownload);
+            window.addEventListener('resize', resizePreview);
+
+            // Mobile Drawer Logic
+            const mobileFab = document.getElementById('mobile-fab');
+            const mobileMenuBtn = document.getElementById('mobile-menu-btn');
+            const sidebarPanel = document.getElementById('sidebar-panel');
+            const mobileBackdrop = document.getElementById('mobile-backdrop');
+            const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+            const mobileDrawerHandle = document.getElementById('mobile-drawer-handle');
+
+            function openDrawer() {
+                sidebarPanel.classList.remove('translate-y-full');
+                mobileBackdrop.classList.remove('hidden');
+                // slight delay to allow display:block to apply before opacity transition
+                setTimeout(() => {
+                    mobileBackdrop.classList.remove('opacity-0');
+                    mobileFab.classList.add('translate-y-24'); // Hide FAB
+                }, 10);
+            }
+
+            function closeDrawer() {
+                sidebarPanel.classList.add('translate-y-full');
+                mobileBackdrop.classList.add('opacity-0');
+                mobileFab.classList.remove('translate-y-24'); // Show FAB
+                setTimeout(() => {
+                    mobileBackdrop.classList.add('hidden');
+                }, 300);
+            }
+
+            if (mobileFab) mobileFab.addEventListener('click', openDrawer);
+            if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', openDrawer);
+            if (closeSidebarBtn) closeSidebarBtn.addEventListener('click', closeDrawer);
+            if (mobileBackdrop) mobileBackdrop.addEventListener('click', closeDrawer);
+            if (mobileDrawerHandle) mobileDrawerHandle.addEventListener('click', closeDrawer);
+
+            initialize();
+        });
+    </script>
+</body>
+
+</html>
