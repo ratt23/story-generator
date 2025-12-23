@@ -216,7 +216,7 @@ export const Canvas = () => {
                                     <p className="mt-1">
                                         <strong
                                             className={clsx("font-semibold", dateClass)}
-                                            style={{ fontSize: `${2.25 * config.dateFontSize}rem` }}
+                                            style={{ fontSize: `${1.125 * config.dateFontSize}rem` }}
                                         >
                                             {dateText}
                                         </strong>

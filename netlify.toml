@@ -3,6 +3,12 @@ command = "cd react-migrated && npm install && npm run build"
 publish = "react-migrated/dist"
 functions = "netlify/functions"
 
+[dev]
+command = "npm --prefix react-migrated run dev"
+port = 8888
+targetPort = 5173
+framework = "#custom"
+
 [functions]
 node_bundler = "esbuild"
 
