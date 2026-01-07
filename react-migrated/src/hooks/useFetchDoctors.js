@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { createDoctorSlug } from '../utils/helpers';
 
 // Reverting to absolute URLs to bypass local proxy issues
-const GOOGLE_SCRIPT_JADWAL_URL = 'https://dashboarddev.netlify.app/.netlify/functions/getDoctors';
-const GOOGLE_SCRIPT_CUTI_URL = 'https://dashboarddev.netlify.app/.netlify/functions/getLeaveData';
+// Using local Netlify functions connected to Neon DB
+const GOOGLE_SCRIPT_JADWAL_URL = '/.netlify/functions/getDoctors';
+const GOOGLE_SCRIPT_CUTI_URL = '/.netlify/functions/getLeaveData';
 
 // Note: Ensure CORS is allowed on dashboarddev.netlify.app for localhost:5173
 // If CORS fails, we must rely on Proxy. But User explicitly requested these URLs.

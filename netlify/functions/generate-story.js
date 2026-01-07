@@ -5,8 +5,10 @@ const path = require('path');
 const https = require('https');
 
 // === KONFIGURASI DASAR ===
-const GOOGLE_SCRIPT_JADWAL_URL = 'https://dashboarddev.netlify.app/.netlify/functions/getDoctors';
-const GOOGLE_SCRIPT_CUTI_URL = 'https://dashboarddev.netlify.app/.netlify/functions/getLeaveData';
+// Import local database functions instead of using HTTP
+const { handler: getDoctorsHandler } = require('./getDoctors.js');
+const { handler: getLeaveDataHandler } = require('./getLeaveData.js');
+
 const CACHE_DURATION_MS = 5 * 60 * 1000;
 
 // === CACHING DATA ===
@@ -14,37 +16,7 @@ let cachedData = null;
 let lastCacheTime = 0;
 
 // === HELPER FUNCTIONS ===
-function fetchData(url, redirectCount = 0) {
-  if (redirectCount > 5) return Promise.reject(new Error('Terlalu banyak redirect.'));
-  const urlWithCacheBust = new URL(url);
-  urlWithCacheBust.searchParams.append('t', new Date().getTime());
-
-  return new Promise((resolve, reject) => {
-    const req = https.get(urlWithCacheBust.href, (res) => {
-      if (res.statusCode === 301 || res.statusCode === 302) {
-        const redirectUrl = new URL(res.headers.location, url).href;
-        return resolve(fetchData(redirectUrl, redirectCount + 1));
-      }
-      if (res.statusCode < 200 || res.statusCode >= 300)
-        return reject(new Error(`HTTP ${res.statusCode} untuk ${url}`));
-
-      let body = '';
-      res.on('data', (chunk) => (body += chunk));
-      res.on('end', () => {
-        try {
-          resolve(JSON.parse(body));
-        } catch (parseError) {
-          reject(new Error(`Gagal parsing JSON: ${parseError.message}`));
-        }
-      });
-    });
-    req.on('error', (err) => reject(err));
-    req.setTimeout(30000, () => {
-      req.destroy();
-      reject(new Error('Request timed out setelah 30 detik'));
-    });
-  });
-}
+// No longer need fetchData for HTTPS since we use local functions
 
 function normalizeName(name) {
   return name.toLowerCase().trim().replace(/\s+/g, ' ');
@@ -75,14 +47,19 @@ async function getCombinedDoctorData() {
     return cachedData;
   }
 
-  console.log('🔄 Mengambil data terbaru dari API Netlify...');
+  console.log('🔄 Mengambil data dari database lokal...');
   try {
-    const [jadwalData, cutiData] = await Promise.all([
-      fetchData(GOOGLE_SCRIPT_JADWAL_URL),
-      fetchData(GOOGLE_SCRIPT_CUTI_URL),
+    // Call local Netlify functions directly
+    const [doctorsResult, leavesResult] = await Promise.all([
+      getDoctorsHandler({}, {}),
+      getLeaveDataHandler({}, {})
     ]);
 
-    if (!jadwalData || !cutiData) throw new Error('Gagal mengambil data dari API.');
+    // Parse responses
+    const jadwalData = JSON.parse(doctorsResult.body);
+    const cutiData = JSON.parse(leavesResult.body);
+
+    if (!jadwalData || !cutiData) throw new Error('Gagal mengambil data dari database.');
 
     const doctorMap = new Map();
     for (const key in jadwalData) {

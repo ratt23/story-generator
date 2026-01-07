@@ -15,6 +15,7 @@ node_bundler = "esbuild"
 # Tambahkan konfigurasi Blobs
 [functions.environment]
 NETLIFY_BLOBS_SITE_ID = "e44d61f4-24fa-4611-bb94-0ea4c4ea83fd"
+NEON_DATABASE_URL = "postgresql://neondb_owner:npg_nYUOg7t6sJFa@ep-divine-queen-a1azjt4n-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require"
 
 [functions."generate-story"]
 external_node_modules = ["@sparticuz/chromium"]

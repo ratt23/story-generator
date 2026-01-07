@@ -28,14 +28,3 @@
   included_files = ["public/**"]
   timeout = 60
 
-[[redirects]]
-  from = "/.netlify/functions/getDoctors"
-  to = "https://dashboarddev.netlify.app/.netlify/functions/getDoctors"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/.netlify/functions/getLeaveData"
-  to = "https://dashboarddev.netlify.app/.netlify/functions/getLeaveData"
-  status = 200
-  force = true
