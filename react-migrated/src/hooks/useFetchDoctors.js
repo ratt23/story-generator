@@ -73,6 +73,8 @@ export function useFetchDoctors() {
                     };
                 }).filter(Boolean) : [];
 
+                console.log('[FRONTEND DEBUG] Sample doctor data:', processedCuti.slice(0, 2));
+
                 // Sort Logic: Name ASC, then Start Date ASC
                 processedCuti.sort((a, b) => {
                     // 1. Sort by Name (for grouping same names)
