@@ -391,7 +391,22 @@ module.exports.handler = async (event) => {
     const page = await browser.newPage();
     await page.setViewport((format === 'square') ? { width: 1080, height: 1080 } : { width: 1080, height: 1920 });
     await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
-    await new Promise((r) => setTimeout(r, 1000));
+
+    // Wait for all images to load
+    console.log('⏳ Waiting for images to load...');
+    await page.evaluate(() => {
+      return Promise.all(
+        Array.from(document.images)
+          .filter(img => !img.complete)
+          .map(img => new Promise(resolve => {
+            img.onload = img.onerror = resolve;
+          }))
+      );
+    });
+    console.log('✅ All images loaded');
+
+    // Extra delay to ensure rendering is complete
+    await new Promise((r) => setTimeout(r, 2000));
 
     const imageBuffer = await page.screenshot({ type: 'png' });
     console.log('✅ Screenshot berhasil dibuat');
