@@ -41,13 +41,28 @@ export const Workspace = () => {
     };
 
     // Initial Fit
+    // Initial Fit & Resize Observer
     useEffect(() => {
-        // Short delay to ensure layout
-        const timer = setTimeout(fitToScreen, 100);
-        window.addEventListener('resize', fitToScreen);
+        const handleResize = () => requestAnimationFrame(fitToScreen);
+
+        // Window resize fallback
+        window.addEventListener('resize', handleResize);
+
+        // Container resize observer
+        let resizeObserver;
+        if (containerRef.current) {
+            resizeObserver = new ResizeObserver(() => {
+                handleResize();
+            });
+            resizeObserver.observe(containerRef.current);
+        }
+
+        // Initial call
+        setTimeout(fitToScreen, 100);
+
         return () => {
-            clearTimeout(timer);
-            window.removeEventListener('resize', fitToScreen);
+            window.removeEventListener('resize', handleResize);
+            if (resizeObserver) resizeObserver.disconnect();
         };
     }, [config.format]); // Re-fit when format changes
 

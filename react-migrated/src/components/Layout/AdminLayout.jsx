@@ -8,7 +8,7 @@ export const AdminLayout = ({ children }) => {
     return (
         <div className="flex h-screen bg-[#f0f2f5] overflow-hidden">
             {/* Left Sidebar (Desktop) */}
-            <SideNav />
+            <SideNav className="hidden md:flex" />
 
             {/* Mobile Sidebar (Off-canvas) */}
             {isMobileMenuOpen && (
@@ -18,7 +18,7 @@ export const AdminLayout = ({ children }) => {
                         onClick={() => setIsMobileMenuOpen(false)}
                     ></div>
                     <div className="fixed inset-y-0 left-0 flex flex-col w-64 bg-white shadow-xl z-50 animate-slide-in">
-                        <SideNav />
+                        <SideNav className="flex" />
                     </div>
                 </div>
             )}

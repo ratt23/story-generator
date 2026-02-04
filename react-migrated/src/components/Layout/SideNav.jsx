@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import { Home, FileText, User, LayoutDashboard, Settings } from 'lucide-react';
 import clsx from 'clsx';
 
-export const SideNav = () => {
+export const SideNav = ({ className = '' }) => {
     const navItems = [
         { name: 'Story Generator', path: '/', icon: <Home size={20} /> },
         { name: 'Brochure Generator', path: '/brochure', icon: <FileText size={20} /> },
@@ -10,7 +10,7 @@ export const SideNav = () => {
     ];
 
     return (
-        <aside className="w-64 bg-white border-r border-[#dfe3e7] flex-shrink-0 flex flex-col h-full z-20 hidden md:flex">
+        <aside className={`w-64 bg-white border-r border-[#dfe3e7] flex-shrink-0 flex flex-col h-full z-20 ${className}`}>
             <div className="h-16 flex items-center px-6 border-b border-[#dfe3e7]">
                 <div className="flex items-center gap-2 text-[#1e3a8a] font-bold text-xl">
                     <div className="w-8 h-8 bg-[#1e3a8a] text-white rounded flex items-center justify-center font-bold">A</div>

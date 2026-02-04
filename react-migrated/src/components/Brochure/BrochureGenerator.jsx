@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Button } from '../UI/Button';
 import { InputGroup, Input } from '../Controls/InputGroup';
-import { Loader2, Printer, Eye } from 'lucide-react';
+import { Loader2, Printer, Eye, ChevronUp, ChevronDown } from 'lucide-react';
 
 export const BrochureGenerator = () => {
+    const [showControls, setShowControls] = useState(true);
     const [coverUrl, setCoverUrl] = useState('asset/brochure/1.png');
     const [bgUrl, setBgUrl] = useState('asset/brochure/2.png');
     const [loading, setLoading] = useState(false);
@@ -53,9 +54,21 @@ export const BrochureGenerator = () => {
 
     return (
         <div className="flex flex-col md:flex-row h-full overflow-hidden">
+            {/* Mobile Toggle Bar */}
+            <div className="md:hidden bg-white border-b border-slate-200 p-4 flex justify-between items-center z-30 sticky top-0">
+                <span className="font-bold text-slate-700">Generator Controls</span>
+                <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowControls(!showControls)}
+                >
+                    {showControls ? <ChevronUp /> : <ChevronDown />}
+                </Button>
+            </div>
+
             {/* Sidebar */}
-            <div className="w-full md:w-80 bg-white p-6 shadow-lg border-r border-slate-200 overflow-y-auto z-20 flex-shrink-0">
-                <div className="mb-6">
+            <div className={`${showControls ? 'block' : 'hidden'} md:block w-full md:w-80 bg-white p-6 shadow-lg border-r border-slate-200 overflow-y-auto z-20 flex-shrink-0 transition-all`}>
+                <div className="mb-6 hidden md:block">
                     <h1 className="text-2xl font-bold text-slate-800">Generator Brosur</h1>
                     <p className="text-slate-500 text-sm">Panel kontrol brosur jadwal.</p>
                 </div>

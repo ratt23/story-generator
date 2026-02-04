@@ -13,7 +13,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
             ></div>
 
             {/* Panel */}
-            <div className={`fixed inset-y-0 left-0 flex flex-col w-full md:w-80 bg-white shadow-xl z-50 transform transition-transform md:translate-x-0 md:static md:h-[calc(100vh-64px)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            <div className={`fixed inset-y-0 left-0 flex flex-col w-[85vw] max-w-[320px] md:max-w-none md:w-80 bg-white shadow-xl z-50 transform transition-transform md:translate-x-0 md:static md:h-[calc(100vh-64px)] ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
 
                 {/* Mobile Header */}
                 <div className="flex items-center justify-between p-4 border-b border-slate-200 md:hidden">
