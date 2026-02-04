@@ -52,9 +52,9 @@ export const BrochureGenerator = () => {
     };
 
     return (
-        <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] overflow-hidden">
+        <div className="flex flex-col md:flex-row h-full overflow-hidden">
             {/* Sidebar */}
-            <div className="w-full md:w-80 bg-white p-6 shadow-lg border-r border-slate-200 overflow-y-auto z-20">
+            <div className="w-full md:w-80 bg-white p-6 shadow-lg border-r border-slate-200 overflow-y-auto z-20 flex-shrink-0">
                 <div className="mb-6">
                     <h1 className="text-2xl font-bold text-slate-800">Generator Brosur</h1>
                     <p className="text-slate-500 text-sm">Panel kontrol brosur jadwal.</p>
@@ -97,18 +97,20 @@ export const BrochureGenerator = () => {
             </div>
 
             {/* Preview Area */}
-            <div className="flex-1 bg-slate-100 p-6 overflow-auto relative">
-                <div className="min-w-[297mm] min-h-[210mm] mx-auto bg-white shadow-xl transition-all origin-top-left">
-                    {previewHtml ? (
-                        <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
-                    ) : (
-                        <div className="flex items-center justify-center h-[210mm] text-slate-400">
-                            <div className="text-center">
-                                <p className="text-lg font-medium">Preview Area</p>
-                                <p className="text-sm">Klik tombol preview</p>
+            <div className="flex-1 bg-slate-100 overflow-auto relative">
+                <div className="w-fit min-w-full min-h-full flex justify-center p-8">
+                    <div className="min-w-[297mm] min-h-[210mm] bg-white shadow-xl transition-all origin-top-left">
+                        {previewHtml ? (
+                            <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                        ) : (
+                            <div className="flex items-center justify-center h-[210mm] text-slate-400">
+                                <div className="text-center">
+                                    <p className="text-lg font-medium">Preview Area</p>
+                                    <p className="text-sm">Klik tombol preview</p>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

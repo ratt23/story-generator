@@ -48,6 +48,7 @@ export const Header = ({ onMenuClick }) => {
                         <div className="hidden md:ml-10 md:flex md:items-baseline md:space-x-4">
                             <Link to="/" className={navLinkClass('/')}>Story Generator</Link>
                             <Link to="/brochure" className={navLinkClass('/brochure')}>Brochure Generator</Link>
+                            <Link to="/welcome" className={navLinkClass('/welcome')}>Welcome on Board</Link>
                         </div>
                     </div>
 
@@ -84,6 +85,13 @@ export const Header = ({ onMenuClick }) => {
                             onClick={() => setIsMobileMenuOpen(false)}
                         >
                             Brochure Generator
+                        </Link>
+                        <Link
+                            to="/welcome"
+                            className={navLinkClass('/welcome')}
+                            onClick={() => setIsMobileMenuOpen(false)}
+                        >
+                            Welcome on Board
                         </Link>
                     </div>
                 </div>
