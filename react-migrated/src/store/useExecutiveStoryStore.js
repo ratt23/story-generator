@@ -17,28 +17,28 @@ const DEFAULT_CONFIG = {
     customNote: 'Pendaftaran & reservasi jadwal dokter dapat dilakukan melalui aplikasi MySiloam.',
     footerNote: 'Informasi jadwal dokter sewaktu-waktu dapat berubah.',
     emergencyNote: 'Emergency 24 Jam: 1-500-911',
-    // Position & Spacing offsets
-    tagOffsetY: 0,
-    headerOffsetY: 0,
-    doctorCardOffsetY: 0,
-    scheduleOffsetY: 0,
-    scheduleGap: 40,
-    // Doctor Card Customization
-    doctorCardScale: 1.0,
-    doctorNameFontSize: 0, // 0 = auto
-    doctorSpecialtyFontSize: 0, // 0 = auto (17px)
-    doctorNameColor: '',
-    doctorSpecialtyColor: '',
-    // Photo Controls
-    photoScale: 1.0,
+    // Position & Spacing offsets (Default: Screenshot 1)
+    tagOffsetY: 50,
+    headerOffsetY: 76,
+    doctorCardOffsetY: 8,
+    scheduleOffsetY: 38,
+    scheduleGap: 45,
+    // Photo Controls (Default: Screenshot 2)
+    photoScale: 1.05,
     photoOffsetY: 0,
     photoOffsetX: 0,
     photoFlipX: false,
-    // Custom Logo in Top-Left
+    // Doctor Card Customization (Default: Screenshot 3)
+    doctorCardScale: 1.16,
+    doctorNameFontSize: 26,
+    doctorSpecialtyFontSize: 23,
+    doctorNameColor: '#001238',
+    doctorSpecialtyColor: '#001f5c',
+    // Custom Logo in Top-Left (Default: Screenshot 4)
     customLogoUrl: '',
-    logoScale: 1.0,
-    logoOffsetX: 0,
-    logoOffsetY: 0,
+    logoScale: 1.35,
+    logoOffsetX: -8,
+    logoOffsetY: 24,
     // Typography Colors
     customTitleColor: '',
     customScheduleTextColor: '',
@@ -50,7 +50,7 @@ export const useExecutiveStoryStore = create(
             selectedDoctor: null,
             config: DEFAULT_CONFIG,
 
-            // Select a doctor from pool and initialize config
+            // Select a doctor from pool and initialize config with user default settings
             selectDoctor: (doc) => {
                 set((state) => ({
                     selectedDoctor: doc,
@@ -59,20 +59,20 @@ export const useExecutiveStoryStore = create(
                         customDoctorName: doc?.name || '',
                         customSpecialty: doc?.specialty || '',
                         customSchedule: { ...(doc?.schedule || {}) },
-                        photoScale: 1.0,
+                        photoScale: 1.05,
                         photoOffsetY: 0,
                         photoOffsetX: 0,
                         photoFlipX: false,
-                        tagOffsetY: 0,
-                        headerOffsetY: 0,
-                        doctorCardOffsetY: 0,
-                        scheduleOffsetY: 0,
-                        scheduleGap: 40,
-                        doctorCardScale: 1.0,
-                        doctorNameFontSize: 0,
-                        doctorSpecialtyFontSize: 0,
-                        doctorNameColor: '',
-                        doctorSpecialtyColor: '',
+                        tagOffsetY: 50,
+                        headerOffsetY: 76,
+                        doctorCardOffsetY: 8,
+                        scheduleOffsetY: 38,
+                        scheduleGap: 45,
+                        doctorCardScale: 1.16,
+                        doctorNameFontSize: 26,
+                        doctorSpecialtyFontSize: 23,
+                        doctorNameColor: '#001238',
+                        doctorSpecialtyColor: '#001f5c',
                     }
                 }));
             },
@@ -100,7 +100,7 @@ export const useExecutiveStoryStore = create(
                 }));
             },
 
-            // Reset text and schedule back to original selected doctor data
+            // Reset text and schedule back to user default settings
             resetToDoctorDefault: () => {
                 const { selectedDoctor } = get();
                 if (!selectedDoctor) return;
@@ -110,38 +110,38 @@ export const useExecutiveStoryStore = create(
                         customDoctorName: selectedDoctor.name || '',
                         customSpecialty: selectedDoctor.specialty || '',
                         customSchedule: { ...(selectedDoctor.schedule || {}) },
-                        photoScale: 1.0,
+                        photoScale: 1.05,
                         photoOffsetY: 0,
                         photoOffsetX: 0,
                         photoFlipX: false,
-                        tagOffsetY: 0,
-                        headerOffsetY: 0,
-                        doctorCardOffsetY: 0,
-                        scheduleOffsetY: 0,
-                        scheduleGap: 40,
-                        doctorCardScale: 1.0,
-                        doctorNameFontSize: 0,
-                        doctorSpecialtyFontSize: 0,
-                        doctorNameColor: '',
-                        doctorSpecialtyColor: '',
+                        tagOffsetY: 50,
+                        headerOffsetY: 76,
+                        doctorCardOffsetY: 8,
+                        scheduleOffsetY: 38,
+                        scheduleGap: 45,
+                        doctorCardScale: 1.16,
+                        doctorNameFontSize: 26,
+                        doctorSpecialtyFontSize: 23,
+                        doctorNameColor: '#001238',
+                        doctorSpecialtyColor: '#001f5c',
                         customTitleColor: '',
                         customScheduleTextColor: '',
                     }
                 }));
             },
 
-            // Reset layout positions back to standard coordinates
+            // Reset layout positions back to user default coordinates
             resetPositions: () => {
                 set((state) => ({
                     config: {
                         ...state.config,
-                        tagOffsetY: 0,
-                        headerOffsetY: 0,
-                        doctorCardOffsetY: 0,
-                        scheduleOffsetY: 0,
-                        scheduleGap: 40,
-                        doctorCardScale: 1.0,
-                        photoScale: 1.0,
+                        tagOffsetY: 50,
+                        headerOffsetY: 76,
+                        doctorCardOffsetY: 8,
+                        scheduleOffsetY: 38,
+                        scheduleGap: 45,
+                        doctorCardScale: 1.16,
+                        photoScale: 1.05,
                         photoOffsetY: 0,
                         photoOffsetX: 0,
                         photoFlipX: false,
@@ -155,9 +155,9 @@ export const useExecutiveStoryStore = create(
                     const { config } = get();
                     const logoData = {
                         customLogoUrl: config.customLogoUrl || '',
-                        logoScale: config.logoScale !== undefined ? config.logoScale : 1.0,
-                        logoOffsetX: config.logoOffsetX || 0,
-                        logoOffsetY: config.logoOffsetY || 0,
+                        logoScale: config.logoScale !== undefined ? config.logoScale : 1.35,
+                        logoOffsetX: config.logoOffsetX !== undefined ? config.logoOffsetX : -8,
+                        logoOffsetY: config.logoOffsetY !== undefined ? config.logoOffsetY : 24,
                     };
                     localStorage.setItem('executive_story_logo_settings', JSON.stringify(logoData));
                     return true;
@@ -176,9 +176,9 @@ export const useExecutiveStoryStore = create(
                     config: {
                         ...state.config,
                         customLogoUrl: '',
-                        logoScale: 1.0,
-                        logoOffsetX: 0,
-                        logoOffsetY: 0,
+                        logoScale: 1.35,
+                        logoOffsetX: -8,
+                        logoOffsetY: 24,
                     }
                 }));
             },
@@ -188,16 +188,16 @@ export const useExecutiveStoryStore = create(
                 set((state) => ({
                     config: {
                         ...state.config,
-                        doctorCardScale: 1.0,
-                        doctorNameFontSize: 0,
-                        doctorSpecialtyFontSize: 0,
-                        doctorNameColor: '',
-                        doctorSpecialtyColor: '',
+                        doctorCardScale: 1.16,
+                        doctorNameFontSize: 26,
+                        doctorSpecialtyFontSize: 23,
+                        doctorNameColor: '#001238',
+                        doctorSpecialtyColor: '#001f5c',
                     }
                 }));
             },
 
-            // Reset entire config to pristine state
+            // Reset entire config to pristine default state
             resetAll: () => {
                 set({
                     selectedDoctor: null,
