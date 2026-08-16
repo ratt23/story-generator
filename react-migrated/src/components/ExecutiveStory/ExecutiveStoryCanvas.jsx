@@ -520,13 +520,13 @@ export const ExecutiveStoryCanvas = ({ canvasRef }) => {
                     maxWidth: '530px'
                 }}
             >
-                <div style={{ lineHeight: 0.95, letterSpacing: '-1.5px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
                     <div
                         style={{
                             fontSize: '72px',
                             fontWeight: 500,
                             color: titleTextColor,
-                            lineHeight: 0.95,
+                            lineHeight: 1.05,
                             letterSpacing: '-1.5px'
                         }}
                     >
@@ -537,23 +537,23 @@ export const ExecutiveStoryCanvas = ({ canvasRef }) => {
                             fontSize: '104px',
                             fontWeight: 900,
                             color: titleTextColor,
-                            lineHeight: 0.95,
+                            lineHeight: 1.05,
                             letterSpacing: '-2.5px',
-                            marginTop: '4px'
+                            marginTop: '6px'
                         }}
                     >
                         {config.headerLine2 || 'Dokter'}
                     </div>
                 </div>
 
-                {/* Gold horizontal accent line */}
+                {/* Gold horizontal accent line positioned cleanly below the title */}
                 <div
                     style={{
-                        width: '110px',
-                        height: '4px',
-                        borderRadius: '2px',
+                        width: '120px',
+                        height: '5px',
+                        borderRadius: '3px',
                         background: 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 60%, transparent 100%)',
-                        marginTop: '16px'
+                        marginTop: '22px'
                     }}
                 />
             </div>
