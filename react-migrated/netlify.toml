@@ -24,3 +24,9 @@
   external_node_modules = ["@sparticuz/chromium", "exceljs"]
   included_files = ["public/**"]
   timeout = 60
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+

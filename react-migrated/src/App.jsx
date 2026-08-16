@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route } from 'react-router-dom';
 import { StoryProvider } from './context/StoryContext';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Workspace } from './components/Preview/Workspace';
@@ -37,7 +37,7 @@ const StoryLayout = () => {
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AdminLayout>
         <Routes>
           <Route path="/" element={<StoryLayout />} />
@@ -49,7 +49,7 @@ function App() {
           <Route path="/changelog" element={<ChangelogPage />} />
         </Routes>
       </AdminLayout>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
