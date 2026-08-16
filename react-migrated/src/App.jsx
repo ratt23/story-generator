@@ -4,10 +4,12 @@ import { StoryProvider } from './context/StoryContext';
 import { Sidebar } from './components/Layout/Sidebar';
 import { Workspace } from './components/Preview/Workspace';
 import { BrochureGenerator } from './components/Brochure/BrochureGenerator';
+import { ExecutiveBrochureGenerator } from './components/Brochure/ExecutiveBrochureGenerator';
 import { TarifApp } from './components/Tarif/TarifApp';
 import { WelcomeBoard } from './components/WelcomeBoard/WelcomeBoard';
 import { ExecutiveStoryGenerator } from './components/ExecutiveStory/ExecutiveStoryGenerator';
 import { AdminLayout } from './components/Layout/AdminLayout';
+import { ChangelogPage } from './components/Changelog/ChangelogPage';
 
 // Layout for Story Generator (has internal Sidebar)
 const StoryLayout = () => {
@@ -42,7 +44,9 @@ function App() {
           <Route path="/executive-card" element={<ExecutiveStoryGenerator />} />
           <Route path="/executive-story" element={<ExecutiveStoryGenerator />} />
           <Route path="/brochure" element={<BrochureGenerator />} />
+          <Route path="/executive-brochure" element={<ExecutiveBrochureGenerator />} />
           <Route path="/welcome" element={<WelcomeBoard />} />
+          <Route path="/changelog" element={<ChangelogPage />} />
         </Routes>
       </AdminLayout>
     </BrowserRouter>

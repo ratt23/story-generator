@@ -117,11 +117,25 @@ function fetchData(url, redirectCount = 0) {
 }
 
 
-async function getJadwalData() {
-    const jadwalData = await fetchData(GOOGLE_SCRIPT_JADWAL_URL);
+async function getJadwalData(type = 'regular') {
+    const url = type === 'executive'
+        ? 'https://dashdev2.netlify.app/.netlify/functions/api/executive-doctors/grouped'
+        : GOOGLE_SCRIPT_JADWAL_URL;
+
+    const jadwalData = await fetchData(url);
     
     if (!jadwalData || (Array.isArray(jadwalData) && jadwalData.length === 0) || Object.keys(jadwalData).length === 0) {
         throw new Error('Data dari API kosong.');
+    }
+
+    if (Array.isArray(jadwalData)) {
+        return jadwalData.map(group => ({
+            title: group.title || group.specialty || group.name || 'Spesialis',
+            doctors: (group.doctors || []).map(doc => ({
+                name: doc.name,
+                schedule: doc.schedule || {}
+            }))
+        })).filter(g => g.doctors.length > 0);
     }
 
     if (jadwalData.doctors && Array.isArray(jadwalData.doctors)) {
@@ -149,7 +163,7 @@ async function getJadwalData() {
             name: doc.name, 
             schedule: doc.schedule
         })),
-    }));
+    })).filter(g => g.doctors.length > 0);
 }
 
 function generateHtmlForDoctors(data) {
@@ -204,15 +218,16 @@ exports.handler = async (event) => {
     console.log('🚀 Function generate-brochure dipanggil');
 
     try {
-        const { cover, bg } = event.queryStringParameters || {};
+        const { cover, bg, type } = event.queryStringParameters || {};
         const host = event.headers.host;
+        const isExecutive = type === 'executive';
 
         if (!host) {
             throw new Error("Header 'host' tidak ditemukan");
         }
 
         // Ambil data jadwal dari API (bukan cache)
-        const allData = await getJadwalData();
+        const allData = await getJadwalData(type);
         if (!allData || allData.length === 0) {
             throw new Error('Tidak ada data jadwal yang ditemukan.');
         }
@@ -381,7 +396,7 @@ exports.handler = async (event) => {
         console.log('  Gambar 4.png:', image4Url ? '✅ BERHASIL' : '❌ GAGAL');
 
         // Generate HTML - INJECT DYNAMIC CSS
-        const insideHtml = insideTemplate
+        let insideHtml = insideTemplate
             .replace('</head>', `${dynamicCss}</head>`) // Inject CSS
             .replace('{{COLUMN_1_HTML}}', generateHtmlForDoctors(insideColumn1Data))
             .replace('{{COLUMN_2_HTML}}', generateHtmlForDoctors(insideColumn2Data))
@@ -396,6 +411,13 @@ exports.handler = async (event) => {
             .replace('{{LOGO_SILOAM_WARNA}}', logoUrl)
             .replace('{{GAMBAR_3_SRC}}', image3Url)
             .replace('{{GAMBAR_4_SRC}}', image4Url); // Pastikan 4.png ada di template luar jika digunakan
+
+        if (isExecutive) {
+            insideHtml = insideHtml.replace('Jadwal Poliklinik Dokter Spesialis', 'Jadwal Poliklinik Executive');
+            outsideHtml = outsideHtml
+                .replace('Jadwal Poliklinik<br>\s*<span style="font-size: 20px;">Dokter Spesialis</span>', 'Jadwal Poliklinik<br><span style="font-size: 20px;">Executive Clinic</span>')
+                .replace('Dokter Spesialis', 'Executive Clinic');
+        }
 
         const finalHtml = `${insideHtml}<div style="page-break-after: always;"></div>${outsideHtml}`;
 

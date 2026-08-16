@@ -3,66 +3,112 @@
 <head>
     <meta charset="UTF-8">
     <title>Brosur Halaman Luar</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
     <style>
         @page { size: A4 landscape; margin: 0; }
-        body {
-            font-family: 'Poppins', sans-serif;
-            width: 297mm; height: 210mm;
-            margin: 0; padding: 0;
+        * {
+            box-sizing: border-box;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
-        .trifold-container { display: flex; width: 100%; height: 100%; }
-        .panel {
-            width: 33.33%;
-            padding: 8px;
-            border-right: 1px solid #e2e8f0;
-            box-sizing: border-box;
-            height: 210mm;
-            overflow: hidden;
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            background: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
         }
-        .content-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+        .trifold-sheet {
+            width: 297mm;
+            height: 210mm;
+            background: #ffffff;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            page-break-after: always;
+            flex-shrink: 0;
+        }
+        .trifold-sheet:last-child {
+            page-break-after: auto;
+        }
+        .panel {
+            width: 99mm;
+            height: 210mm;
+            padding: 6px 8px;
+            box-sizing: border-box;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e2e8f0;
+            position: relative;
+        }
+        .panel:last-child {
+            border-right: none;
+        }
+        .outside-column-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
         .montserrat { font-family: 'Montserrat', sans-serif; }
         
-        /* Panel cover dengan background */
-        .cover-background {
+        /* Panel cover dengan background Gambar 2 */
+        .cover-panel-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .cover-bg-layer {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
             background-image: url('{{COVER_BACKGROUND_SRC}}');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            position: relative;
+            z-index: 0;
+            transform-origin: center center;
         }
         .background-overlay {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(255, 255, 255, 0.85);
+            background: rgba(255, 255, 255, 0.88);
             z-index: 1;
         }
         .logo-text-container {
             position: relative;
             z-index: 10;
             text-align: center;
-            padding: 20px;
+            padding: 10px 8px 0 8px;
             background: transparent;
         }
         .logo-image {
-            height: 50px;
+            height: 36px;
             width: auto;
-            margin: 0 auto 15px;
+            margin: 0 auto 6px;
             display: block;
+            object-fit: contain;
         }
         .divider-line {
-            width: 80px;
-            height: 3px;
+            width: 50px;
+            height: 2px;
             background: #192670;
-            margin: 15px auto 20px auto;
+            margin: 5px auto 6px auto;
+            border-radius: 2px;
         }
         .image-container {
             position: absolute;
             bottom: 0; left: 0; right: 0;
-            height: 65%;
+            height: 58%;
             overflow: hidden;
             z-index: 2;
         }
@@ -73,98 +119,174 @@
             object-position: center bottom;
         }
         
-        /* Panel tengah hanya gambar 3.png */
+        /* Panel tengah: Unclipped Phone Mockup */
+        .middle-panel {
+            background-color: #f8fafc;
+            padding: 6px 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
         .single-image-container {
             flex: 1;
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 10px;
+            padding: 2px;
+            overflow: hidden;
+            position: relative;
+            min-height: 0;
         }
-        .single-image-container img {
-            width: 100%;
+        .image3-img {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
             height: auto;
-            max-height: 85%;
             object-fit: contain;
-            border-radius: 8px;
+            object-position: center center;
+            transform-origin: center center;
         }
         .address-container {
             text-align: center;
-            padding: 10px;
+            padding: 5px;
+            background: #ffffff;
+            border-radius: 5px;
+            border: 1px solid #e2e8f0;
+            flex-shrink: 0;
+            margin-top: 4px;
         }
         .address-container p {
-            font-size: 9px;
+            font-size: 7px;
             color: #475569;
-            line-height: 1.4;
-            margin: 2px 0;
+            line-height: 1.25;
+            margin: 1px 0;
         }
         .address-container p.title {
-            font-weight: bold;
-            font-size: 10px;
-            margin-bottom: 4px;
+            font-weight: 800;
+            font-size: 8px;
+            margin-bottom: 1px;
             color: #1e293b;
         }
 
-        .logo-fallback {
-            display: none;
-            font-size: 16px;
-            font-weight: bold;
-            color: #192670;
-            margin: 10px 0;
-            padding: 8px;
-            border: 1px solid #192670;
-            border-radius: 4px;
-            background: rgba(255, 255, 255, 0.9);
+        .specialization-group {
+            margin-bottom: 3px;
+            break-inside: avoid;
+        }
+        .specialization-title {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 800;
+            font-size: 9.5px;
+            color: #1e3a8a;
+            margin-bottom: 2px;
+            padding-bottom: 1.5px;
+            border-bottom: 1.5px solid #3b82f6;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+        }
+        .doctor-card {
+            padding: 2.5px 5px;
+            margin-bottom: 2.5px;
+            border-radius: 3px;
+            border-left: 2.5px solid #3b82f6;
+            background: #ffffff;
+            border-top: 1px solid #f1f5f9;
+            border-right: 1px solid #f1f5f9;
+            border-bottom: 1px solid #f1f5f9;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+        }
+        .doctor-name {
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1px;
+            font-size: 8px;
+            line-height: 1.2;
+        }
+        .schedule-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5px 4px;
+            font-size: 7px;
+            line-height: 1.15;
+        }
+        .schedule-day {
+            color: #334155;
+            background: #f8fafc;
+            padding: 1px 3px;
+            border-radius: 2px;
+            border: 1px solid #e2e8f0;
+        }
+        .schedule-day strong {
+            color: #1e3a8a;
+            font-weight: 700;
+        }
+
+        @media print {
+            body {
+                background: none !important;
+                gap: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .trifold-sheet {
+                box-shadow: none !important;
+                width: 297mm !important;
+                height: 210mm !important;
+                page-break-after: always !important;
+            }
+            .trifold-sheet:last-child {
+                page-break-after: auto !important;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="trifold-container">
-        <!-- Panel kiri -->
+    <div class="trifold-sheet">
+        <!-- Panel kiri luar: Dokter Column 1 Outside -->
         <div class="panel">
-            <div class="content-wrapper">
-                {{COLUMN_1_OUTSIDE}}
-            </div>
-        </div>
-        
-        <!-- Panel tengah: gambar 3.png + alamat di bawah -->
-        <div class="panel" style="background-color: #f0f4f8;">
-            <div class="content-wrapper">
-                <div class="single-image-container">
-                    <img src="{{GAMBAR_3_SRC}}" alt="Additional Image 3" onerror="this.style.display='none'">
-                </div>
-                <div class="address-container">
-                    <p class="title">Siloam Hospitals Ambon</p>
-                    <p>Jl. Sultan Hasanudin, Hative Kecil, Kec. Sirimau, Kota Ambon, Maluku</p>
-                    <p>Telp: (0911) 3911900</p>
+            <div class="outside-column-wrapper">
+                <div>
+                    {{COLUMN_1_OUTSIDE}}
                 </div>
             </div>
         </div>
         
-        <!-- Panel kanan: cover -->
-        <div class="panel cover-background">
+        <!-- Panel tengah: Gambar 3.png (Phone Mockup) + Alamat di Bawah -->
+        <div class="panel middle-panel">
+            <div class="single-image-container">
+                <img src="{{GAMBAR_3_SRC}}" 
+                     alt="Gambar Tambahan" 
+                     class="image3-img" 
+                     onerror="this.style.display='none'">
+            </div>
+            <div class="address-container">
+                <p class="title">Siloam Hospitals Ambon</p>
+                <p>Jl. Sultan Hasanudin, Hative Kecil, Kec. Sirimau, Kota Ambon, Maluku</p>
+                <p>Telp: (0911) 3911900 / 0812-4040-3900</p>
+            </div>
+        </div>
+        
+        <!-- Panel kanan: Cover Depan (Gambar 2 BG + Teks Cover + Gambar 1 Cover) -->
+        <div class="panel cover-panel-wrapper">
+            <div class="cover-bg-layer"></div>
             <div class="background-overlay"></div>
             <div class="logo-text-container">
                 <img src="{{LOGO_SILOAM_WARNA}}" 
                      alt="Logo Siloam" 
                      class="logo-image"
-                     id="main-logo"
-                     onerror="document.getElementById('logo-fallback').style.display='block'; this.style.display='none';">
+                     onerror="this.src='/asset/logo/logo.png'">
                 
-                <div id="logo-fallback" class="logo-fallback">SILOAM HOSPITALS</div>
-                
-                <h2 class="montserrat" style="font-weight: 700; font-size: 18px; color: #192670; margin-bottom: 5px; line-height: 1.3;">
+                <h2 class="montserrat" style="font-weight: 800; font-size: 15px; color: #192670; margin-bottom: 2px; line-height: 1.2;">
                     Jadwal Poliklinik<br>
-                    <span style="font-size: 20px;">Dokter Spesialis</span>
+                    <span style="font-size: 17px; color: #0284c7;">Dokter Spesialis</span>
                 </h2>
-                <p style="font-size: 14px; color: #192670; margin-bottom: 25px; font-weight: 500;">
+                <p style="font-size: 10px; color: #1e293b; margin: 0 0 4px 0; font-weight: 600;">
                     Siloam Hospitals Ambon
                 </p>
                 <div class="divider-line"></div>
-                <p style="font-size: 16px; font-weight: 600; color: #192670; margin-bottom: 20px;">2025</p>
+                <p style="font-size: 11px; font-weight: 700; color: #192670; margin: 0;">2025/2026</p>
             </div>
             <div class="image-container">
-                <img src="{{COVER_IMAGE_SRC}}" alt="Cover Image" class="cover-image" onerror="this.style.display='none';">
+                <img src="{{COVER_IMAGE_SRC}}" alt="Cover Image" class="cover-image" onerror="this.src='/asset/brochure/1.png'">
             </div>
         </div>
     </div>

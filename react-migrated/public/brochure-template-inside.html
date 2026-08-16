@@ -3,82 +3,184 @@
 <head>
     <meta charset="UTF-8">
     <title>Jadwal Dokter Trifold Brochure - Halaman Dalam</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Montserrat:wght@700;800;900&display=swap" rel="stylesheet">
     <style>
         @page { size: A4 landscape; margin: 0; }
-        body {
-            font-family: 'Poppins', sans-serif;
-            width: 297mm; height: 210mm;
-            margin: 0; padding: 0;
+        * {
+            box-sizing: border-box;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
-        .trifold-container { display: flex; width: 100%; height: 100%; }
-        .panel {
-            width: 33.33%;
-            padding: 8px;
-            border-right: 1px solid #e2e8f0;
-            box-sizing: border-box;
-            height: 210mm;
-            overflow: hidden;
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            background: #f1f5f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
         }
-        .content-wrapper { width: 100%; height: 100%; }
+        .trifold-sheet {
+            width: 297mm;
+            height: 210mm;
+            background: #ffffff;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            page-break-after: always;
+            flex-shrink: 0;
+        }
+        .trifold-sheet:last-child {
+            page-break-after: auto;
+        }
+        .panel {
+            width: 99mm;
+            height: 210mm;
+            padding: 6px 8px;
+            box-sizing: border-box;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e2e8f0;
+            position: relative;
+        }
+        .panel:last-child {
+            border-right: none;
+        }
+        .inside-content-wrapper {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start !important;
+            gap: 0px !important;
+        }
+        .header-container {
+            width: 100%;
+            margin-bottom: 4px;
+            flex-shrink: 0;
+        }
+        .main-header-title {
+            font-family: 'Montserrat', sans-serif;
+            font-weight: 900;
+            font-size: 13px;
+            color: #1e3a8a;
+            margin: 0 0 2px 0;
+            line-height: 1.15;
+        }
+        .main-header-subtitle {
+            font-size: 7.5px;
+            color: #64748b;
+            margin: 0;
+            font-weight: 500;
+            line-height: 1.2;
+        }
+        .doctor-list-column {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
         .specialization-group {
-            margin-bottom: 6px;
+            margin-bottom: 3px;
             break-inside: avoid;
         }
         .specialization-title {
             font-family: 'Montserrat', sans-serif;
-            font-weight: 700;
-            font-size: 12px;
+            font-weight: 800;
+            font-size: 9.5px;
             color: #1e3a8a;
-            margin-bottom: 4px;
-            padding-bottom: 2px;
+            margin-bottom: 2px;
+            padding-bottom: 1.5px;
             border-bottom: 1.5px solid #3b82f6;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
         }
         .doctor-card {
-            padding: 4px;
-            margin-bottom: 4px;
-            border-radius: 4px;
+            padding: 2.5px 5px;
+            margin-bottom: 2.5px;
+            border-radius: 3px;
             border-left: 2.5px solid #3b82f6;
-            background: #fdfdfd;
+            background: #ffffff;
+            border-top: 1px solid #f1f5f9;
+            border-right: 1px solid #f1f5f9;
+            border-bottom: 1px solid #f1f5f9;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.02);
         }
         .doctor-name {
-            font-weight: 600;
-            color: #1e293b;
-            margin-bottom: 2px;
-            font-size: 9px;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 1px;
+            font-size: 8px;
+            line-height: 1.2;
         }
         .schedule-grid {
             display: flex;
             flex-wrap: wrap;
-            gap: 1px 4px;
-            font-size: 8px;
-            line-height: 1.2;
+            gap: 1.5px 4px;
+            font-size: 7px;
+            line-height: 1.15;
         }
-        .schedule-day { color: #475569; }
-        .schedule-day strong { color: #1e293b; font-weight: 600; }
+        .schedule-day {
+            color: #334155;
+            background: #f8fafc;
+            padding: 1px 3px;
+            border-radius: 2px;
+            border: 1px solid #e2e8f0;
+        }
+        .schedule-day strong {
+            color: #1e3a8a;
+            font-weight: 700;
+        }
         .montserrat { font-family: 'Montserrat', sans-serif; }
+        @media print {
+            body {
+                background: none !important;
+                gap: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .trifold-sheet {
+                box-shadow: none !important;
+                width: 297mm !important;
+                height: 210mm !important;
+                page-break-after: always !important;
+            }
+            .trifold-sheet:last-child {
+                page-break-after: auto !important;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="trifold-container">
+    <div class="trifold-sheet">
         <div class="panel">
-            <div class="content-wrapper">
-                <h1 class="montserrat font-extrabold text-lg text-blue-900 mb-1">Jadwal Poliklinik Dokter Spesialis</h1>
-                <p style="font-size: 9px;" class="text-gray-600 mb-3">Siloam Hospitals Ambon (Update: {{GENERATED_DATE}})</p>
-                {{COLUMN_1_HTML}}
+            <div class="inside-content-wrapper">
+                <div class="header-container">
+                    <h1 class="main-header-title">Jadwal Poliklinik Dokter Spesialis</h1>
+                    <p class="main-header-subtitle">Siloam Hospitals Ambon (Update: {{GENERATED_DATE}})</p>
+                </div>
+                <div class="doctor-list-column">
+                    {{COLUMN_1_HTML}}
+                </div>
             </div>
         </div>
         <div class="panel">
-            <div class="content-wrapper">
-                {{COLUMN_2_HTML}}
+            <div class="inside-content-wrapper">
+                <div class="doctor-list-column">
+                    {{COLUMN_2_HTML}}
+                </div>
             </div>
         </div>
         <div class="panel">
-            <div class="content-wrapper">
-                {{COLUMN_3_HTML}}
+            <div class="inside-content-wrapper">
+                <div class="doctor-list-column">
+                    {{COLUMN_3_HTML}}
+                </div>
             </div>
         </div>
     </div>
