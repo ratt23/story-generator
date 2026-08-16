@@ -890,6 +890,7 @@ export async function buildExecutiveBifoldHtml({
                     box-shadow: 0 10px 25px rgba(0,0,0,0.15);
                     page-break-after: always;
                     flex-shrink: 0;
+                    border: 1px solid #cbd5e1;
                     transform: translate(${layout.offsetX}px, ${layout.offsetY}px);
                 }
                 .bifold-sheet:last-child {
@@ -916,16 +917,17 @@ export async function buildExecutiveBifoldHtml({
                 }
                 @media print {
                     body {
-                        background: none;
-                        gap: 0;
+                        background: none !important;
+                        gap: 0 !important;
                     }
                     .bifold-sheet {
-                        box-shadow: none;
-                        width: 297mm;
-                        height: 210mm;
+                        box-shadow: none !important;
+                        width: 297mm !important;
+                        height: 210mm !important;
+                        border: 1px solid #cbd5e1 !important;
                     }
                     .fold-line {
-                        border-left: 1px dashed rgba(0,0,0,0.08);
+                        border-left: 1px dashed rgba(0,0,0,0.08) !important;
                     }
                 }
             </style>
