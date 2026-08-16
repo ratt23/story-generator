@@ -526,7 +526,7 @@ export const ExecutiveStoryCanvas = ({ canvasRef }) => {
                             fontSize: '72px',
                             fontWeight: 500,
                             color: titleTextColor,
-                            lineHeight: 1.05,
+                            lineHeight: 1.15,
                             letterSpacing: '-1.5px'
                         }}
                     >
@@ -537,23 +537,24 @@ export const ExecutiveStoryCanvas = ({ canvasRef }) => {
                             fontSize: '104px',
                             fontWeight: 900,
                             color: titleTextColor,
-                            lineHeight: 1.05,
+                            lineHeight: 1.15,
                             letterSpacing: '-2.5px',
-                            marginTop: '6px'
+                            marginTop: '8px',
+                            paddingBottom: '6px'
                         }}
                     >
                         {config.headerLine2 || 'Dokter'}
                     </div>
                 </div>
 
-                {/* Gold horizontal accent line positioned cleanly below the title */}
+                {/* Gold horizontal accent line positioned cleanly below the title with safe clearance */}
                 <div
                     style={{
                         width: '120px',
-                        height: '5px',
+                        height: '6px',
                         borderRadius: '3px',
                         background: 'linear-gradient(90deg, #f59e0b 0%, #fbbf24 60%, transparent 100%)',
-                        marginTop: '22px'
+                        marginTop: '24px'
                     }}
                 />
             </div>
