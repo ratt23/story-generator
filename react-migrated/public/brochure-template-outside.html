@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Brosur Halaman Luar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Montserrat:wght@700;800&display=swap" rel="stylesheet">
+    <style>
+        @page { size: A4 landscape; margin: 0; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            width: 297mm; height: 210mm;
+            margin: 0; padding: 0;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .trifold-container { display: flex; width: 100%; height: 100%; }
+        .panel {
+            width: 33.33%;
+            padding: 8px;
+            border-right: 1px solid #e2e8f0;
+            box-sizing: border-box;
+            height: 210mm;
+            overflow: hidden;
+        }
+        .content-wrapper { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+        .montserrat { font-family: 'Montserrat', sans-serif; }
+        
+        /* Panel cover dengan background */
+        .cover-background {
+            background-image: url('{{COVER_BACKGROUND_SRC}}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            position: relative;
+        }
+        .background-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 255, 255, 0.85);
+            z-index: 1;
+        }
+        .logo-text-container {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            padding: 20px;
+            background: transparent;
+        }
+        .logo-image {
+            height: 50px;
+            width: auto;
+            margin: 0 auto 15px;
+            display: block;
+        }
+        .divider-line {
+            width: 80px;
+            height: 3px;
+            background: #192670;
+            margin: 15px auto 20px auto;
+        }
+        .image-container {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            height: 65%;
+            overflow: hidden;
+            z-index: 2;
+        }
+        .cover-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: center bottom;
+        }
+        
+        /* Panel tengah hanya gambar 3.png */
+        .single-image-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px;
+        }
+        .single-image-container img {
+            width: 100%;
+            height: auto;
+            max-height: 85%;
+            object-fit: contain;
+            border-radius: 8px;
+        }
+        .address-container {
+            text-align: center;
+            padding: 10px;
+        }
+        .address-container p {
+            font-size: 9px;
+            color: #475569;
+            line-height: 1.4;
+            margin: 2px 0;
+        }
+        .address-container p.title {
+            font-weight: bold;
+            font-size: 10px;
+            margin-bottom: 4px;
+            color: #1e293b;
+        }
+
+        .logo-fallback {
+            display: none;
+            font-size: 16px;
+            font-weight: bold;
+            color: #192670;
+            margin: 10px 0;
+            padding: 8px;
+            border: 1px solid #192670;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.9);
+        }
+    </style>
+</head>
+<body>
+    <div class="trifold-container">
+        <!-- Panel kiri -->
+        <div class="panel">
+            <div class="content-wrapper">
+                {{COLUMN_1_OUTSIDE}}
+            </div>
+        </div>
+        
+        <!-- Panel tengah: gambar 3.png + alamat di bawah -->
+        <div class="panel" style="background-color: #f0f4f8;">
+            <div class="content-wrapper">
+                <div class="single-image-container">
+                    <img src="{{GAMBAR_3_SRC}}" alt="Additional Image 3" onerror="this.style.display='none'">
+                </div>
+                <div class="address-container">
+                    <p class="title">Siloam Hospitals Ambon</p>
+                    <p>Jl. Sultan Hasanudin, Hative Kecil, Kec. Sirimau, Kota Ambon, Maluku</p>
+                    <p>Telp: (0911) 3911900</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Panel kanan: cover -->
+        <div class="panel cover-background">
+            <div class="background-overlay"></div>
+            <div class="logo-text-container">
+                <img src="{{LOGO_SILOAM_WARNA}}" 
+                     alt="Logo Siloam" 
+                     class="logo-image"
+                     id="main-logo"
+                     onerror="document.getElementById('logo-fallback').style.display='block'; this.style.display='none';">
+                
+                <div id="logo-fallback" class="logo-fallback">SILOAM HOSPITALS</div>
+                
+                <h2 class="montserrat" style="font-weight: 700; font-size: 18px; color: #192670; margin-bottom: 5px; line-height: 1.3;">
+                    Jadwal Poliklinik<br>
+                    <span style="font-size: 20px;">Dokter Spesialis</span>
+                </h2>
+                <p style="font-size: 14px; color: #192670; margin-bottom: 25px; font-weight: 500;">
+                    Siloam Hospitals Ambon
+                </p>
+                <div class="divider-line"></div>
+                <p style="font-size: 16px; font-weight: 600; color: #192670; margin-bottom: 20px;">2025</p>
+            </div>
+            <div class="image-container">
+                <img src="{{COVER_IMAGE_SRC}}" alt="Cover Image" class="cover-image" onerror="this.style.display='none';">
+            </div>
+        </div>
+    </div>
+</body>
+</html>

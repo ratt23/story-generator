@@ -1,0 +1,27 @@
+[build]
+command = "cd react-migrated && npm install && npm run build"
+publish = "react-migrated/dist"
+functions = "netlify/functions"
+
+[dev]
+command = "npm --prefix react-migrated run dev"
+port = 8888
+targetPort = 5173
+framework = "#custom"
+
+[functions]
+node_bundler = "esbuild"
+
+[functions."generate-story"]
+external_node_modules = ["@sparticuz/chromium"]
+included_files = ["public/**"]
+timeout = 26
+
+[functions."generate-brochure"]
+included_files = ["public/**"]
+timeout = 26
+
+[functions."process-tarif"]
+external_node_modules = ["@sparticuz/chromium", "exceljs"]
+included_files = ["public/**"]
+timeout = 60

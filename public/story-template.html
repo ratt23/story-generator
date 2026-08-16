@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Story Template</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Montserrat:wght@700;800&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+        }
+
+        #story-preview {
+            font-family: 'Poppins', sans-serif;
+            width: 1080px;
+            height: 1920px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 64px;
+            transform-origin: center;
+            transition: transform 0.2s ease-in-out, background 0.3s, color 0.3s;
+        }
+
+        .montserrat {
+            font-family: 'Montserrat', sans-serif;
+        }
+
+        #story-preview img {
+            object-fit: cover;
+        }
+
+        #story-preview .flex .items-center img.rounded-full {
+            object-position: center 10%;
+        }
+
+        /* Square Format Overrides */
+        #story-preview.square {
+            width: 1080px;
+            height: 1080px;
+            padding: 48px;
+        }
+
+        #story-preview.square #content-area {
+            padding-top: 40px;
+            /* Reduced top padding for square */
+        }
+
+        #story-preview.square .mb-10 {
+            margin-bottom: 2rem;
+        }
+
+        #story-preview.theme-gradient-blue {
+            background: linear-gradient(160deg, #192670, #4c9b32);
+            color: white;
+        }
+
+        #story-preview.theme-gradient-purple {
+            background: linear-gradient(160deg, #5a189a, #c1121f, #f77f00);
+            color: white;
+        }
+
+        #story-preview.theme-gradient-orange {
+            background: linear-gradient(160deg, #f7b267, #f79d65, #f4845f);
+            color: white;
+        }
+
+        #story-preview.theme-solid-white {
+            background-color: #ffffff;
+            background-image:
+                radial-gradient(circle, #E5E7EB 1px, transparent 1.5px),
+                radial-gradient(circle at 0% 0%, rgba(229, 231, 235, 0.5) 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, rgba(229, 231, 235, 0.5) 0%, transparent 40%);
+            background-size:
+                20px 20px,
+                120% 120%,
+                120% 120%;
+            color: #1e293b;
+        }
+
+
+        #story-preview.theme-solid-white-dots {
+            background-color: #ffffff;
+            background-image: radial-gradient(circle, #D1D5DB 1px, transparent 1.5px);
+            background-size: 35px 35px;
+            color: #1e293b;
+            /* Warna teks gelap agar kontras */
+        }
+
+        /* Style khusus untuk footer baru (UPDATED) */
+        .footer-hashtag {
+            font-family: 'Montserrat', sans-serif;
+            /* Menggunakan Montserrat */
+            font-weight: 700;
+            font-size: 1.75rem;
+            /* Ukuran 28px */
+        }
+
+        #story-preview.theme-solid-white .footer-hashtag,
+        #story-preview.theme-solid-white-dots .footer-hashtag {
+            color: #192670;
+        }
+
+        #story-preview.theme-gradient-blue .footer-hashtag,
+        #story-preview.theme-gradient-purple .footer-hashtag,
+        #story-preview.theme-gradient-orange .footer-hashtag {
+            color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="story-preview" class="{{THEME_CLASS}} {{FORMAT_CLASS}}" style="{{CUSTOM_STYLES}}">
+        <div class="flex-shrink-0 flex justify-start items-center relative z-10">
+            <img id="story-logo" src="{{LOGO_SRC}}" class="h-24" alt="Logo">
+        </div>
+
+        <div class="flex-grow flex flex-col justify-start items-center text-center pt-20 relative z-10 w-full"
+            id="content-area">
+            <div class="mb-10 w-full px-12">
+                <p class="text-5xl tracking-widest montserrat">{{HEADER_TOP}}</p>
+                <h2 class="text-9xl font-extrabold mt-2 montserrat">{{HEADER_MAIN}}</h2>
+            </div>
+            {{DOCTOR_LIST_HTML}}
+            <div id="custom-message-container" class="w-full text-center text-4xl font-semibold mt-8 px-12">
+                {{CUSTOM_MESSAGE}}
+            </div>
+        </div>
+
+        <div class="flex-shrink-0 flex justify-between items-center relative z-10">
+            <span class="footer-hashtag">#BersamaSiloam</span>
+            <img src="{{SILOAM_LOGO_SRC}}" class="h-20" alt="Siloam Logo">
+        </div>
+    </div>
+</body>
+
+</html>
