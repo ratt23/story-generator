@@ -112,6 +112,23 @@ const getAnimationName = (type) => {
     }
 };
 
+// Helper to convert hex to rgba
+const getCardBgColor = (hex = '#ffffff', opacity = 1.0) => {
+    const numOpacity = Number(opacity ?? 1.0);
+    if (numOpacity >= 1.0) {
+        return hex || '#ffffff';
+    }
+    let cleanHex = (hex || '#ffffff').replace('#', '');
+    if (cleanHex.length === 3) {
+        cleanHex = cleanHex.split('').map(c => c + c).join('');
+    }
+    if (cleanHex.length !== 6) return `rgba(255, 255, 255, ${numOpacity})`;
+    const r = parseInt(cleanHex.substring(0, 2), 16);
+    const g = parseInt(cleanHex.substring(2, 4), 16);
+    const b = parseInt(cleanHex.substring(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${numOpacity})`;
+};
+
 export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableAnimations = false }) => {
     const { selectedDay, activeDoctors, config, animationKey } = useExecutiveDailyStory();
     const localVideoRef = useRef(null);
@@ -125,27 +142,12 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
 
     const dayText = config.customDayBadge || selectedDay;
 
-    // Dynamic auto-padding calculation based on doctor count
-    const count = activeDoctors.length;
-    let computedRowSpacing = config.rowSpacing;
-    let computedNameFontSize = config.nameFontSize;
-    let computedSpecialtyFontSize = config.specialtyFontSize;
-    let computedTimeFontSize = config.timeFontSize;
-    let computedAvatarSize = config.avatarSize || 64;
-
-    if (count >= 10) {
-        computedRowSpacing = Math.min(computedRowSpacing, 5);
-        computedNameFontSize = Math.min(computedNameFontSize, 17);
-        computedSpecialtyFontSize = Math.min(computedSpecialtyFontSize, 11);
-        computedTimeFontSize = Math.min(computedTimeFontSize, 17);
-        computedAvatarSize = Math.min(computedAvatarSize, 56);
-    } else if (count >= 8) {
-        computedRowSpacing = Math.min(computedRowSpacing, 7);
-        computedNameFontSize = Math.min(computedNameFontSize, 18);
-        computedSpecialtyFontSize = Math.min(computedSpecialtyFontSize, 12);
-        computedTimeFontSize = Math.min(computedTimeFontSize, 18);
-        computedAvatarSize = Math.min(computedAvatarSize, 60);
-    }
+    // Direct font & layout parameters from config (allows full user customization)
+    const computedRowSpacing = config.rowSpacing !== undefined ? config.rowSpacing : 10;
+    const computedNameFontSize = config.nameFontSize !== undefined ? config.nameFontSize : 20;
+    const computedSpecialtyFontSize = config.specialtyFontSize !== undefined ? config.specialtyFontSize : 13;
+    const computedTimeFontSize = config.timeFontSize !== undefined ? config.timeFontSize : 20;
+    const computedAvatarSize = config.avatarSize !== undefined ? config.avatarSize : 64;
 
     // Animation Configurations
     const duration = `${config.animationDuration || 0.8}s`;
@@ -419,18 +421,18 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                         animationFillMode: 'both'
                     }}
                 >
-                    {/* Table Header Bar (Navy Blue) */}
+                    {/* Table Header Bar */}
                     <div
                         style={{
                             width: '100%',
                             height: `${config.tableHeaderHeight || 70}px`,
-                            backgroundColor: '#001f5c',
+                            backgroundColor: config.tableHeaderBgColor || '#001f5c',
                             borderRadius: '26px 26px 0 0',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
                             padding: '0 44px',
-                            color: '#ffffff',
+                            color: config.tableHeaderTextColor || '#ffffff',
                             boxShadow: '0 6px 18px rgba(0, 31, 92, 0.25)'
                         }}
                     >
@@ -438,7 +440,8 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                             style={{
                                 fontSize: `${config.tableHeaderFontSize || 26}px`,
                                 fontWeight: 800,
-                                letterSpacing: '-0.3px'
+                                letterSpacing: '-0.3px',
+                                color: config.tableHeaderTextColor || '#ffffff'
                             }}
                         >
                             {config.tableTitleName || 'Nama Dokter'}
@@ -447,22 +450,23 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                             style={{
                                 fontSize: `${config.tableHeaderFontSize || 26}px`,
                                 fontWeight: 800,
-                                letterSpacing: '-0.3px'
+                                letterSpacing: '-0.3px',
+                                color: config.tableHeaderTextColor || '#ffffff'
                             }}
                         >
                             {config.tableTitleSchedule || 'Jadwal'}
                         </span>
                     </div>
 
-                    {/* Table Body Card (Frosted Glass) */}
+                    {/* Table Body Card (Solid White or Frosted Glass) */}
                     <div
                         style={{
                             width: '100%',
-                            backgroundColor: `rgba(255, 255, 255, ${config.cardOpacity || 0.92})`,
-                            backdropFilter: `blur(${config.cardBlur || 20}px)`,
-                            WebkitBackdropFilter: `blur(${config.cardBlur || 20}px)`,
+                            backgroundColor: getCardBgColor(config.cardBgColor, config.cardOpacity),
+                            backdropFilter: (Number(config.cardOpacity ?? 1) < 1 && (config.cardBlur || 0) > 0) ? `blur(${config.cardBlur}px)` : 'none',
+                            WebkitBackdropFilter: (Number(config.cardOpacity ?? 1) < 1 && (config.cardBlur || 0) > 0) ? `blur(${config.cardBlur}px)` : 'none',
                             borderRadius: '0 0 26px 26px',
-                            border: `${config.cardBorderWidth || 1.5}px solid rgba(255, 255, 255, 0.85)`,
+                            border: `${config.cardBorderWidth || 1.5}px solid ${config.cardBorderColor || 'rgba(255, 255, 255, 0.9)'}`,
                             borderTop: 'none',
                             boxShadow: '0 20px 48px rgba(0, 31, 92, 0.2)',
                             padding: `${config.tablePaddingY || 12}px ${config.tablePaddingX || 28}px 18px ${config.tablePaddingX || 28}px`,

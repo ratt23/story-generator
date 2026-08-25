@@ -107,6 +107,23 @@ const NumberSliderField = ({
     );
 };
 
+const ColorPickerField = ({ label, value, onChange, className = '' }) => (
+    <div className={`flex items-center justify-between text-[11px] ${className}`}>
+        <span className="text-slate-600 font-medium truncate pr-1">{label}</span>
+        <div className="flex items-center gap-1.5 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 shrink-0">
+            <input
+                type="color"
+                value={value || '#000000'}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-5 h-5 rounded cursor-pointer border-0 p-0 bg-transparent"
+            />
+            <span className="text-[10px] font-mono font-bold text-slate-600 uppercase">
+                {value || '#000000'}
+            </span>
+        </div>
+    </div>
+);
+
 export const ExecutiveDailyStoryControls = () => {
     const {
         selectedDay,
@@ -1117,8 +1134,50 @@ export const ExecutiveDailyStoryControls = () => {
                     <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs space-y-3">
                         <span className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5 border-b border-slate-100 pb-2">
                             <Layout className="w-3.5 h-3.5 text-blue-600" />
-                            <span>Tabel Jadwal Dokter (Frosted Glass)</span>
+                            <span>Tabel Jadwal Dokter & Background</span>
                         </span>
+
+                        {/* Mode Tampilan Tabel Preset */}
+                        <div>
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">
+                                Mode Tampilan Background Tabel:
+                            </label>
+                            <div className="grid grid-cols-2 gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        updateConfig('cardOpacity', 1.0);
+                                        updateConfig('cardBlur', 0);
+                                        updateConfig('cardBgColor', '#ffffff');
+                                    }}
+                                    className={`py-2 px-2.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                                        Number(config.cardOpacity ?? 1) >= 0.99
+                                            ? 'bg-blue-50 border-blue-600 text-blue-700 shadow-xs'
+                                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    <span className="w-3 h-3 rounded-full bg-white border border-slate-400 inline-block shadow-2xs"></span>
+                                    <span>Putih Solid (Bersih)</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        updateConfig('cardOpacity', 0.88);
+                                        updateConfig('cardBlur', 16);
+                                        updateConfig('cardBgColor', '#ffffff');
+                                    }}
+                                    className={`py-2 px-2.5 rounded-lg border text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+                                        Number(config.cardOpacity ?? 1) < 0.99
+                                            ? 'bg-blue-50 border-blue-600 text-blue-700 shadow-xs'
+                                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                                    }`}
+                                >
+                                    <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                                    <span>Kaca Transparan</span>
+                                </button>
+                            </div>
+                        </div>
 
                         <div className="grid grid-cols-2 gap-2.5">
                             <NumberSliderField
@@ -1186,8 +1245,8 @@ export const ExecutiveDailyStoryControls = () => {
 
                         <div className="grid grid-cols-2 gap-2.5">
                             <NumberSliderField
-                                label="Opasitas Kaca"
-                                value={config.cardOpacity || 0.92}
+                                label="Opasitas Tabel"
+                                value={config.cardOpacity !== undefined ? config.cardOpacity : 1.0}
                                 min={0.3}
                                 max={1.0}
                                 step={0.02}
@@ -1196,8 +1255,8 @@ export const ExecutiveDailyStoryControls = () => {
                                 onChange={(val) => updateConfig('cardOpacity', val)}
                             />
                             <NumberSliderField
-                                label="Blur Kaca"
-                                value={config.cardBlur || 20}
+                                label="Blur Efek Kaca"
+                                value={config.cardBlur || 0}
                                 min={0}
                                 max={40}
                                 step={1}
@@ -1217,7 +1276,7 @@ export const ExecutiveDailyStoryControls = () => {
                                 onChange={(val) => updateConfig('rowSpacing', val)}
                             />
                             <NumberSliderField
-                                label="Ukuran Avatar Bulat"
+                                label="Ukuran Avatar"
                                 value={config.avatarSize || 64}
                                 min={40}
                                 max={120}
@@ -1226,18 +1285,37 @@ export const ExecutiveDailyStoryControls = () => {
                                 onChange={(val) => updateConfig('avatarSize', val)}
                             />
                         </div>
+
+                        <div className="border-t border-slate-100 pt-2.5 space-y-2">
+                            <ColorPickerField
+                                label="Warna Background Tabel"
+                                value={config.cardBgColor || '#ffffff'}
+                                onChange={(val) => updateConfig('cardBgColor', val)}
+                            />
+                            <ColorPickerField
+                                label="Warna Background Header"
+                                value={config.tableHeaderBgColor || '#001f5c'}
+                                onChange={(val) => updateConfig('tableHeaderBgColor', val)}
+                            />
+                            <ColorPickerField
+                                label="Warna Teks Header"
+                                value={config.tableHeaderTextColor || '#ffffff'}
+                                onChange={(val) => updateConfig('tableHeaderTextColor', val)}
+                            />
+                        </div>
                     </div>
 
                     {/* 5. TYPOGRAPHY & FONT SIZES */}
-                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs space-y-3">
+                    <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs space-y-3.5">
                         <span className="font-extrabold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5 border-b border-slate-100 pb-2">
                             <Type className="w-3.5 h-3.5 text-blue-600" />
-                            <span>Ukuran Font & Teks Tabel</span>
+                            <span>Ukuran Font & Teks Dokter</span>
                         </span>
 
-                        <div className="grid grid-cols-3 gap-2">
+                        {/* Font Size & Color for Nama Dokter */}
+                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-2">
                             <NumberSliderField
-                                label="Nama Dokter"
+                                label="Ukuran Font Nama Dokter"
                                 value={config.nameFontSize || 20}
                                 min={12}
                                 max={36}
@@ -1245,8 +1323,17 @@ export const ExecutiveDailyStoryControls = () => {
                                 unit="px"
                                 onChange={(val) => updateConfig('nameFontSize', val)}
                             />
+                            <ColorPickerField
+                                label="Warna Teks Nama Dokter"
+                                value={config.nameColor || '#001f5c'}
+                                onChange={(val) => updateConfig('nameColor', val)}
+                            />
+                        </div>
+
+                        {/* Font Size & Color for Spesialis */}
+                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-2">
                             <NumberSliderField
-                                label="Spesialis"
+                                label="Ukuran Font Spesialis"
                                 value={config.specialtyFontSize || 13}
                                 min={9}
                                 max={26}
@@ -1254,14 +1341,28 @@ export const ExecutiveDailyStoryControls = () => {
                                 unit="px"
                                 onChange={(val) => updateConfig('specialtyFontSize', val)}
                             />
+                            <ColorPickerField
+                                label="Warna Teks Spesialis"
+                                value={config.specialtyColor || '#475569'}
+                                onChange={(val) => updateConfig('specialtyColor', val)}
+                            />
+                        </div>
+
+                        {/* Font Size & Color for Jam Praktik */}
+                        <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-2">
                             <NumberSliderField
-                                label="Jam Praktik"
+                                label="Ukuran Font Jam Praktik / Jadwal"
                                 value={config.timeFontSize || 20}
                                 min={12}
                                 max={36}
                                 step={1}
                                 unit="px"
                                 onChange={(val) => updateConfig('timeFontSize', val)}
+                            />
+                            <ColorPickerField
+                                label="Warna Teks Jam Praktik"
+                                value={config.timeColor || '#001f5c'}
+                                onChange={(val) => updateConfig('timeColor', val)}
                             />
                         </div>
 
