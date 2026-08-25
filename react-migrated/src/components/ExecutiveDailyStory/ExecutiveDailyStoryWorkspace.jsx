@@ -376,6 +376,10 @@ function fixWebmDuration(blob, durationMs) {
         let recordCanvas = null;
 
         try {
+            if (document.fonts) {
+                await document.fonts.ready;
+            }
+
             // 1. Disable animations and make canvas background transparent for overlay snapshot
             setDisableAnimForSnapshot(true);
             const savedTransform = contentEl.style.transform;
@@ -387,7 +391,7 @@ function fixWebmDuration(blob, durationMs) {
             targetEl.style.backgroundColor = 'transparent';
 
             await new Promise((r) => requestAnimationFrame(r));
-            await new Promise((r) => setTimeout(r, 120));
+            await new Promise((r) => setTimeout(r, 200));
 
             // 2. Snapshot crisp 1:1 DOM layout overlay (Table, logo, doctor rows, badges) with FULL transparency
             const overlayCanvas = await html2canvas(targetEl, {
@@ -399,7 +403,10 @@ function fixWebmDuration(blob, durationMs) {
                 backgroundColor: null,
                 logging: false,
                 imageTimeout: 20000,
-                ignoreElements: (element) => element.tagName === 'VIDEO'
+                ignoreElements: (element) =>
+                    element.tagName === 'VIDEO' ||
+                    element.id === 'eds-video-bg-container' ||
+                    element.getAttribute('data-html2canvas-ignore') === 'true'
             });
 
             // Restore interactive preview state

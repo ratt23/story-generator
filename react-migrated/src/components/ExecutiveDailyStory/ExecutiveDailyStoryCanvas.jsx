@@ -150,8 +150,14 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
     const computedAvatarSize = config.avatarSize !== undefined ? config.avatarSize : 64;
 
     // Animation Configurations
-    const duration = `${config.animationDuration || 0.8}s`;
+    const duration = disableAnimations ? '0s' : `${config.animationDuration || 0.8}s`;
     const easing = 'cubic-bezier(0.22, 1, 0.36, 1)';
+    const delayLogo = disableAnimations ? '0s' : '0.05s';
+    const delayTitle = disableAnimations ? '0s' : '0.1s';
+    const delayBadge = disableAnimations ? '0s' : `${config.animationDelayBadge || 0.15}s`;
+    const delayTable = disableAnimations ? '0s' : `${config.animationDelayTable || 0.35}s`;
+    const delayFooters = disableAnimations ? '0s' : `${config.animationDelayFooters || 0.55}s`;
+    const fillMode = disableAnimations ? 'none' : 'both';
 
     const tableAnimName = disableAnimations ? 'none' : getAnimationName(config.tableAnimation || 'pan-right');
     const badgeAnimName = disableAnimations ? 'none' : getAnimationName(config.dayBadgeAnimation || 'rise');
@@ -244,6 +250,8 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
 
             {/* 1. BACKGROUND VIDEO */}
             <div
+                id="eds-video-bg-container"
+                data-html2canvas-ignore="true"
                 style={{
                     position: 'absolute',
                     top: 0,
@@ -300,8 +308,8 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                         animationName: logoAnimName,
                         animationDuration: duration,
                         animationTimingFunction: easing,
-                        animationDelay: '0.05s',
-                        animationFillMode: 'both'
+                        animationDelay: delayLogo,
+                        animationFillMode: fillMode
                     }}
                 >
                     <img
@@ -336,8 +344,8 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                         animationName: titleAnimName,
                         animationDuration: duration,
                         animationTimingFunction: easing,
-                        animationDelay: '0.1s',
-                        animationFillMode: 'both'
+                        animationDelay: delayTitle,
+                        animationFillMode: fillMode
                     }}
                 >
                     <img
@@ -372,8 +380,8 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                         animationName: badgeAnimName,
                         animationDuration: duration,
                         animationTimingFunction: easing,
-                        animationDelay: `${config.animationDelayBadge || 0.15}s`,
-                        animationFillMode: 'both'
+                        animationDelay: delayBadge,
+                        animationFillMode: fillMode
                     }}
                 >
                     <div
@@ -417,8 +425,8 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                         animationName: tableAnimName,
                         animationDuration: duration,
                         animationTimingFunction: easing,
-                        animationDelay: `${config.animationDelayTable || 0.35}s`,
-                        animationFillMode: 'both'
+                        animationDelay: delayTable,
+                        animationFillMode: fillMode
                     }}
                 >
                     {/* Table Header Bar */}
@@ -569,8 +577,8 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                         animationName: footerAnimName,
                         animationDuration: duration,
                         animationTimingFunction: easing,
-                        animationDelay: `${config.animationDelayFooters || 0.55}s`,
-                        animationFillMode: 'both'
+                        animationDelay: delayFooters,
+                        animationFillMode: fillMode
                     }}
                 >
                     {/* Left: Address Footer */}
