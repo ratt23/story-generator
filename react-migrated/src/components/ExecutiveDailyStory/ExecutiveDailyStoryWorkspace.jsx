@@ -323,8 +323,42 @@ export const ExecutiveDailyStoryWorkspace = () => {
         }
     };
 
+// Helper to patch WebM duration header so video players show exact duration (00:20)
+function fixWebmDuration(blob, durationMs) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = function () {
+            try {
+                const buffer = reader.result;
+                const view = new DataView(buffer);
+                const bytes = new Uint8Array(buffer);
+                let pos = -1;
+                for (let i = 0; i < Math.min(bytes.length - 10, 4096); i++) {
+                    if (bytes[i] === 0x44 && bytes[i + 1] === 0x89) {
+                        pos = i + 2;
+                        break;
+                    }
+                }
+                if (pos !== -1) {
+                    const len = bytes[pos];
+                    if (len === 0x84) {
+                        view.setFloat32(pos + 1, durationMs, false);
+                    } else if (len === 0x88) {
+                        view.setFloat64(pos + 1, durationMs, false);
+                    }
+                }
+                resolve(new Blob([buffer], { type: blob.type }));
+            } catch {
+                resolve(blob);
+            }
+        };
+        reader.onerror = () => resolve(blob);
+        reader.readAsArrayBuffer(blob);
+    });
+}
+
     // ========================================================
-    // Video Story Generator (MP4 Format - Matching Background Duration)
+    // Video Story Generator (MP4 Format - 20s Background Sync)
     // ========================================================
     const handleRecordVideo = async () => {
         const targetEl = document.getElementById('executive-daily-story-canvas');
@@ -342,13 +376,20 @@ export const ExecutiveDailyStoryWorkspace = () => {
         let recordCanvas = null;
 
         try {
-            // 1. Snapshot crisp 1:1 DOM layout overlay (ignoring video)
+            // 1. Disable animations and make canvas background transparent for overlay snapshot
+            setDisableAnimForSnapshot(true);
             const savedTransform = contentEl.style.transform;
+            const savedTransition = contentEl.style.transition;
+            const savedBg = targetEl.style.backgroundColor;
+
             contentEl.style.transition = 'none';
             contentEl.style.transform = 'none';
-            await new Promise((r) => requestAnimationFrame(r));
-            await new Promise((r) => setTimeout(r, 60));
+            targetEl.style.backgroundColor = 'transparent';
 
+            await new Promise((r) => requestAnimationFrame(r));
+            await new Promise((r) => setTimeout(r, 120));
+
+            // 2. Snapshot crisp 1:1 DOM layout overlay (Table, logo, doctor rows, badges) with FULL transparency
             const overlayCanvas = await html2canvas(targetEl, {
                 scale: 1,
                 width: 1080,
@@ -361,17 +402,17 @@ export const ExecutiveDailyStoryWorkspace = () => {
                 ignoreElements: (element) => element.tagName === 'VIDEO'
             });
 
-            // Restore interactive preview transform
+            // Restore interactive preview state
+            targetEl.style.backgroundColor = savedBg || '#001238';
             contentEl.style.transform = savedTransform;
+            contentEl.style.transition = savedTransition;
+            setDisableAnimForSnapshot(false);
 
-            // 2. Determine duration from background video (e.g. 20s or exact video duration)
-            const bgDuration = (videoEl.duration && !isNaN(videoEl.duration) && videoEl.duration > 0)
-                ? videoEl.duration
-                : 20;
-            const totalDurationSec = Math.min(Math.round(bgDuration), 20); // 20 detik
+            // 3. Exact 20 seconds duration (matching 1 full clinic video loop)
+            const totalDurationSec = 20;
             const totalDurationMs = totalDurationSec * 1000;
 
-            // 3. Setup composite canvas attached to DOM for active hardware compositing
+            // 4. Setup composite canvas attached to DOM for active hardware compositing
             recordCanvas = document.createElement('canvas');
             recordCanvas.id = 'eds-active-record-canvas';
             recordCanvas.width = 1080;
@@ -393,7 +434,7 @@ export const ExecutiveDailyStoryWorkspace = () => {
             const stream = recordCanvas.captureStream(30);
             const videoTrack = stream.getVideoTracks()[0];
 
-            // 4. Codec detection for MP4 / WebM
+            // 5. Codec detection for MP4 / WebM
             let mimeType = 'video/mp4';
             if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a.40.2')) {
                 mimeType = 'video/mp4;codecs=avc1,mp4a.40.2';
@@ -430,7 +471,15 @@ export const ExecutiveDailyStoryWorkspace = () => {
                 }
 
                 const finalMime = mimeType.includes('mp4') ? 'video/mp4' : mimeType;
-                const videoBlob = new Blob(chunks, { type: finalMime });
+                let videoBlob = new Blob(chunks, { type: finalMime });
+
+                // Patch duration metadata so media player shows 00:20
+                try {
+                    videoBlob = await fixWebmDuration(videoBlob, totalDurationMs);
+                } catch (patchErr) {
+                    console.warn('[handleRecordVideo] duration patch fallback:', patchErr);
+                }
+
                 const videoUrl = URL.createObjectURL(videoBlob);
                 const filename = `story-video-executive-${selectedDay.toLowerCase()}.mp4`;
 
@@ -455,13 +504,13 @@ export const ExecutiveDailyStoryWorkspace = () => {
 
             mediaRecorder.start(100);
 
-            // 5. Continuous Real-Time Animation Loop (Active Video + Overlay)
+            // 6. Continuous Real-Time Compositing Loop (Active Video + Transparent DOM Overlay)
             const renderFrame = () => {
                 const elapsed = Date.now() - startTime;
                 const progress = Math.min(100, Math.round((elapsed / totalDurationMs) * 100));
                 setRecordingProgress(progress);
 
-                // A. Base navy background
+                // A. Base navy background fallback
                 ctx.fillStyle = '#001238';
                 ctx.fillRect(0, 0, 1080, 1920);
 
@@ -505,6 +554,7 @@ export const ExecutiveDailyStoryWorkspace = () => {
 
         } catch (err) {
             console.error('[ExecutiveDailyStory] Video recording error:', err);
+            setDisableAnimForSnapshot(false);
             if (recordCanvas && document.body.contains(recordCanvas)) {
                 document.body.removeChild(recordCanvas);
             }
