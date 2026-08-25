@@ -1,6 +1,6 @@
 import { Share, Download, X, Instagram, Video as VideoIcon } from 'lucide-react';
 import { Button } from '../UI/Button';
-import { downloadPngFile } from '../../utils/downloadHelper';
+import { downloadPngFile, downloadVideoFile } from '../../utils/downloadHelper';
 
 export const SuccessModal = ({
     isOpen,
@@ -40,12 +40,7 @@ export const SuccessModal = ({
         if (!mediaUrl && !mediaBlob) return;
         try {
             if (isVideo) {
-                const a = document.createElement('a');
-                a.href = mediaUrl;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                await downloadVideoFile(mediaBlob || mediaUrl, filename);
             } else {
                 await downloadPngFile(mediaBlob || mediaUrl, filename);
             }

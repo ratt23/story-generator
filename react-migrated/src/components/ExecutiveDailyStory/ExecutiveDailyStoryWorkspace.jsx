@@ -4,7 +4,7 @@ import { useExecutiveDailyStory } from '../../context/ExecutiveDailyStoryContext
 import { ExecutiveDailyStoryCanvas } from './ExecutiveDailyStoryCanvas';
 import { ZoomControls } from '../Preview/ZoomControls';
 import { SuccessModal } from '../UI/SuccessModal';
-import { downloadPngFile } from '../../utils/downloadHelper';
+import { downloadPngFile, downloadVideoFile } from '../../utils/downloadHelper';
 import { Download, Loader2, Video as VideoIcon, Sparkles, Play } from 'lucide-react';
 
 export const ExecutiveDailyStoryWorkspace = () => {
@@ -400,18 +400,18 @@ export const ExecutiveDailyStoryWorkspace = () => {
             const durationMs = 5000; // 5 Seconds Story Duration
             const startTime = Date.now();
 
-            mediaRecorder.onstop = () => {
-                const videoBlob = new Blob(chunks, { type: 'video/mp4' });
+            mediaRecorder.onstop = async () => {
+                const finalMime = mimeType.includes('mp4') ? 'video/mp4' : mimeType;
+                const videoBlob = new Blob(chunks, { type: finalMime });
                 const videoUrl = URL.createObjectURL(videoBlob);
                 const filename = `story-video-executive-${selectedDay.toLowerCase()}.mp4`;
 
-                // Automatically trigger MP4 download
-                const a = document.createElement('a');
-                a.href = videoUrl;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                // Automatically trigger MP4 download via safe file-saver
+                try {
+                    await downloadVideoFile(videoBlob, filename);
+                } catch (dlErr) {
+                    console.warn('[handleRecordVideo] Automatic download fallback:', dlErr);
+                }
 
                 // Show preview success modal
                 setResult({
@@ -425,7 +425,8 @@ export const ExecutiveDailyStoryWorkspace = () => {
                 setRecordingProgress(100);
             };
 
-            mediaRecorder.start();
+            // Flush chunk buffer every 100ms
+            mediaRecorder.start(100);
 
             // Restart video loop for fresh recording start
             if (videoEl) {
@@ -444,10 +445,16 @@ export const ExecutiveDailyStoryWorkspace = () => {
                 }
                 ctx.drawImage(overlayCanvas, 0, 0, 1080, 1920);
 
+                if (stream.getVideoTracks()[0]?.requestFrame) {
+                    stream.getVideoTracks()[0].requestFrame();
+                }
+
                 if (elapsed < durationMs) {
                     requestAnimationFrame(renderFrame);
                 } else {
-                    mediaRecorder.stop();
+                    if (mediaRecorder.state === 'recording') {
+                        mediaRecorder.stop();
+                    }
                 }
             };
 

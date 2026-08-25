@@ -8,7 +8,6 @@ import { saveAs } from 'file-saver';
  * @param {string} filename - The target filename (e.g. 'jadwal-executive-dokter.png')
  */
 export async function downloadPngFile(imageBlobOrDataUrl, filename = 'jadwal-executive.png') {
-    // Ensure filename ends with .png
     const cleanFilename = filename.toLowerCase().endsWith('.png') ? filename : `${filename}.png`;
 
     try {
@@ -18,7 +17,6 @@ export async function downloadPngFile(imageBlobOrDataUrl, filename = 'jadwal-exe
             blobToSave = imageBlobOrDataUrl;
         } else if (typeof imageBlobOrDataUrl === 'string') {
             if (imageBlobOrDataUrl.startsWith('data:')) {
-                // Convert Data URL to typed Blob
                 const byteString = atob(imageBlobOrDataUrl.split(',')[1]);
                 const mimeString = imageBlobOrDataUrl.split(',')[0].split(':')[1].split(';')[0];
                 const ab = new ArrayBuffer(byteString.length);
@@ -28,7 +26,6 @@ export async function downloadPngFile(imageBlobOrDataUrl, filename = 'jadwal-exe
                 }
                 blobToSave = new Blob([ab], { type: mimeString || 'image/png' });
             } else {
-                // Fetch URL to Blob
                 const res = await fetch(imageBlobOrDataUrl);
                 blobToSave = await res.blob();
             }
@@ -38,14 +35,11 @@ export async function downloadPngFile(imageBlobOrDataUrl, filename = 'jadwal-exe
             throw new Error('Data gambar tidak valid untuk diunduh.');
         }
 
-        // 1. Try file-saver saveAs (Standard cross-browser file saver)
         saveAs(blobToSave, cleanFilename);
         return true;
 
     } catch (err) {
         console.warn('[downloadPngFile] saveAs fallback failed, attempting manual anchor click:', err);
-
-        // Fallback anchor click
         try {
             const url = imageBlobOrDataUrl instanceof Blob 
                 ? URL.createObjectURL(imageBlobOrDataUrl) 
@@ -58,7 +52,6 @@ export async function downloadPngFile(imageBlobOrDataUrl, filename = 'jadwal-exe
             link.target = '_self';
             document.body.appendChild(link);
 
-            // Dispatch simulated native mouse click event
             const evt = new MouseEvent('click', {
                 view: window,
                 bubbles: true,
@@ -73,6 +66,70 @@ export async function downloadPngFile(imageBlobOrDataUrl, filename = 'jadwal-exe
             return true;
         } catch (fallbackErr) {
             console.error('[downloadPngFile] Download failed completely:', fallbackErr);
+            throw fallbackErr;
+        }
+    }
+}
+
+/**
+ * Universal safe MP4/video downloader that guarantees proper .mp4 file extension
+ * across Chrome, Edge, Firefox, Safari, and Windows OS.
+ *
+ * @param {Blob|string} videoBlobOrUrl - The video blob or URL to download
+ * @param {string} filename - The target filename (e.g. 'story-video-executive-senin.mp4')
+ */
+export async function downloadVideoFile(videoBlobOrUrl, filename = 'story-video-executive.mp4') {
+    let cleanFilename = filename;
+    if (!cleanFilename.toLowerCase().endsWith('.mp4') && !cleanFilename.toLowerCase().endsWith('.webm')) {
+        cleanFilename = `${cleanFilename}.mp4`;
+    }
+
+    try {
+        let blobToSave = null;
+
+        if (videoBlobOrUrl instanceof Blob) {
+            blobToSave = videoBlobOrUrl;
+        } else if (typeof videoBlobOrUrl === 'string') {
+            const res = await fetch(videoBlobOrUrl);
+            blobToSave = await res.blob();
+        }
+
+        if (!blobToSave) {
+            throw new Error('Data video tidak valid untuk diunduh.');
+        }
+
+        // Use file-saver saveAs to guarantee proper OS file extension
+        saveAs(blobToSave, cleanFilename);
+        return true;
+
+    } catch (err) {
+        console.warn('[downloadVideoFile] saveAs fallback failed, attempting manual anchor click:', err);
+        try {
+            const url = videoBlobOrUrl instanceof Blob 
+                ? URL.createObjectURL(videoBlobOrUrl) 
+                : videoBlobOrUrl;
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = cleanFilename;
+            link.setAttribute('download', cleanFilename);
+            link.target = '_self';
+            document.body.appendChild(link);
+
+            const evt = new MouseEvent('click', {
+                view: window,
+                bubbles: true,
+                cancelable: true
+            });
+            link.dispatchEvent(evt);
+
+            document.body.removeChild(link);
+            if (videoBlobOrUrl instanceof Blob) {
+                setTimeout(() => URL.revokeObjectURL(url), 30000);
+            }
+            return true;
+        } catch (fallbackErr) {
+            console.error('[downloadVideoFile] Video download failed completely:', fallbackErr);
             throw fallbackErr;
         }
     }
