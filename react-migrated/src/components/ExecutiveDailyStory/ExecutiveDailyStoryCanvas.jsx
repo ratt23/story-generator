@@ -165,6 +165,18 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
     const logoAnimName = disableAnimations ? 'none' : getAnimationName(config.logoAnimation || 'fade');
     const footerAnimName = disableAnimations ? 'none' : getAnimationName(config.footersAnimation || 'fade');
 
+    // When animations are disabled (for snapshot), force all animated elements to their fully-visible final state
+    // This guarantees html2canvas captures at opacity:1 with correct transforms, not the keyframe start (opacity:0)
+    const staticAnimStyle = disableAnimations ? {
+        opacity: 1,
+        transform: 'translate3d(0,0,0)',
+        animationName: 'none',
+        animationDuration: '0s',
+        animationDelay: '0s',
+        animationFillMode: 'none',
+        animationPlayState: 'paused'
+    } : {};
+
     return (
         <div
             ref={canvasRef}
@@ -305,11 +317,13 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                         alignItems: 'center',
                         transformOrigin: 'top left',
                         '--eds-scale': config.logoScale || 1,
-                        animationName: logoAnimName,
-                        animationDuration: duration,
-                        animationTimingFunction: easing,
-                        animationDelay: delayLogo,
-                        animationFillMode: fillMode
+                        ...(!disableAnimations ? {
+                            animationName: logoAnimName,
+                            animationDuration: duration,
+                            animationTimingFunction: easing,
+                            animationDelay: delayLogo,
+                            animationFillMode: fillMode
+                        } : staticAnimStyle)
                     }}
                 >
                     <img
@@ -341,11 +355,13 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                         pointerEvents: 'none',
                         transformOrigin: 'top center',
                         '--eds-scale': config.headerScale || 1,
-                        animationName: titleAnimName,
-                        animationDuration: duration,
-                        animationTimingFunction: easing,
-                        animationDelay: delayTitle,
-                        animationFillMode: fillMode
+                        ...(!disableAnimations ? {
+                            animationName: titleAnimName,
+                            animationDuration: duration,
+                            animationTimingFunction: easing,
+                            animationDelay: delayTitle,
+                            animationFillMode: fillMode
+                        } : staticAnimStyle)
                     }}
                 >
                     <img
@@ -377,11 +393,13 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                         zIndex: 20,
                         transformOrigin: 'top center',
                         '--eds-scale': config.dayBadgeScale || 1,
-                        animationName: badgeAnimName,
-                        animationDuration: duration,
-                        animationTimingFunction: easing,
-                        animationDelay: delayBadge,
-                        animationFillMode: fillMode
+                        ...(!disableAnimations ? {
+                            animationName: badgeAnimName,
+                            animationDuration: duration,
+                            animationTimingFunction: easing,
+                            animationDelay: delayBadge,
+                            animationFillMode: fillMode
+                        } : staticAnimStyle)
                     }}
                 >
                     <div
@@ -422,11 +440,13 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                         zIndex: 20,
                         transformOrigin: 'top center',
                         '--eds-scale': config.tableScale || 1,
-                        animationName: tableAnimName,
-                        animationDuration: duration,
-                        animationTimingFunction: easing,
-                        animationDelay: delayTable,
-                        animationFillMode: fillMode
+                        ...(!disableAnimations ? {
+                            animationName: tableAnimName,
+                            animationDuration: duration,
+                            animationTimingFunction: easing,
+                            animationDelay: delayTable,
+                            animationFillMode: fillMode
+                        } : staticAnimStyle)
                     }}
                 >
                     {/* Table Header Bar */}
@@ -574,11 +594,13 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                         zIndex: 20,
                         pointerEvents: 'none',
                         '--eds-scale': 1,
-                        animationName: footerAnimName,
-                        animationDuration: duration,
-                        animationTimingFunction: easing,
-                        animationDelay: delayFooters,
-                        animationFillMode: fillMode
+                        ...(!disableAnimations ? {
+                            animationName: footerAnimName,
+                            animationDuration: duration,
+                            animationTimingFunction: easing,
+                            animationDelay: delayFooters,
+                            animationFillMode: fillMode
+                        } : staticAnimStyle)
                     }}
                 >
                     {/* Left: Address Footer */}

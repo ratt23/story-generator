@@ -5,6 +5,19 @@ import { createDoctorSlug, DAYS_LIST } from '../utils/imageHelper';
 const ExecutiveDailyStoryContext = createContext(null);
 
 const PHOTO_SETTINGS_STORAGE_KEY = 'executive_daily_story_doctor_photos_v1';
+const CONFIG_STORAGE_KEY = 'eds_layout_config_v1';
+
+// Load saved config from localStorage, merged with DEFAULT_CONFIG so new keys always exist
+const loadSavedConfig = (defaults) => {
+    try {
+        const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
+        if (!raw) return defaults;
+        return { ...defaults, ...JSON.parse(raw) };
+    } catch (e) {
+        console.warn('[ExecutiveDailyStory] Failed to load config from localStorage', e);
+        return defaults;
+    }
+};
 
 // Helper to get stored photo adjustments from localStorage
 const getStoredPhotoSettings = () => {
@@ -156,7 +169,7 @@ export const ExecutiveDailyStoryProvider = ({ children }) => {
     const { executiveDoctors, allDoctors, loading, error, refetch } = useExecutiveStoryDoctors();
     const [selectedDay, setSelectedDay] = useState('Sabtu');
     const [dailyDoctors, setDailyDoctors] = useState([]);
-    const [config, setConfig] = useState(DEFAULT_CONFIG);
+    const [config, setConfig] = useState(() => loadSavedConfig(DEFAULT_CONFIG));
     const [hasManualEdits, setHasManualEdits] = useState(false);
     const [animationKey, setAnimationKey] = useState(1);
 
@@ -413,13 +426,26 @@ export const ExecutiveDailyStoryProvider = ({ children }) => {
         }
     };
 
-    // Update config property
+    // Update config property — always persists to localStorage
     const updateConfig = (key, value) => {
-        setConfig(prev => ({ ...prev, [key]: value }));
+        setConfig(prev => {
+            const next = { ...prev, [key]: value };
+            try {
+                localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(next));
+            } catch (e) {
+                console.warn('[ExecutiveDailyStory] Failed to save config to localStorage', e);
+            }
+            return next;
+        });
     };
 
-    // Reset all config to default
+    // Reset all config to default and clear localStorage
     const resetConfig = () => {
+        try {
+            localStorage.removeItem(CONFIG_STORAGE_KEY);
+        } catch (e) {
+            console.warn('[ExecutiveDailyStory] Failed to clear config from localStorage', e);
+        }
         setConfig(DEFAULT_CONFIG);
         setAnimationKey(prev => prev + 1);
     };

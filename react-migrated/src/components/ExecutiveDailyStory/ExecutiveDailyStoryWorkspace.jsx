@@ -390,8 +390,17 @@ function fixWebmDuration(blob, durationMs) {
             contentEl.style.transform = 'none';
             targetEl.style.backgroundColor = 'transparent';
 
+            // Wait for React to commit state change (setDisableAnimForSnapshot) to the DOM:
+            // Two rAFs: first for React reconcile+commit, second for browser paint/layout
             await new Promise((r) => requestAnimationFrame(r));
-            await new Promise((r) => setTimeout(r, 200));
+            await new Promise((r) => requestAnimationFrame(r));
+            await new Promise((r) => setTimeout(r, 300));
+
+            // Hide the video background container directly in the DOM so html2canvas
+            // cannot detect any video color bleeding through transparent table backgrounds
+            const videoBgEl = document.getElementById('eds-video-bg-container');
+            const savedVideoBgVisibility = videoBgEl ? videoBgEl.style.visibility : '';
+            if (videoBgEl) videoBgEl.style.visibility = 'hidden';
 
             // 2. Snapshot crisp 1:1 DOM layout overlay (Table, logo, doctor rows, badges) with FULL transparency
             const overlayCanvas = await html2canvas(targetEl, {
@@ -408,6 +417,9 @@ function fixWebmDuration(blob, durationMs) {
                     element.id === 'eds-video-bg-container' ||
                     element.getAttribute('data-html2canvas-ignore') === 'true'
             });
+
+            // Restore video bg container visibility
+            if (videoBgEl) videoBgEl.style.visibility = savedVideoBgVisibility;
 
             // Restore interactive preview state
             targetEl.style.backgroundColor = savedBg || '#001238';
