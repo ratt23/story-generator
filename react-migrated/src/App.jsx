@@ -8,6 +8,7 @@ import { ExecutiveBrochureGenerator } from './components/Brochure/ExecutiveBroch
 import { TarifApp } from './components/Tarif/TarifApp';
 import { WelcomeBoard } from './components/WelcomeBoard/WelcomeBoard';
 import { ExecutiveStoryGenerator } from './components/ExecutiveStory/ExecutiveStoryGenerator';
+import { ExecutiveDailyStoryGenerator } from './components/ExecutiveDailyStory/ExecutiveDailyStoryGenerator';
 import { AdminLayout } from './components/Layout/AdminLayout';
 import { ChangelogPage } from './components/Changelog/ChangelogPage';
 
@@ -41,6 +42,7 @@ function App() {
       <AdminLayout>
         <Routes>
           <Route path="/" element={<StoryLayout />} />
+          <Route path="/executive-schedule" element={<ExecutiveDailyStoryGenerator />} />
           <Route path="/executive-card" element={<ExecutiveStoryGenerator />} />
           <Route path="/executive-story" element={<ExecutiveStoryGenerator />} />
           <Route path="/brochure" element={<BrochureGenerator />} />

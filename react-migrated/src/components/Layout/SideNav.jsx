@@ -1,15 +1,16 @@
 import { NavLink, useLocation } from 'react-router-dom';
-import { Home, FileText, Sparkles, LayoutDashboard, Settings, BookOpen } from 'lucide-react';
+import { Home, FileText, Sparkles, LayoutDashboard, Settings, BookOpen, Calendar } from 'lucide-react';
 import clsx from 'clsx';
 
-const APP_VERSION = 'v3.0.0';
-const APP_DATE = '17 Agu 2026';
+const APP_VERSION = 'v3.1.0';
+const APP_DATE = '25 Agu 2026';
 
 export const SideNav = ({ className = '' }) => {
     const location = useLocation();
     const navItems = [
+        { name: 'Story Jadwal Executive', path: '/executive-schedule', icon: <Calendar size={20} className="text-amber-500" />, isNew: true },
         { name: 'Executive Doctor Card', path: '/executive-card', icon: <Sparkles size={20} className="text-amber-500" /> },
-        { name: 'Executive Brochure', path: '/executive-brochure', icon: <FileText size={20} className="text-amber-500" />, isNew: true },
+        { name: 'Executive Brochure', path: '/executive-brochure', icon: <FileText size={20} className="text-amber-500" /> },
         { name: 'Story Cuti Dokter', path: '/', icon: <Home size={20} /> },
         { name: 'Brochure Generator', path: '/brochure', icon: <FileText size={20} /> },
         { name: 'Welcome Board', path: '/welcome', icon: <LayoutDashboard size={20} /> },

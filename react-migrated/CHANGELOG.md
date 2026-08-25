@@ -7,6 +7,25 @@ Format mengikuti [Keep a Changelog](https://keepachangelog.com/id/1.0.0/).
 
 ---
 
+## [v3.1.0] — 25 Agustus 2026 — Fitur Baru: Story Jadwal Dokter Executive
+
+### ✨ Fitur Baru
+- **Menu Baru "Story Jadwal Executive"** (`/executive-schedule`): Generator story jadwal dokter executive harian (Instagram & WhatsApp Story 1080x1920) dengan background video animasi mewah (`Background.webm`), kartu tabel *frosted glass*, dan logo Siloam resmi.
+- **Filter Jadwal Otomatis Berdasarkan Hari**: Memilih hari (Senin s/d Minggu) otomatis memfilter dokter executive yang memiliki jam praktik pada hari tersebut.
+- **Interactive Photo Positioning Popup**:
+  - Modal interaktif untuk mengatur posisi foto dokter di dalam lingkaran avatar secara presisi.
+  - Fitur drag-and-drop langsung pada lingkaran foto, slider Zoom/Skala (0.5x - 3.5x), Geser X & Y (-120px s/d +120px), Rotasi (-180° s/d +180°), dan Cermin (Flip Horizontal).
+  - Opsi upload foto lokal dari komputer dan custom URL.
+- **Kustomisasi Layout & Tipografi Lengkap**:
+  - Pengaturan Skala (Scale) dan Posisi (X, Y) untuk Logo, Judul "EXECUTIVE Clinic", Badge Hari, Tabel Frosted Glass, dan Footer Kiri & Kanan.
+  - Pengaturan lebar tabel, opasitas kaca, efek blur, padding, dan jarak antar baris.
+  - Pengaturan font size nama dokter, spesialis, jam praktik, dan ukuran frame avatar bulat.
+- **Dual Export (PNG & Animated Video WebM)**:
+  - Download PNG kualitas tinggi (1080x1920) dengan frame snapshot video.
+  - Download Video Story (WebM) yang merekam video animasi latar belakang bersama overlay tabel.
+
+---
+
 ## [v3.0.0] — 17 Agustus 2026 — Print-Safe Architecture & iframe Preview
 
 ### 🐛 Diperbaiki
