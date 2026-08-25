@@ -452,14 +452,28 @@ function fixWebmDuration(blob, durationMs) {
                 cx.closePath();
             };
 
-            // Helper: draw circular avatar clip + image or initials
+            // Helper: draw circular avatar clip + image or initials (with object-fit:cover)
             const drawAvatar = (cx, doc, avatarImg, x, y, size) => {
                 cx.save();
                 cx.beginPath();
                 cx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
                 cx.clip();
                 if (avatarImg) {
-                    cx.drawImage(avatarImg, x, y, size, size);
+                    // object-fit: cover — crop proportionally so no stretch/squish
+                    const iw = avatarImg.naturalWidth || avatarImg.width;
+                    const ih = avatarImg.naturalHeight || avatarImg.height;
+                    const imgAspect = iw / ih;
+                    let sx = 0, sy = 0, sw = iw, sh = ih;
+                    if (imgAspect > 1) {
+                        // wider than tall: crop sides
+                        sw = ih;
+                        sx = (iw - sw) / 2;
+                    } else {
+                        // taller than wide: crop top/bottom
+                        sh = iw;
+                        sy = (ih - sh) / 2;
+                    }
+                    cx.drawImage(avatarImg, sx, sy, sw, sh, x, y, size, size);
                 } else {
                     cx.fillStyle = '#001f5c';
                     cx.fillRect(x, y, size, size);
@@ -478,6 +492,52 @@ function fixWebmDuration(blob, durationMs) {
                 cx.beginPath();
                 cx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
                 cx.stroke();
+                cx.restore();
+            };
+
+            // Helper: draw a simple calendar icon using canvas primitives
+            const drawCalendarIcon = (cx, x, y, size, color) => {
+                cx.save();
+                cx.strokeStyle = color;
+                cx.fillStyle = color;
+                cx.lineWidth = 2;
+                cx.lineCap = 'round';
+                cx.lineJoin = 'round';
+
+                const bx = x + size * 0.05;
+                const bw = size * 0.9;
+                const bh = size * 0.82;
+                const by = y + size * 0.18;
+
+                // Outer rectangle body
+                roundRect(cx, bx, by, bw, bh, 3, 3, 3, 3);
+                cx.stroke();
+
+                // Header separator line
+                cx.beginPath();
+                cx.moveTo(bx, by + bh * 0.32);
+                cx.lineTo(bx + bw, by + bh * 0.32);
+                cx.stroke();
+
+                // Two binding hooks at top
+                cx.lineWidth = 2.5;
+                [bx + bw * 0.27, bx + bw * 0.73].forEach(hx => {
+                    cx.beginPath();
+                    cx.moveTo(hx, y + 1);
+                    cx.lineTo(hx, by + bh * 0.18);
+                    cx.stroke();
+                });
+
+                // Date grid — 5 small dots
+                const dotR = size * 0.055;
+                cx.lineWidth = 1;
+                [[0.22, 0.58], [0.5, 0.58], [0.78, 0.58],
+                 [0.22, 0.82], [0.5, 0.82]].forEach(([fx, fy]) => {
+                    cx.beginPath();
+                    cx.arc(bx + bw * fx, by + bh * fy, dotR, 0, Math.PI * 2);
+                    cx.fill();
+                });
+
                 cx.restore();
             };
 
@@ -526,27 +586,34 @@ function fixWebmDuration(blob, durationMs) {
                     const badgeFontSize = config.dayBadgeFontSize || 28;
                     ctx.font = `800 ${badgeFontSize}px "Plus Jakarta Sans", Poppins, sans-serif`;
                     const textW = ctx.measureText(dayText).width;
-                    const iconW = 28;
+                    const iconSize = badgeFontSize;
                     const gap = 12;
                     const padH = 11;
-                    const padV = 46;
-                    const badgeW = padV * 2 + iconW + gap + textW;
+                    const padV = 36;
+                    const badgeW = padV * 2 + iconSize + gap + textW;
                     const badgeH = badgeFontSize + padH * 2;
                     const badgeX = (1080 - badgeW) / 2 + (config.dayBadgeOffsetX || 0);
                     const badgeY = 500 + (config.dayBadgeOffsetY || 0);
+                    const iconColor = config.dayBadgeTextColor || '#ffffff';
 
+                    // Badge background
                     ctx.save();
                     roundRect(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2, badgeH / 2, badgeH / 2, badgeH / 2);
                     ctx.fillStyle = config.dayBadgeBgColor || '#001f5c';
                     ctx.fill();
                     ctx.restore();
 
+                    // Calendar icon
+                    const iconX = badgeX + padV;
+                    const iconY = badgeY + (badgeH - iconSize) / 2;
+                    drawCalendarIcon(ctx, iconX, iconY, iconSize, iconColor);
+
                     // Badge text
                     ctx.save();
-                    ctx.fillStyle = config.dayBadgeTextColor || '#ffffff';
+                    ctx.fillStyle = iconColor;
                     ctx.font = `800 ${badgeFontSize}px "Plus Jakarta Sans", Poppins, sans-serif`;
                     ctx.textBaseline = 'middle';
-                    ctx.fillText(dayText, badgeX + padV + iconW + gap, badgeY + badgeH / 2);
+                    ctx.fillText(dayText, iconX + iconSize + gap, badgeY + badgeH / 2);
                     ctx.restore();
                 }
 
