@@ -255,6 +255,8 @@ export const ExecutiveDailyStoryCanvas = ({ canvasRef, videoElementRef, disableA
                 <video
                     ref={localVideoRef}
                     src={config.bgVideoUrl || '/asset2/Background.webm'}
+                    crossOrigin="anonymous"
+                    preload="auto"
                     autoPlay
                     loop
                     muted

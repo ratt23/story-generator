@@ -324,7 +324,7 @@ export const ExecutiveDailyStoryWorkspace = () => {
     };
 
     // ========================================================
-    // Video Story Generator via Canvas MediaRecorder (MP4 Format)
+    // Video Story Generator (MP4 Format - Matching Background Duration)
     // ========================================================
     const handleRecordVideo = async () => {
         const targetEl = document.getElementById('executive-daily-story-canvas');
@@ -332,21 +332,23 @@ export const ExecutiveDailyStoryWorkspace = () => {
         const videoEl = videoElementRef.current;
 
         if (!targetEl || !videoEl) {
-            alert('Elemen video belum siap.');
+            alert('Elemen video background belum siap.');
             return;
         }
 
         setIsRecordingVideo(true);
         setRecordingProgress(0);
 
+        let recordCanvas = null;
+
         try {
-            // Save transform & unscale for high-res recording
+            // 1. Snapshot crisp 1:1 DOM layout overlay (ignoring video)
             const savedTransform = contentEl.style.transform;
             contentEl.style.transition = 'none';
             contentEl.style.transform = 'none';
             await new Promise((r) => requestAnimationFrame(r));
+            await new Promise((r) => setTimeout(r, 60));
 
-            // Generate an overlay image of the DOM without the video background
             const overlayCanvas = await html2canvas(targetEl, {
                 scale: 1,
                 width: 1080,
@@ -355,21 +357,43 @@ export const ExecutiveDailyStoryWorkspace = () => {
                 allowTaint: false,
                 backgroundColor: null,
                 logging: false,
+                imageTimeout: 20000,
                 ignoreElements: (element) => element.tagName === 'VIDEO'
             });
 
-            // Restore interactive preview
+            // Restore interactive preview transform
             contentEl.style.transform = savedTransform;
 
-            // Setup composite recording canvas
-            const recordCanvas = document.createElement('canvas');
+            // 2. Determine duration from background video (e.g. 20s or exact video duration)
+            const bgDuration = (videoEl.duration && !isNaN(videoEl.duration) && videoEl.duration > 0)
+                ? videoEl.duration
+                : 20;
+            const totalDurationSec = Math.min(Math.round(bgDuration), 20); // 20 detik
+            const totalDurationMs = totalDurationSec * 1000;
+
+            // 3. Setup composite canvas attached to DOM for active hardware compositing
+            recordCanvas = document.createElement('canvas');
+            recordCanvas.id = 'eds-active-record-canvas';
             recordCanvas.width = 1080;
             recordCanvas.height = 1920;
-            const ctx = recordCanvas.getContext('2d');
+            recordCanvas.style.cssText = 'position:fixed; left:0; top:0; width:1080px; height:1920px; z-index:-9999; opacity:0.01; pointer-events:none;';
+            document.body.appendChild(recordCanvas);
+
+            const ctx = recordCanvas.getContext('2d', { alpha: false, desynchronized: true });
+
+            // Restart live video from beginning
+            videoEl.muted = true;
+            videoEl.currentTime = 0;
+            try {
+                await videoEl.play();
+            } catch (playErr) {
+                console.warn('[handleRecordVideo] play error:', playErr);
+            }
 
             const stream = recordCanvas.captureStream(30);
+            const videoTrack = stream.getVideoTracks()[0];
 
-            // Determine best supported MP4 / WebM codec
+            // 4. Codec detection for MP4 / WebM
             let mimeType = 'video/mp4';
             if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a.40.2')) {
                 mimeType = 'video/mp4;codecs=avc1,mp4a.40.2';
@@ -397,10 +421,14 @@ export const ExecutiveDailyStoryWorkspace = () => {
                 }
             };
 
-            const durationMs = 5000; // 5 Seconds Story Duration
             const startTime = Date.now();
 
             mediaRecorder.onstop = async () => {
+                // Cleanup DOM
+                if (recordCanvas && document.body.contains(recordCanvas)) {
+                    document.body.removeChild(recordCanvas);
+                }
+
                 const finalMime = mimeType.includes('mp4') ? 'video/mp4' : mimeType;
                 const videoBlob = new Blob(chunks, { type: finalMime });
                 const videoUrl = URL.createObjectURL(videoBlob);
@@ -410,7 +438,7 @@ export const ExecutiveDailyStoryWorkspace = () => {
                 try {
                     await downloadVideoFile(videoBlob, filename);
                 } catch (dlErr) {
-                    console.warn('[handleRecordVideo] Automatic download fallback:', dlErr);
+                    console.warn('[handleRecordVideo] Download fallback:', dlErr);
                 }
 
                 // Show preview success modal
@@ -425,35 +453,46 @@ export const ExecutiveDailyStoryWorkspace = () => {
                 setRecordingProgress(100);
             };
 
-            // Flush chunk buffer every 100ms
             mediaRecorder.start(100);
 
-            // Restart video loop for fresh recording start
-            if (videoEl) {
-                videoEl.currentTime = 0;
-                videoEl.play().catch(() => {});
-            }
-
-            // High-fps render loop: video background + overlay elements
+            // 5. Continuous Real-Time Animation Loop (Active Video + Overlay)
             const renderFrame = () => {
                 const elapsed = Date.now() - startTime;
-                const progress = Math.min(100, Math.round((elapsed / durationMs) * 100));
+                const progress = Math.min(100, Math.round((elapsed / totalDurationMs) * 100));
                 setRecordingProgress(progress);
 
+                // A. Base navy background
+                ctx.fillStyle = '#001238';
+                ctx.fillRect(0, 0, 1080, 1920);
+
+                // B. Draw live video background with filters
                 if (videoEl && videoEl.readyState >= 2) {
-                    ctx.drawImage(videoEl, 0, 0, 1080, 1920);
+                    try {
+                        ctx.save();
+                        ctx.filter = `brightness(${config.videoBrightness || 100}%) contrast(${config.videoContrast || 100}%) saturate(${config.videoSaturate || 100}%)`;
+                        ctx.drawImage(videoEl, 0, 0, 1080, 1920);
+                        ctx.restore();
+                    } catch (dErr) {
+                        console.warn('[handleRecordVideo] video draw error:', dErr);
+                    }
                 }
+
+                // C. Overlay darkness if configured
                 if (config.overlayDarkness > 0) {
                     ctx.fillStyle = `rgba(0, 18, 56, ${config.overlayDarkness / 100})`;
                     ctx.fillRect(0, 0, 1080, 1920);
                 }
-                ctx.drawImage(overlayCanvas, 0, 0, 1080, 1920);
 
-                if (stream.getVideoTracks()[0]?.requestFrame) {
-                    stream.getVideoTracks()[0].requestFrame();
+                // D. Draw high-res DOM layout overlay (table, doctor names, schedules, badges, footers)
+                if (overlayCanvas) {
+                    ctx.drawImage(overlayCanvas, 0, 0, 1080, 1920);
                 }
 
-                if (elapsed < durationMs) {
+                if (videoTrack?.requestFrame) {
+                    videoTrack.requestFrame();
+                }
+
+                if (elapsed < totalDurationMs) {
                     requestAnimationFrame(renderFrame);
                 } else {
                     if (mediaRecorder.state === 'recording') {
@@ -466,7 +505,10 @@ export const ExecutiveDailyStoryWorkspace = () => {
 
         } catch (err) {
             console.error('[ExecutiveDailyStory] Video recording error:', err);
-            alert('Gagal merekam video story MP4: ' + err.message);
+            if (recordCanvas && document.body.contains(recordCanvas)) {
+                document.body.removeChild(recordCanvas);
+            }
+            alert('Gagal membuat video story: ' + err.message);
             setIsRecordingVideo(false);
         }
     };
