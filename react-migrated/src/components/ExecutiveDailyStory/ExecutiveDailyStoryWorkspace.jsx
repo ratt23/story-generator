@@ -387,7 +387,7 @@ export const ExecutiveDailyStoryWorkspace = () => {
 
             const mediaRecorder = new MediaRecorder(stream, {
                 mimeType,
-                videoBitsPerSecond: 10000000 // 10 Mbps High Quality
+                videoBitsPerSecond: 15000000 // 15 Mbps Ultra HD
             });
 
             const chunks = [];
@@ -442,6 +442,10 @@ export const ExecutiveDailyStoryWorkspace = () => {
 
                 if (videoEl && videoEl.readyState >= 2) {
                     ctx.drawImage(videoEl, 0, 0, 1080, 1920);
+                }
+                if (config.overlayDarkness > 0) {
+                    ctx.fillStyle = `rgba(0, 18, 56, ${config.overlayDarkness / 100})`;
+                    ctx.fillRect(0, 0, 1080, 1920);
                 }
                 ctx.drawImage(overlayCanvas, 0, 0, 1080, 1920);
 

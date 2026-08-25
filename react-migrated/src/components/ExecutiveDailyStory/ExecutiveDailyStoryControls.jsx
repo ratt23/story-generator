@@ -54,6 +54,59 @@ const AnimationOptionCard = ({ label, icon: Icon, isSelected, onClick, descripti
     </button>
 );
 
+const NumberSliderField = ({
+    label,
+    value,
+    min,
+    max,
+    step = 1,
+    unit = 'px',
+    onChange,
+    isPercentage = false,
+    className = ''
+}) => {
+    const displayVal = isPercentage ? Math.round((value ?? 0) * 100) : (value ?? 0);
+
+    const handleNumberChange = (e) => {
+        const raw = parseFloat(e.target.value);
+        if (isNaN(raw)) return;
+        if (isPercentage) {
+            onChange(Number((raw / 100).toFixed(2)));
+        } else {
+            onChange(raw);
+        }
+    };
+
+    return (
+        <div className={`space-y-1 ${className}`}>
+            <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-600 font-medium truncate pr-1">{label}</span>
+                <div className="flex items-center gap-0.5 bg-slate-100 border border-slate-200 rounded px-1.5 py-0.5 focus-within:ring-1 focus-within:ring-blue-500 focus-within:bg-white focus-within:border-blue-400 transition-all shrink-0">
+                    <input
+                        type="number"
+                        min={isPercentage ? min * 100 : min}
+                        max={isPercentage ? max * 100 : max}
+                        step={isPercentage ? (step * 100) : step}
+                        value={displayVal}
+                        onChange={handleNumberChange}
+                        className="w-12 text-right bg-transparent text-[11px] font-bold text-blue-700 focus:outline-none"
+                    />
+                    <span className="text-[10px] text-slate-400 font-bold">{unit}</span>
+                </div>
+            </div>
+            <input
+                type="range"
+                min={min}
+                max={max}
+                step={step}
+                value={value ?? 0}
+                onChange={(e) => onChange(parseFloat(e.target.value))}
+                className="w-full accent-blue-600 cursor-pointer h-1.5 bg-slate-200 rounded-lg block"
+            />
+        </div>
+    );
+};
+
 export const ExecutiveDailyStoryControls = () => {
     const {
         selectedDay,
@@ -894,52 +947,37 @@ export const ExecutiveDailyStoryControls = () => {
                         </div>
 
                         {config.showLogo && (
-                            <div className="space-y-2.5 pt-1">
-                                <div>
-                                    <label className="text-slate-600 font-medium flex justify-between">
-                                        <span>Skala Logo (Scale):</span>
-                                        <span className="font-bold text-blue-700">{Math.round((config.logoScale || 1) * 100)}%</span>
-                                    </label>
-                                    <input
-                                        type="range"
-                                        min="0.5"
-                                        max="2.0"
-                                        step="0.05"
-                                        value={config.logoScale || 1}
-                                        onChange={(e) => updateConfig('logoScale', parseFloat(e.target.value))}
-                                        className="w-full mt-1 accent-blue-600"
-                                    />
-                                </div>
+                            <div className="space-y-3 pt-1">
+                                <NumberSliderField
+                                    label="Skala Logo (Scale)"
+                                    value={config.logoScale || 1}
+                                    min={0.2}
+                                    max={3.0}
+                                    step={0.05}
+                                    unit="%"
+                                    isPercentage={true}
+                                    onChange={(val) => updateConfig('logoScale', val)}
+                                />
 
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                            <span>Posisi X:</span>
-                                            <span className="font-bold text-blue-700">{config.logoOffsetX || 0}px</span>
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="-150"
-                                            max="150"
-                                            value={config.logoOffsetX || 0}
-                                            onChange={(e) => updateConfig('logoOffsetX', parseInt(e.target.value))}
-                                            className="w-full mt-1 accent-blue-600"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                            <span>Posisi Y:</span>
-                                            <span className="font-bold text-blue-700">{config.logoOffsetY || 0}px</span>
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="-150"
-                                            max="150"
-                                            value={config.logoOffsetY || 0}
-                                            onChange={(e) => updateConfig('logoOffsetY', parseInt(e.target.value))}
-                                            className="w-full mt-1 accent-blue-600"
-                                        />
-                                    </div>
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <NumberSliderField
+                                        label="Posisi X"
+                                        value={config.logoOffsetX || 0}
+                                        min={-300}
+                                        max={300}
+                                        step={1}
+                                        unit="px"
+                                        onChange={(val) => updateConfig('logoOffsetX', val)}
+                                    />
+                                    <NumberSliderField
+                                        label="Posisi Y"
+                                        value={config.logoOffsetY || 0}
+                                        min={-300}
+                                        max={300}
+                                        step={1}
+                                        unit="px"
+                                        onChange={(val) => updateConfig('logoOffsetY', val)}
+                                    />
                                 </div>
                             </div>
                         )}
@@ -963,52 +1001,37 @@ export const ExecutiveDailyStoryControls = () => {
                         </div>
 
                         {config.showTitle !== false && (
-                            <div className="space-y-2.5 pt-1">
-                                <div>
-                                    <label className="text-slate-600 font-medium flex justify-between">
-                                        <span>Skala Judul (Scale):</span>
-                                        <span className="font-bold text-blue-700">{Math.round((config.headerScale || 1) * 100)}%</span>
-                                    </label>
-                                    <input
-                                        type="range"
-                                        min="0.5"
-                                        max="2.0"
-                                        step="0.05"
-                                        value={config.headerScale || 1}
-                                        onChange={(e) => updateConfig('headerScale', parseFloat(e.target.value))}
-                                        className="w-full mt-1 accent-blue-600"
-                                    />
-                                </div>
+                            <div className="space-y-3 pt-1">
+                                <NumberSliderField
+                                    label="Skala Judul (Scale)"
+                                    value={config.headerScale || 1}
+                                    min={0.2}
+                                    max={3.0}
+                                    step={0.05}
+                                    unit="%"
+                                    isPercentage={true}
+                                    onChange={(val) => updateConfig('headerScale', val)}
+                                />
 
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                            <span>Posisi X:</span>
-                                            <span className="font-bold text-blue-700">{config.headerOffsetX || 0}px</span>
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="-200"
-                                            max="200"
-                                            value={config.headerOffsetX || 0}
-                                            onChange={(e) => updateConfig('headerOffsetX', parseInt(e.target.value))}
-                                            className="w-full mt-1 accent-blue-600"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                            <span>Posisi Y:</span>
-                                            <span className="font-bold text-blue-700">{config.headerOffsetY || 0}px</span>
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="-200"
-                                            max="200"
-                                            value={config.headerOffsetY || 0}
-                                            onChange={(e) => updateConfig('headerOffsetY', parseInt(e.target.value))}
-                                            className="w-full mt-1 accent-blue-600"
-                                        />
-                                    </div>
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <NumberSliderField
+                                        label="Posisi X"
+                                        value={config.headerOffsetX || 0}
+                                        min={-400}
+                                        max={400}
+                                        step={1}
+                                        unit="px"
+                                        onChange={(val) => updateConfig('headerOffsetX', val)}
+                                    />
+                                    <NumberSliderField
+                                        label="Posisi Y"
+                                        value={config.headerOffsetY || 0}
+                                        min={-400}
+                                        max={400}
+                                        step={1}
+                                        unit="px"
+                                        onChange={(val) => updateConfig('headerOffsetY', val)}
+                                    />
                                 </div>
                             </div>
                         )}
@@ -1032,9 +1055,9 @@ export const ExecutiveDailyStoryControls = () => {
                         </div>
 
                         {config.showDayBadge && (
-                            <div className="space-y-2.5 pt-1">
+                            <div className="space-y-3 pt-1">
                                 <div>
-                                    <label className="text-slate-600 font-medium">Kustom Teks Hari/Tanggal:</label>
+                                    <label className="text-slate-600 font-medium text-[11px]">Kustom Teks Hari/Tanggal:</label>
                                     <input
                                         type="text"
                                         value={config.customDayBadge || ''}
@@ -1044,67 +1067,47 @@ export const ExecutiveDailyStoryControls = () => {
                                     />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                            <span>Skala Badge:</span>
-                                            <span className="font-bold text-blue-700">{Math.round((config.dayBadgeScale || 1) * 100)}%</span>
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="0.5"
-                                            max="2.0"
-                                            step="0.05"
-                                            value={config.dayBadgeScale || 1}
-                                            onChange={(e) => updateConfig('dayBadgeScale', parseFloat(e.target.value))}
-                                            className="w-full mt-1 accent-blue-600"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                            <span>Ukuran Font:</span>
-                                            <span className="font-bold text-blue-700">{config.dayBadgeFontSize || 28}px</span>
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="16"
-                                            max="44"
-                                            value={config.dayBadgeFontSize || 28}
-                                            onChange={(e) => updateConfig('dayBadgeFontSize', parseInt(e.target.value))}
-                                            className="w-full mt-1 accent-blue-600"
-                                        />
-                                    </div>
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <NumberSliderField
+                                        label="Skala Badge"
+                                        value={config.dayBadgeScale || 1}
+                                        min={0.2}
+                                        max={3.0}
+                                        step={0.05}
+                                        unit="%"
+                                        isPercentage={true}
+                                        onChange={(val) => updateConfig('dayBadgeScale', val)}
+                                    />
+                                    <NumberSliderField
+                                        label="Ukuran Font"
+                                        value={config.dayBadgeFontSize || 28}
+                                        min={12}
+                                        max={60}
+                                        step={1}
+                                        unit="px"
+                                        onChange={(val) => updateConfig('dayBadgeFontSize', val)}
+                                    />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                            <span>Posisi X:</span>
-                                            <span className="font-bold text-blue-700">{config.dayBadgeOffsetX || 0}px</span>
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="-200"
-                                            max="200"
-                                            value={config.dayBadgeOffsetX || 0}
-                                            onChange={(e) => updateConfig('dayBadgeOffsetX', parseInt(e.target.value))}
-                                            className="w-full mt-1 accent-blue-600"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                            <span>Posisi Y:</span>
-                                            <span className="font-bold text-blue-700">{config.dayBadgeOffsetY || 0}px</span>
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="-200"
-                                            max="200"
-                                            value={config.dayBadgeOffsetY || 0}
-                                            onChange={(e) => updateConfig('dayBadgeOffsetY', parseInt(e.target.value))}
-                                            className="w-full mt-1 accent-blue-600"
-                                        />
-                                    </div>
+                                <div className="grid grid-cols-2 gap-2.5">
+                                    <NumberSliderField
+                                        label="Posisi X"
+                                        value={config.dayBadgeOffsetX || 0}
+                                        min={-400}
+                                        max={400}
+                                        step={1}
+                                        unit="px"
+                                        onChange={(val) => updateConfig('dayBadgeOffsetX', val)}
+                                    />
+                                    <NumberSliderField
+                                        label="Posisi Y"
+                                        value={config.dayBadgeOffsetY || 0}
+                                        min={-400}
+                                        max={400}
+                                        step={1}
+                                        unit="px"
+                                        onChange={(val) => updateConfig('dayBadgeOffsetY', val)}
+                                    />
                                 </div>
                             </div>
                         )}
@@ -1117,129 +1120,111 @@ export const ExecutiveDailyStoryControls = () => {
                             <span>Tabel Jadwal Dokter (Frosted Glass)</span>
                         </span>
 
-                        <div>
-                            <label className="text-slate-600 font-medium flex justify-between">
-                                <span>Skala Tabel Keseluruhan:</span>
-                                <span className="font-bold text-blue-700">{Math.round((config.tableScale || 1) * 100)}%</span>
-                            </label>
-                            <input
-                                type="range"
-                                min="0.6"
-                                max="1.5"
-                                step="0.05"
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <NumberSliderField
+                                label="Skala Tabel"
                                 value={config.tableScale || 1}
-                                onChange={(e) => updateConfig('tableScale', parseFloat(e.target.value))}
-                                className="w-full mt-1 accent-blue-600"
+                                min={0.4}
+                                max={2.0}
+                                step={0.05}
+                                unit="%"
+                                isPercentage={true}
+                                onChange={(val) => updateConfig('tableScale', val)}
+                            />
+                            <NumberSliderField
+                                label="Lebar Tabel"
+                                value={config.tableWidth || 960}
+                                min={700}
+                                max={1060}
+                                step={5}
+                                unit="px"
+                                onChange={(val) => updateConfig('tableWidth', val)}
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                    <span>Posisi X:</span>
-                                    <span className="font-bold text-blue-700">{config.tableOffsetX || 0}px</span>
-                                </label>
-                                <input
-                                    type="range"
-                                    min="-150"
-                                    max="150"
-                                    value={config.tableOffsetX || 0}
-                                    onChange={(e) => updateConfig('tableOffsetX', parseInt(e.target.value))}
-                                    className="w-full mt-1 accent-blue-600"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                    <span>Posisi Y:</span>
-                                    <span className="font-bold text-blue-700">{config.tableOffsetY || 0}px</span>
-                                </label>
-                                <input
-                                    type="range"
-                                    min="-250"
-                                    max="250"
-                                    value={config.tableOffsetY || 0}
-                                    onChange={(e) => updateConfig('tableOffsetY', parseInt(e.target.value))}
-                                    className="w-full mt-1 accent-blue-600"
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="text-slate-600 font-medium flex justify-between">
-                                <span>Lebar Tabel (Width):</span>
-                                <span className="font-bold text-blue-700">{config.tableWidth || 940}px</span>
-                            </label>
-                            <input
-                                type="range"
-                                min="700"
-                                max="1040"
-                                step="10"
-                                value={config.tableWidth || 940}
-                                onChange={(e) => updateConfig('tableWidth', parseInt(e.target.value))}
-                                className="w-full mt-1 accent-blue-600"
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <NumberSliderField
+                                label="Posisi X"
+                                value={config.tableOffsetX || 0}
+                                min={-300}
+                                max={300}
+                                step={1}
+                                unit="px"
+                                onChange={(val) => updateConfig('tableOffsetX', val)}
+                            />
+                            <NumberSliderField
+                                label="Posisi Y"
+                                value={config.tableOffsetY || 0}
+                                min={-500}
+                                max={500}
+                                step={1}
+                                unit="px"
+                                onChange={(val) => updateConfig('tableOffsetY', val)}
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                    <span>Opasitas Kaca:</span>
-                                    <span className="font-bold text-blue-700">{Math.round((config.cardOpacity || 0.94) * 100)}%</span>
-                                </label>
-                                <input
-                                    type="range"
-                                    min="40"
-                                    max="100"
-                                    value={Math.round((config.cardOpacity || 0.94) * 100)}
-                                    onChange={(e) => updateConfig('cardOpacity', parseInt(e.target.value) / 100)}
-                                    className="w-full mt-1 accent-blue-600"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                    <span>Blur Kaca:</span>
-                                    <span className="font-bold text-blue-700">{config.cardBlur || 16}px</span>
-                                </label>
-                                <input
-                                    type="range"
-                                    min="0"
-                                    max="30"
-                                    value={config.cardBlur || 16}
-                                    onChange={(e) => updateConfig('cardBlur', parseInt(e.target.value))}
-                                    className="w-full mt-1 accent-blue-600"
-                                />
-                            </div>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <NumberSliderField
+                                label="Padding Atas/Bwh"
+                                value={config.tablePaddingY || 12}
+                                min={0}
+                                max={40}
+                                step={1}
+                                unit="px"
+                                onChange={(val) => updateConfig('tablePaddingY', val)}
+                            />
+                            <NumberSliderField
+                                label="Padding Kiri/Knn"
+                                value={config.tablePaddingX || 28}
+                                min={8}
+                                max={80}
+                                step={1}
+                                unit="px"
+                                onChange={(val) => updateConfig('tablePaddingX', val)}
+                            />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2">
-                            <div>
-                                <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                    <span>Jarak Antar Baris:</span>
-                                    <span className="font-bold text-blue-700">{config.rowSpacing || 8}px</span>
-                                </label>
-                                <input
-                                    type="range"
-                                    min="2"
-                                    max="24"
-                                    value={config.rowSpacing || 8}
-                                    onChange={(e) => updateConfig('rowSpacing', parseInt(e.target.value))}
-                                    className="w-full mt-1 accent-blue-600"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                    <span>Ukuran Avatar Bulat:</span>
-                                    <span className="font-bold text-blue-700">{config.avatarSize || 64}px</span>
-                                </label>
-                                <input
-                                    type="range"
-                                    min="44"
-                                    max="90"
-                                    value={config.avatarSize || 64}
-                                    onChange={(e) => updateConfig('avatarSize', parseInt(e.target.value))}
-                                    className="w-full mt-1 accent-blue-600"
-                                />
-                            </div>
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <NumberSliderField
+                                label="Opasitas Kaca"
+                                value={config.cardOpacity || 0.92}
+                                min={0.3}
+                                max={1.0}
+                                step={0.02}
+                                unit="%"
+                                isPercentage={true}
+                                onChange={(val) => updateConfig('cardOpacity', val)}
+                            />
+                            <NumberSliderField
+                                label="Blur Kaca"
+                                value={config.cardBlur || 20}
+                                min={0}
+                                max={40}
+                                step={1}
+                                unit="px"
+                                onChange={(val) => updateConfig('cardBlur', val)}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2.5">
+                            <NumberSliderField
+                                label="Jarak Antar Baris"
+                                value={config.rowSpacing || 10}
+                                min={0}
+                                max={30}
+                                step={1}
+                                unit="px"
+                                onChange={(val) => updateConfig('rowSpacing', val)}
+                            />
+                            <NumberSliderField
+                                label="Ukuran Avatar Bulat"
+                                value={config.avatarSize || 64}
+                                min={40}
+                                max={120}
+                                step={2}
+                                unit="px"
+                                onChange={(val) => updateConfig('avatarSize', val)}
+                            />
                         </div>
                     </div>
 
@@ -1251,61 +1236,74 @@ export const ExecutiveDailyStoryControls = () => {
                         </span>
 
                         <div className="grid grid-cols-3 gap-2">
-                            <div>
-                                <label className="text-[10px] text-slate-500 font-bold block">Nama Dokter:</label>
-                                <input
-                                    type="number"
-                                    min="12"
-                                    max="32"
-                                    value={config.nameFontSize}
-                                    onChange={(e) => updateConfig('nameFontSize', parseInt(e.target.value))}
-                                    className="w-full mt-1 p-1.5 text-center font-bold bg-slate-50 border border-slate-200 rounded"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-[10px] text-slate-500 font-bold block">Spesialis:</label>
-                                <input
-                                    type="number"
-                                    min="9"
-                                    max="24"
-                                    value={config.specialtyFontSize}
-                                    onChange={(e) => updateConfig('specialtyFontSize', parseInt(e.target.value))}
-                                    className="w-full mt-1 p-1.5 text-center font-bold bg-slate-50 border border-slate-200 rounded"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-[10px] text-slate-500 font-bold block">Jam Praktik:</label>
-                                <input
-                                    type="number"
-                                    min="12"
-                                    max="32"
-                                    value={config.timeFontSize}
-                                    onChange={(e) => updateConfig('timeFontSize', parseInt(e.target.value))}
-                                    className="w-full mt-1 p-1.5 text-center font-bold bg-slate-50 border border-slate-200 rounded"
-                                />
-                            </div>
+                            <NumberSliderField
+                                label="Nama Dokter"
+                                value={config.nameFontSize || 20}
+                                min={12}
+                                max={36}
+                                step={1}
+                                unit="px"
+                                onChange={(val) => updateConfig('nameFontSize', val)}
+                            />
+                            <NumberSliderField
+                                label="Spesialis"
+                                value={config.specialtyFontSize || 13}
+                                min={9}
+                                max={26}
+                                step={1}
+                                unit="px"
+                                onChange={(val) => updateConfig('specialtyFontSize', val)}
+                            />
+                            <NumberSliderField
+                                label="Jam Praktik"
+                                value={config.timeFontSize || 20}
+                                min={12}
+                                max={36}
+                                step={1}
+                                unit="px"
+                                onChange={(val) => updateConfig('timeFontSize', val)}
+                            />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 pt-1">
+                        <div className="grid grid-cols-2 gap-2.5 pt-1">
+                            <NumberSliderField
+                                label="Tinggi Header"
+                                value={config.tableHeaderHeight || 70}
+                                min={40}
+                                max={120}
+                                step={2}
+                                unit="px"
+                                onChange={(val) => updateConfig('tableHeaderHeight', val)}
+                            />
+                            <NumberSliderField
+                                label="Font Header"
+                                value={config.tableHeaderFontSize || 26}
+                                min={16}
+                                max={40}
+                                step={1}
+                                unit="px"
+                                onChange={(val) => updateConfig('tableHeaderFontSize', val)}
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-100">
                             <div>
-                                <label className="text-[10px] text-slate-500 font-bold block">Header Tabel Kiri:</label>
+                                <label className="text-[10px] text-slate-500 font-bold block">Teks Header Kiri:</label>
                                 <input
                                     type="text"
                                     value={config.tableTitleName || 'Nama Dokter'}
                                     onChange={(e) => updateConfig('tableTitleName', e.target.value)}
-                                    className="w-full mt-1 p-1.5 text-xs font-bold bg-slate-50 border border-slate-200 rounded"
+                                    className="w-full mt-1 p-1.5 text-xs font-bold bg-slate-50 border border-slate-200 rounded focus:bg-white"
                                 />
                             </div>
 
                             <div>
-                                <label className="text-[10px] text-slate-500 font-bold block">Header Tabel Kanan:</label>
+                                <label className="text-[10px] text-slate-500 font-bold block">Teks Header Kanan:</label>
                                 <input
                                     type="text"
                                     value={config.tableTitleSchedule || 'Jadwal'}
                                     onChange={(e) => updateConfig('tableTitleSchedule', e.target.value)}
-                                    className="w-full mt-1 p-1.5 text-xs font-bold bg-slate-50 border border-slate-200 rounded"
+                                    className="w-full mt-1 p-1.5 text-xs font-bold bg-slate-50 border border-slate-200 rounded focus:bg-white"
                                 />
                             </div>
                         </div>
@@ -1333,100 +1331,70 @@ export const ExecutiveDailyStoryControls = () => {
                                 {/* Footer Kiri */}
                                 <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-2">
                                     <span className="font-bold text-slate-700 text-[11px] block">Footer Kiri (Alamat):</span>
-                                    <div>
-                                        <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                            <span>Skala:</span>
-                                            <span className="font-bold text-blue-700">{Math.round((config.footerKiriScale || 1) * 100)}%</span>
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="0.5"
-                                            max="2.0"
-                                            step="0.05"
-                                            value={config.footerKiriScale || 1}
-                                            onChange={(e) => updateConfig('footerKiriScale', parseFloat(e.target.value))}
-                                            className="w-full accent-blue-600"
-                                        />
-                                    </div>
+                                    <NumberSliderField
+                                        label="Skala Footer Kiri"
+                                        value={config.footerKiriScale || 1}
+                                        min={0.4}
+                                        max={2.0}
+                                        step={0.05}
+                                        unit="%"
+                                        isPercentage={true}
+                                        onChange={(val) => updateConfig('footerKiriScale', val)}
+                                    />
                                     <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="text-slate-600 text-[10px] flex justify-between">
-                                                <span>X:</span>
-                                                <span className="font-bold">{config.footerKiriOffsetX || 0}px</span>
-                                            </label>
-                                            <input
-                                                type="range"
-                                                min="-150"
-                                                max="150"
-                                                value={config.footerKiriOffsetX || 0}
-                                                onChange={(e) => updateConfig('footerKiriOffsetX', parseInt(e.target.value))}
-                                                className="w-full accent-blue-600"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-slate-600 text-[10px] flex justify-between">
-                                                <span>Y:</span>
-                                                <span className="font-bold">{config.footerKiriOffsetY || 0}px</span>
-                                            </label>
-                                            <input
-                                                type="range"
-                                                min="-150"
-                                                max="150"
-                                                value={config.footerKiriOffsetY || 0}
-                                                onChange={(e) => updateConfig('footerKiriOffsetY', parseInt(e.target.value))}
-                                                className="w-full accent-blue-600"
-                                            />
-                                        </div>
+                                        <NumberSliderField
+                                            label="Posisi X"
+                                            value={config.footerKiriOffsetX || 0}
+                                            min={-200}
+                                            max={200}
+                                            step={1}
+                                            unit="px"
+                                            onChange={(val) => updateConfig('footerKiriOffsetX', val)}
+                                        />
+                                        <NumberSliderField
+                                            label="Posisi Y"
+                                            value={config.footerKiriOffsetY || 0}
+                                            min={-200}
+                                            max={200}
+                                            step={1}
+                                            unit="px"
+                                            onChange={(val) => updateConfig('footerKiriOffsetY', val)}
+                                        />
                                     </div>
                                 </div>
 
                                 {/* Footer Kanan */}
                                 <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 space-y-2">
                                     <span className="font-bold text-slate-700 text-[11px] block">Footer Kanan (Call Center 24/7):</span>
-                                    <div>
-                                        <label className="text-slate-600 font-medium flex justify-between text-[11px]">
-                                            <span>Skala:</span>
-                                            <span className="font-bold text-blue-700">{Math.round((config.footerKananScale || 1) * 100)}%</span>
-                                        </label>
-                                        <input
-                                            type="range"
-                                            min="0.5"
-                                            max="2.0"
-                                            step="0.05"
-                                            value={config.footerKananScale || 1}
-                                            onChange={(e) => updateConfig('footerKananScale', parseFloat(e.target.value))}
-                                            className="w-full accent-blue-600"
-                                        />
-                                    </div>
+                                    <NumberSliderField
+                                        label="Skala Footer Kanan"
+                                        value={config.footerKananScale || 1}
+                                        min={0.4}
+                                        max={2.0}
+                                        step={0.05}
+                                        unit="%"
+                                        isPercentage={true}
+                                        onChange={(val) => updateConfig('footerKananScale', val)}
+                                    />
                                     <div className="grid grid-cols-2 gap-2">
-                                        <div>
-                                            <label className="text-slate-600 text-[10px] flex justify-between">
-                                                <span>X:</span>
-                                                <span className="font-bold">{config.footerKananOffsetX || 0}px</span>
-                                            </label>
-                                            <input
-                                                type="range"
-                                                min="-150"
-                                                max="150"
-                                                value={config.footerKananOffsetX || 0}
-                                                onChange={(e) => updateConfig('footerKananOffsetX', parseInt(e.target.value))}
-                                                className="w-full accent-blue-600"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-slate-600 text-[10px] flex justify-between">
-                                                <span>Y:</span>
-                                                <span className="font-bold">{config.footerKananOffsetY || 0}px</span>
-                                            </label>
-                                            <input
-                                                type="range"
-                                                min="-150"
-                                                max="150"
-                                                value={config.footerKananOffsetY || 0}
-                                                onChange={(e) => updateConfig('footerKananOffsetY', parseInt(e.target.value))}
-                                                className="w-full accent-blue-600"
-                                            />
-                                        </div>
+                                        <NumberSliderField
+                                            label="Posisi X"
+                                            value={config.footerKananOffsetX || 0}
+                                            min={-200}
+                                            max={200}
+                                            step={1}
+                                            unit="px"
+                                            onChange={(val) => updateConfig('footerKananOffsetX', val)}
+                                        />
+                                        <NumberSliderField
+                                            label="Posisi Y"
+                                            value={config.footerKananOffsetY || 0}
+                                            min={-200}
+                                            max={200}
+                                            step={1}
+                                            unit="px"
+                                            onChange={(val) => updateConfig('footerKananOffsetY', val)}
+                                        />
                                     </div>
                                 </div>
                             </div>
@@ -1443,65 +1411,45 @@ export const ExecutiveDailyStoryControls = () => {
                             Pengaturan Video Background
                         </span>
 
-                        <div>
-                            <label className="text-slate-600 font-medium flex justify-between">
-                                <span>Kecerahan (Brightness):</span>
-                                <span className="font-bold text-blue-700">{config.videoBrightness}%</span>
-                            </label>
-                            <input
-                                type="range"
-                                min="50"
-                                max="150"
-                                value={config.videoBrightness}
-                                onChange={(e) => updateConfig('videoBrightness', parseInt(e.target.value))}
-                                className="w-full mt-1 accent-blue-600"
-                            />
-                        </div>
+                        <NumberSliderField
+                            label="Kecerahan (Brightness)"
+                            value={config.videoBrightness || 100}
+                            min={30}
+                            max={200}
+                            step={1}
+                            unit="%"
+                            onChange={(val) => updateConfig('videoBrightness', val)}
+                        />
 
-                        <div>
-                            <label className="text-slate-600 font-medium flex justify-between">
-                                <span>Kontras (Contrast):</span>
-                                <span className="font-bold text-blue-700">{config.videoContrast}%</span>
-                            </label>
-                            <input
-                                type="range"
-                                min="50"
-                                max="150"
-                                value={config.videoContrast}
-                                onChange={(e) => updateConfig('videoContrast', parseInt(e.target.value))}
-                                className="w-full mt-1 accent-blue-600"
-                            />
-                        </div>
+                        <NumberSliderField
+                            label="Kontras (Contrast)"
+                            value={config.videoContrast || 100}
+                            min={30}
+                            max={200}
+                            step={1}
+                            unit="%"
+                            onChange={(val) => updateConfig('videoContrast', val)}
+                        />
 
-                        <div>
-                            <label className="text-slate-600 font-medium flex justify-between">
-                                <span>Saturasi Warna:</span>
-                                <span className="font-bold text-blue-700">{config.videoSaturate}%</span>
-                            </label>
-                            <input
-                                type="range"
-                                min="50"
-                                max="150"
-                                value={config.videoSaturate}
-                                onChange={(e) => updateConfig('videoSaturate', parseInt(e.target.value))}
-                                className="w-full mt-1 accent-blue-600"
-                            />
-                        </div>
+                        <NumberSliderField
+                            label="Saturasi Warna"
+                            value={config.videoSaturate || 100}
+                            min={0}
+                            max={200}
+                            step={1}
+                            unit="%"
+                            onChange={(val) => updateConfig('videoSaturate', val)}
+                        />
 
-                        <div>
-                            <label className="text-slate-600 font-medium flex justify-between">
-                                <span>Kegelapan Overlay Latar:</span>
-                                <span className="font-bold text-blue-700">{config.overlayDarkness}%</span>
-                            </label>
-                            <input
-                                type="range"
-                                min="0"
-                                max="70"
-                                value={config.overlayDarkness}
-                                onChange={(e) => updateConfig('overlayDarkness', parseInt(e.target.value))}
-                                className="w-full mt-1 accent-blue-600"
-                            />
-                        </div>
+                        <NumberSliderField
+                            label="Kegelapan Overlay Latar"
+                            value={config.overlayDarkness || 0}
+                            min={0}
+                            max={80}
+                            step={1}
+                            unit="%"
+                            onChange={(val) => updateConfig('overlayDarkness', val)}
+                        />
                     </div>
                 </div>
             )}
