@@ -358,14 +358,13 @@ function fixWebmDuration(blob, durationMs) {
 }
 
     // ========================================================
-    // Video Story Generator (MP4 Format - 20s Background Sync)
+    // Video Story Generator — Pure Canvas 2D (No html2canvas)
+    // Draws every element directly onto canvas for 100% reliable output
     // ========================================================
     const handleRecordVideo = async () => {
-        const targetEl = document.getElementById('executive-daily-story-canvas');
-        const contentEl = contentRef.current;
         const videoEl = videoElementRef.current;
 
-        if (!targetEl || !videoEl) {
+        if (!videoEl) {
             alert('Elemen video background belum siap.');
             return;
         }
@@ -380,80 +379,303 @@ function fixWebmDuration(blob, durationMs) {
                 await document.fonts.ready;
             }
 
-            // 1. Disable animations and make canvas background transparent for overlay snapshot
-            setDisableAnimForSnapshot(true);
-            const savedTransform = contentEl.style.transform;
-            const savedTransition = contentEl.style.transition;
-            const savedBg = targetEl.style.backgroundColor;
-
-            contentEl.style.transition = 'none';
-            contentEl.style.transform = 'none';
-            targetEl.style.backgroundColor = 'transparent';
-
-            // Wait for React to commit state change (setDisableAnimForSnapshot) to the DOM:
-            // Two rAFs: first for React reconcile+commit, second for browser paint/layout
-            await new Promise((r) => requestAnimationFrame(r));
-            await new Promise((r) => requestAnimationFrame(r));
-            await new Promise((r) => setTimeout(r, 300));
-
-            // Hide the video background container directly in the DOM so html2canvas
-            // cannot detect any video color bleeding through transparent table backgrounds
-            const videoBgEl = document.getElementById('eds-video-bg-container');
-            const savedVideoBgVisibility = videoBgEl ? videoBgEl.style.visibility : '';
-            if (videoBgEl) videoBgEl.style.visibility = 'hidden';
-
-            // 2. Snapshot crisp 1:1 DOM layout overlay (Table, logo, doctor rows, badges) with FULL transparency
-            const overlayCanvas = await html2canvas(targetEl, {
-                scale: 1,
-                width: 1080,
-                height: 1920,
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor: null,
-                logging: false,
-                imageTimeout: 20000,
-                ignoreElements: (element) =>
-                    element.tagName === 'VIDEO' ||
-                    element.id === 'eds-video-bg-container' ||
-                    element.getAttribute('data-html2canvas-ignore') === 'true'
+            // 1. Pre-load all image assets so drawImage works synchronously in renderFrame
+            const loadImg = (src) => new Promise((resolve) => {
+                if (!src) { resolve(null); return; }
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => resolve(img);
+                img.onerror = () => resolve(null);
+                img.src = src;
             });
 
-            // Restore video bg container visibility
-            if (videoBgEl) videoBgEl.style.visibility = savedVideoBgVisibility;
+            const [logoImg, titleImg, footerKiriImg, footerKananImg] = await Promise.all([
+                config.showLogo !== false ? loadImg(config.logoUrl || '/asset2/webp/logo.webp') : Promise.resolve(null),
+                config.showTitle !== false ? loadImg(config.headerTitleUrl || '/asset2/webp/1.webp') : Promise.resolve(null),
+                config.showFooters !== false ? loadImg(config.footerKiriUrl || '/asset2/webp/footer kiri.webp') : Promise.resolve(null),
+                config.showFooters !== false ? loadImg(config.footerKananUrl || '/asset2/webp/footer kanan.webp') : Promise.resolve(null),
+            ]);
 
-            // Restore interactive preview state
-            targetEl.style.backgroundColor = savedBg || '#001238';
-            contentEl.style.transform = savedTransform;
-            contentEl.style.transition = savedTransition;
-            setDisableAnimForSnapshot(false);
+            // Pre-load doctor avatars
+            const doctorAvatarImgs = await Promise.all(
+                activeDoctors.map(doc => doc.avatar ? loadImg(doc.avatar) : Promise.resolve(null))
+            );
 
-            // 3. Exact 20 seconds duration (matching 1 full clinic video loop)
-            const totalDurationSec = 20;
-            const totalDurationMs = totalDurationSec * 1000;
-
-            // 4. Setup composite canvas attached to DOM for active hardware compositing
+            // 2. Setup 1080x1920 composite canvas
             recordCanvas = document.createElement('canvas');
             recordCanvas.id = 'eds-active-record-canvas';
             recordCanvas.width = 1080;
             recordCanvas.height = 1920;
-            recordCanvas.style.cssText = 'position:fixed; left:0; top:0; width:1080px; height:1920px; z-index:-9999; opacity:0.01; pointer-events:none;';
+            recordCanvas.style.cssText = 'position:fixed;left:0;top:0;width:1080px;height:1920px;z-index:-9999;opacity:0.01;pointer-events:none;';
             document.body.appendChild(recordCanvas);
 
-            const ctx = recordCanvas.getContext('2d', { alpha: false, desynchronized: true });
+            const ctx = recordCanvas.getContext('2d', { alpha: false });
 
-            // Restart live video from beginning
+            // Font config from settings
+            const nameFontSize = config.nameFontSize ?? 20;
+            const specialtyFontSize = config.specialtyFontSize ?? 13;
+            const timeFontSize = config.timeFontSize ?? 20;
+            const avatarSize = config.avatarSize ?? 64;
+            const rowSpacing = config.rowSpacing ?? 10;
+            const tableWidth = config.tableWidth ?? 960;
+            const tableOffsetX = config.tableOffsetX ?? 0;
+            const tableOffsetY = config.tableOffsetY ?? 0;
+            const tableLeft = ((1080 - tableWidth) / 2) + tableOffsetX;
+            const tableTop = 600 + tableOffsetY;
+            const tableHeaderHeight = config.tableHeaderHeight ?? 70;
+            const tablePaddingX = config.tablePaddingX ?? 28;
+            const tablePaddingY = config.tablePaddingY ?? 12;
+            const headerFontSize = config.tableHeaderFontSize ?? 26;
+            const cardBorderRadius = 26;
+
+            // Helper: convert hex + opacity to rgba string for canvas fillStyle
+            const hexToRgba = (hex, alpha) => {
+                const h = (hex || '#ffffff').replace('#', '');
+                const r = parseInt(h.substring(0, 2), 16) || 255;
+                const g = parseInt(h.substring(2, 4), 16) || 255;
+                const b = parseInt(h.substring(4, 6), 16) || 255;
+                return `rgba(${r},${g},${b},${alpha ?? 1})`;
+            };
+
+            // Helper: draw rounded rectangle path
+            const roundRect = (cx, x, y, w, h, tl, tr, br, bl) => {
+                cx.beginPath();
+                cx.moveTo(x + tl, y);
+                cx.lineTo(x + w - tr, y);
+                cx.quadraticCurveTo(x + w, y, x + w, y + tr);
+                cx.lineTo(x + w, y + h - br);
+                cx.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+                cx.lineTo(x + bl, y + h);
+                cx.quadraticCurveTo(x, y + h, x, y + h - bl);
+                cx.lineTo(x, y + tl);
+                cx.quadraticCurveTo(x, y, x + tl, y);
+                cx.closePath();
+            };
+
+            // Helper: draw circular avatar clip + image or initials
+            const drawAvatar = (cx, doc, avatarImg, x, y, size) => {
+                cx.save();
+                cx.beginPath();
+                cx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+                cx.clip();
+                if (avatarImg) {
+                    cx.drawImage(avatarImg, x, y, size, size);
+                } else {
+                    cx.fillStyle = '#001f5c';
+                    cx.fillRect(x, y, size, size);
+                    cx.fillStyle = '#ffffff';
+                    cx.font = `800 ${Math.round(size * 0.3)}px "Plus Jakarta Sans", Poppins, sans-serif`;
+                    cx.textAlign = 'center';
+                    cx.textBaseline = 'middle';
+                    const initials = (doc.name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
+                    cx.fillText(initials, x + size / 2, y + size / 2);
+                }
+                cx.restore();
+                // Circle border
+                cx.save();
+                cx.strokeStyle = '#001f5c';
+                cx.lineWidth = 2;
+                cx.beginPath();
+                cx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+                cx.stroke();
+                cx.restore();
+            };
+
+            // Main draw function — called every rAF during recording
+            const drawFrame = () => {
+                // A. Base navy background
+                ctx.fillStyle = '#001238';
+                ctx.fillRect(0, 0, 1080, 1920);
+
+                // B. Live video background
+                if (videoEl && videoEl.readyState >= 2) {
+                    ctx.save();
+                    ctx.filter = `brightness(${config.videoBrightness || 100}%) contrast(${config.videoContrast || 100}%) saturate(${config.videoSaturate || 100}%)`;
+                    ctx.drawImage(videoEl, 0, 0, 1080, 1920);
+                    ctx.restore();
+                }
+
+                // C. Overlay darkness tint
+                if ((config.overlayDarkness || 0) > 0) {
+                    ctx.fillStyle = `rgba(0,18,56,${config.overlayDarkness / 100})`;
+                    ctx.fillRect(0, 0, 1080, 1920);
+                }
+
+                // D. Logo (top-left)
+                if (config.showLogo !== false && logoImg) {
+                    const logoH = config.logoHeight || 52;
+                    const logoScale = config.logoScale || 1;
+                    const logoX = 44 + (config.logoOffsetX || 0);
+                    const logoY = 64 + (config.logoOffsetY || 0);
+                    const logoW = logoImg.width * (logoH / logoImg.height) * logoScale;
+                    ctx.drawImage(logoImg, logoX, logoY, logoW, logoH * logoScale);
+                }
+
+                // E. Header title image (centered)
+                if (config.showTitle !== false && titleImg) {
+                    const titleW = (config.headerWidth || 720) * (config.headerScale || 1);
+                    const titleH = titleImg.height * (titleW / titleImg.width);
+                    const titleX = (1080 - titleW) / 2 + (config.headerOffsetX || 0);
+                    const titleY = 220 + (config.headerOffsetY || 0);
+                    ctx.drawImage(titleImg, titleX, titleY, titleW, titleH);
+                }
+
+                // F. Day badge pill
+                if (config.showDayBadge !== false) {
+                    const dayText = config.customDayBadge || selectedDay;
+                    const badgeFontSize = config.dayBadgeFontSize || 28;
+                    ctx.font = `800 ${badgeFontSize}px "Plus Jakarta Sans", Poppins, sans-serif`;
+                    const textW = ctx.measureText(dayText).width;
+                    const iconW = 28;
+                    const gap = 12;
+                    const padH = 11;
+                    const padV = 46;
+                    const badgeW = padV * 2 + iconW + gap + textW;
+                    const badgeH = badgeFontSize + padH * 2;
+                    const badgeX = (1080 - badgeW) / 2 + (config.dayBadgeOffsetX || 0);
+                    const badgeY = 500 + (config.dayBadgeOffsetY || 0);
+
+                    ctx.save();
+                    roundRect(ctx, badgeX, badgeY, badgeW, badgeH, badgeH / 2, badgeH / 2, badgeH / 2, badgeH / 2);
+                    ctx.fillStyle = config.dayBadgeBgColor || '#001f5c';
+                    ctx.fill();
+                    ctx.restore();
+
+                    // Badge text
+                    ctx.save();
+                    ctx.fillStyle = config.dayBadgeTextColor || '#ffffff';
+                    ctx.font = `800 ${badgeFontSize}px "Plus Jakarta Sans", Poppins, sans-serif`;
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(dayText, badgeX + padV + iconW + gap, badgeY + badgeH / 2);
+                    ctx.restore();
+                }
+
+                // G. Schedule table card
+                if (config.showTable !== false) {
+                    // G1. Table header bar (rounded top)
+                    roundRect(ctx, tableLeft, tableTop, tableWidth, tableHeaderHeight, cardBorderRadius, cardBorderRadius, 0, 0);
+                    ctx.fillStyle = config.tableHeaderBgColor || '#001f5c';
+                    ctx.fill();
+
+                    // Header labels
+                    ctx.save();
+                    ctx.fillStyle = config.tableHeaderTextColor || '#ffffff';
+                    ctx.font = `800 ${headerFontSize}px "Plus Jakarta Sans", Poppins, sans-serif`;
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(config.tableTitleName || 'Nama Dokter', tableLeft + 44, tableTop + tableHeaderHeight / 2);
+                    ctx.textAlign = 'right';
+                    ctx.fillText(config.tableTitleSchedule || 'Jadwal', tableLeft + tableWidth - 44, tableTop + tableHeaderHeight / 2);
+                    ctx.restore();
+
+                    // G2. Table body card — solid white (or user-configured color)
+                    const cardOpacity = Number(config.cardOpacity ?? 1);
+                    const cardBgColor = (() => {
+                        const hex = (config.cardBgColor || '#ffffff').replace('#', '');
+                        const r = parseInt(hex.substring(0, 2), 16) || 255;
+                        const g = parseInt(hex.substring(2, 4), 16) || 255;
+                        const b = parseInt(hex.substring(4, 6), 16) || 255;
+                        return `rgba(${r},${g},${b},${cardOpacity})`;
+                    })();
+
+                    // Calculate total body height
+                    const rowHeight = avatarSize + rowSpacing * 2 + 4;
+                    const bodyHeight = activeDoctors.length > 0
+                        ? activeDoctors.length * rowHeight + tablePaddingY * 2
+                        : 120;
+
+                    const bodyTop = tableTop + tableHeaderHeight;
+                    roundRect(ctx, tableLeft, bodyTop, tableWidth, bodyHeight, 0, 0, cardBorderRadius, cardBorderRadius);
+                    ctx.fillStyle = cardBgColor;
+                    ctx.fill();
+
+                    // Table body border
+                    ctx.save();
+                    ctx.strokeStyle = config.cardBorderColor || 'rgba(255,255,255,0.9)';
+                    ctx.lineWidth = config.cardBorderWidth || 1.5;
+                    roundRect(ctx, tableLeft, bodyTop, tableWidth, bodyHeight, 0, 0, cardBorderRadius, cardBorderRadius);
+                    ctx.stroke();
+                    ctx.restore();
+
+                    // G3. Doctor rows
+                    activeDoctors.forEach((doc, idx) => {
+                        const rowY = bodyTop + tablePaddingY + idx * rowHeight + rowSpacing;
+
+                        // Avatar
+                        const avatarX = tableLeft + tablePaddingX;
+                        const avatarY = rowY;
+                        drawAvatar(ctx, doc, doctorAvatarImgs[idx], avatarX, avatarY, avatarSize);
+
+                        // Doctor name
+                        ctx.save();
+                        ctx.fillStyle = config.nameColor || '#001f5c';
+                        ctx.font = `800 ${nameFontSize}px "Plus Jakarta Sans", Poppins, sans-serif`;
+                        ctx.textBaseline = 'alphabetic';
+                        const textX = avatarX + avatarSize + 16;
+                        ctx.fillText(doc.name || '', textX, rowY + nameFontSize + 2);
+                        ctx.restore();
+
+                        // Specialty
+                        ctx.save();
+                        ctx.fillStyle = config.specialtyColor || '#475569';
+                        ctx.font = `600 ${specialtyFontSize}px "Plus Jakarta Sans", Poppins, sans-serif`;
+                        ctx.textBaseline = 'alphabetic';
+                        ctx.fillText(doc.specialty || '', textX, rowY + nameFontSize + 6 + specialtyFontSize);
+                        ctx.restore();
+
+                        // Time (right-aligned)
+                        ctx.save();
+                        ctx.fillStyle = config.timeColor || '#001f5c';
+                        ctx.font = `800 ${timeFontSize}px "Plus Jakarta Sans", Poppins, sans-serif`;
+                        ctx.textBaseline = 'middle';
+                        ctx.textAlign = 'right';
+                        ctx.fillText(doc.time || '14:00–17:00', tableLeft + tableWidth - tablePaddingX, rowY + avatarSize / 2);
+                        ctx.restore();
+
+                        // Row separator line
+                        if (idx < activeDoctors.length - 1) {
+                            ctx.save();
+                            ctx.strokeStyle = 'rgba(0,31,92,0.08)';
+                            ctx.lineWidth = 1.5;
+                            ctx.beginPath();
+                            ctx.moveTo(tableLeft + tablePaddingX, rowY + avatarSize + rowSpacing);
+                            ctx.lineTo(tableLeft + tableWidth - tablePaddingX, rowY + avatarSize + rowSpacing);
+                            ctx.stroke();
+                            ctx.restore();
+                        }
+                    });
+                }
+
+                // H. Footer images
+                if (config.showFooters !== false) {
+                    const footerH = 56;
+                    const footerBottom = 1920 - 36;
+
+                    if (footerKiriImg) {
+                        const scale = config.footerKiriScale || 1;
+                        const w = footerKiriImg.width * (footerH / footerKiriImg.height) * scale;
+                        const x = 44 + (config.footerKiriOffsetX || 0);
+                        const y = footerBottom - footerH * scale + (config.footerKiriOffsetY || 0);
+                        ctx.drawImage(footerKiriImg, x, y, w, footerH * scale);
+                    }
+                    if (footerKananImg) {
+                        const scale = config.footerKananScale || 1;
+                        const w = footerKananImg.width * (footerH / footerKananImg.height) * scale;
+                        const x = 1080 - 44 - w + (config.footerKananOffsetX || 0);
+                        const y = footerBottom - footerH * scale + (config.footerKananOffsetY || 0);
+                        ctx.drawImage(footerKananImg, x, y, w, footerH * scale);
+                    }
+                }
+            };
+
+            // 3. Restart live video from beginning
             videoEl.muted = true;
             videoEl.currentTime = 0;
-            try {
-                await videoEl.play();
-            } catch (playErr) {
-                console.warn('[handleRecordVideo] play error:', playErr);
-            }
+            try { await videoEl.play(); } catch (e) { console.warn('[handleRecordVideo] play err:', e); }
 
             const stream = recordCanvas.captureStream(30);
             const videoTrack = stream.getVideoTracks()[0];
 
-            // 5. Codec detection for MP4 / WebM
+            // 4. Codec detection for MP4 / WebM
             let mimeType = 'video/mp4';
             if (MediaRecorder.isTypeSupported('video/mp4;codecs=avc1,mp4a.40.2')) {
                 mimeType = 'video/mp4;codecs=avc1,mp4a.40.2';
@@ -469,103 +691,57 @@ function fixWebmDuration(blob, durationMs) {
                 mimeType = 'video/webm';
             }
 
+            const totalDurationSec = 20;
+            const totalDurationMs = totalDurationSec * 1000;
+
             const mediaRecorder = new MediaRecorder(stream, {
                 mimeType,
-                videoBitsPerSecond: 15000000 // 15 Mbps Ultra HD
+                videoBitsPerSecond: 15000000
             });
 
             const chunks = [];
             mediaRecorder.ondataavailable = (e) => {
-                if (e.data && e.data.size > 0) {
-                    chunks.push(e.data);
-                }
+                if (e.data && e.data.size > 0) chunks.push(e.data);
             };
 
             const startTime = Date.now();
 
             mediaRecorder.onstop = async () => {
-                // Cleanup DOM
                 if (recordCanvas && document.body.contains(recordCanvas)) {
                     document.body.removeChild(recordCanvas);
                 }
-
                 const finalMime = mimeType.includes('mp4') ? 'video/mp4' : mimeType;
                 let videoBlob = new Blob(chunks, { type: finalMime });
 
-                // Patch duration metadata so media player shows 00:20
                 try {
                     videoBlob = await fixWebmDuration(videoBlob, totalDurationMs);
-                } catch (patchErr) {
-                    console.warn('[handleRecordVideo] duration patch fallback:', patchErr);
-                }
+                } catch (e) { console.warn('[handleRecordVideo] duration patch:', e); }
 
                 const videoUrl = URL.createObjectURL(videoBlob);
                 const filename = `story-video-executive-${selectedDay.toLowerCase()}.mp4`;
 
-                // Automatically trigger MP4 download via safe file-saver
-                try {
-                    await downloadVideoFile(videoBlob, filename);
-                } catch (dlErr) {
-                    console.warn('[handleRecordVideo] Download fallback:', dlErr);
-                }
+                try { await downloadVideoFile(videoBlob, filename); } catch (e) { console.warn(e); }
 
-                // Show preview success modal
-                setResult({
-                    videoUrl,
-                    videoBlob,
-                    filename,
-                    isVideo: true
-                });
-
+                setResult({ videoUrl, videoBlob, filename, isVideo: true });
                 setIsRecordingVideo(false);
                 setRecordingProgress(100);
             };
 
             mediaRecorder.start(100);
 
-            // 6. Continuous Real-Time Compositing Loop (Active Video + Transparent DOM Overlay)
+            // 5. Recording loop
             const renderFrame = () => {
                 const elapsed = Date.now() - startTime;
-                const progress = Math.min(100, Math.round((elapsed / totalDurationMs) * 100));
-                setRecordingProgress(progress);
+                setRecordingProgress(Math.min(100, Math.round((elapsed / totalDurationMs) * 100)));
 
-                // A. Base navy background fallback
-                ctx.fillStyle = '#001238';
-                ctx.fillRect(0, 0, 1080, 1920);
+                drawFrame();
 
-                // B. Draw live video background with filters
-                if (videoEl && videoEl.readyState >= 2) {
-                    try {
-                        ctx.save();
-                        ctx.filter = `brightness(${config.videoBrightness || 100}%) contrast(${config.videoContrast || 100}%) saturate(${config.videoSaturate || 100}%)`;
-                        ctx.drawImage(videoEl, 0, 0, 1080, 1920);
-                        ctx.restore();
-                    } catch (dErr) {
-                        console.warn('[handleRecordVideo] video draw error:', dErr);
-                    }
-                }
-
-                // C. Overlay darkness if configured
-                if (config.overlayDarkness > 0) {
-                    ctx.fillStyle = `rgba(0, 18, 56, ${config.overlayDarkness / 100})`;
-                    ctx.fillRect(0, 0, 1080, 1920);
-                }
-
-                // D. Draw high-res DOM layout overlay (table, doctor names, schedules, badges, footers)
-                if (overlayCanvas) {
-                    ctx.drawImage(overlayCanvas, 0, 0, 1080, 1920);
-                }
-
-                if (videoTrack?.requestFrame) {
-                    videoTrack.requestFrame();
-                }
+                if (videoTrack?.requestFrame) videoTrack.requestFrame();
 
                 if (elapsed < totalDurationMs) {
                     requestAnimationFrame(renderFrame);
                 } else {
-                    if (mediaRecorder.state === 'recording') {
-                        mediaRecorder.stop();
-                    }
+                    if (mediaRecorder.state === 'recording') mediaRecorder.stop();
                 }
             };
 
