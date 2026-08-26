@@ -208,11 +208,13 @@ export const ExecutiveDailyStoryProvider = ({ children }) => {
             });
         });
 
-        // Put enabled ones first, then alphabetical
+        // Put enabled ones first, then sort by specialty, then by name
         matched.sort((a, b) => {
             if (a.enabled && !b.enabled) return -1;
             if (!a.enabled && b.enabled) return 1;
-            return a.name.localeCompare(b.name);
+            const specComp = (a.specialty || '').localeCompare(b.specialty || '', 'id');
+            if (specComp !== 0) return specComp;
+            return (a.name || '').localeCompare(b.name || '', 'id');
         });
 
         return matched;
