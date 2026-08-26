@@ -452,45 +452,78 @@ function fixWebmDuration(blob, durationMs) {
                 cx.closePath();
             };
 
-            // Helper: draw circular avatar clip + image or initials (with object-fit:cover)
+            // Helper: draw circular avatar clip + image or initials
+            // Applies photoScale, photoOffsetX/Y (%), photoRotate, photoFlipX
+            // to match the HTML preview transform exactly.
             const drawAvatar = (cx, doc, avatarImg, x, y, size) => {
+                const cx_x = x + size / 2;
+                const cy_y = y + size / 2;
+
                 cx.save();
                 cx.beginPath();
-                cx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+                cx.arc(cx_x, cy_y, size / 2, 0, Math.PI * 2);
                 cx.clip();
+
                 if (avatarImg) {
-                    // object-fit: cover — crop proportionally so no stretch/squish
-                    const iw = avatarImg.naturalWidth || avatarImg.width;
-                    const ih = avatarImg.naturalHeight || avatarImg.height;
+                    const photoScale = doc.photoScale !== undefined ? doc.photoScale : 1;
+                    const photoOffsetX = doc.photoOffsetX !== undefined ? doc.photoOffsetX : 0; // in %
+                    const photoOffsetY = doc.photoOffsetY !== undefined ? doc.photoOffsetY : 0; // in %
+                    const photoRotate = doc.photoRotate !== undefined ? doc.photoRotate : 0;    // in deg
+                    const photoFlipX = Boolean(doc.photoFlipX);
+
+                    // The HTML preview uses:
+                    // transform: translate(calc(-50% + offsetX%), calc(-50% + offsetY%)) scale(photoScale) rotate(Ndeg) scaleX(±1)
+                    // where % is relative to the image's rendered width/height.
+                    //
+                    // In canvas: image is drawn at (size x size). We:
+                    //   1. Translate to circle center
+                    //   2. Apply offsetX/Y (% of size)
+                    //   3. Apply scale
+                    //   4. Apply rotate
+                    //   5. Apply flipX
+                    //   6. Draw image centered at origin
+                    cx.translate(cx_x, cy_y);
+
+                    // offsetX/Y are % of the circle size (same unit as HTML %)
+                    cx.translate((photoOffsetX / 100) * size, (photoOffsetY / 100) * size);
+                    cx.scale(photoScale * (photoFlipX ? -1 : 1), photoScale);
+                    cx.rotate((photoRotate * Math.PI) / 180);
+
+                    // Draw image centered at origin; image fills at least the circle
+                    const iw = avatarImg.naturalWidth || avatarImg.width || size;
+                    const ih = avatarImg.naturalHeight || avatarImg.height || size;
                     const imgAspect = iw / ih;
-                    let sx = 0, sy = 0, sw = iw, sh = ih;
+                    let drawW, drawH;
                     if (imgAspect > 1) {
-                        // wider than tall: crop sides
-                        sw = ih;
-                        sx = (iw - sw) / 2;
+                        // wider: fit height to size
+                        drawH = size;
+                        drawW = size * imgAspect;
                     } else {
-                        // taller than wide: crop top/bottom
-                        sh = iw;
-                        sy = (ih - sh) / 2;
+                        // taller or square: fit width to size
+                        drawW = size;
+                        drawH = size / imgAspect;
                     }
-                    cx.drawImage(avatarImg, sx, sy, sw, sh, x, y, size, size);
+                    cx.drawImage(avatarImg, -drawW / 2, -drawH / 2, drawW, drawH);
                 } else {
                     cx.fillStyle = '#001f5c';
-                    cx.fillRect(x, y, size, size);
+                    cx.beginPath();
+                    cx.arc(cx_x, cy_y, size / 2, 0, Math.PI * 2);
+                    cx.fill();
                     cx.fillStyle = '#ffffff';
                     cx.font = `800 ${Math.round(size * 0.3)}px "Plus Jakarta Sans", Poppins, sans-serif`;
                     cx.textAlign = 'center';
                     cx.textBaseline = 'middle';
                     const initials = (doc.name || '?').split(' ').slice(0, 2).map(w => w[0]).join('').toUpperCase();
-                    cx.fillText(initials, x + size / 2, y + size / 2);
+                    cx.fillText(initials, cx_x, cy_y);
                 }
                 cx.restore();
+
                 // Circle border
                 cx.save();
                 cx.strokeStyle = '#001f5c';
                 cx.lineWidth = 2;
                 cx.beginPath();
-                cx.arc(x + size / 2, y + size / 2, size / 2, 0, Math.PI * 2);
+                cx.arc(cx_x, cy_y, size / 2, 0, Math.PI * 2);
                 cx.stroke();
                 cx.restore();
             };
